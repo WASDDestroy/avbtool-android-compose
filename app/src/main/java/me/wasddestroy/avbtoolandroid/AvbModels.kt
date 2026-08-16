@@ -13,7 +13,8 @@ data class AvbArg(
     val defaultValue: String? = null,
     @param:StringRes val helpRes: Int? = null,
     val advanced: Boolean = false,
-    val repeatable: Boolean = false
+    val repeatable: Boolean = false,
+    @param:StringRes val hintRes: Int? = null
 )
 
 enum class AvbCommandKind { IMAGE_TOOL, VBMETA_GENERATOR }
@@ -65,7 +66,7 @@ object AvbCommands {
                 AvbArg("--calc_max_image_size", R.string.arg_add_hash_footer_calc_max_image_size_label, ArgType.BOOL),
                 AvbArg("--do_not_append_vbmeta_image", R.string.arg_add_hash_footer_do_not_append_vbmeta_image_label, ArgType.BOOL),
                 AvbArg("--rollback_index", R.string.arg_add_hash_footer_rollback_index_label, ArgType.INT),
-                AvbArg("--prop", R.string.arg_add_hash_footer_prop_label, ArgType.TEXT, repeatable = true),
+                AvbArg("--prop", R.string.arg_add_hash_footer_prop_label, ArgType.TEXT, repeatable = true, hintRes = R.string.arg_add_hash_footer_prop_hint),
                 AvbArg("--include_descriptors_from_image", R.string.arg_add_hash_footer_include_descriptors_from_image_label, ArgType.FILE, repeatable = true),
                 AvbArg("--flags", R.string.arg_add_hash_footer_flags_label, ArgType.INT),
 
@@ -75,12 +76,12 @@ object AvbCommands {
                 AvbArg("--public_key_metadata", R.string.arg_add_hash_footer_public_key_metadata_label, ArgType.FILE, advanced = true),
                 AvbArg("--rollback_index_location", R.string.arg_add_hash_footer_rollback_index_location_label, ArgType.INT, advanced = true),
                 AvbArg("--append_to_release_string", R.string.arg_add_hash_footer_append_to_release_string_label, ArgType.TEXT, advanced = true),
-                AvbArg("--prop_from_file", R.string.arg_add_hash_footer_prop_from_file_label, ArgType.TEXT, repeatable = true, advanced = true),
-                AvbArg("--kernel_cmdline", R.string.arg_add_hash_footer_kernel_cmdline_label, ArgType.TEXT, repeatable = true, advanced = true),
+                AvbArg("--prop_from_file", R.string.arg_add_hash_footer_prop_from_file_label, ArgType.TEXT, repeatable = true, advanced = true, hintRes = R.string.arg_add_hash_footer_prop_from_file_hint),
+                AvbArg("--kernel_cmdline", R.string.arg_add_hash_footer_kernel_cmdline_label, ArgType.TEXT, repeatable = true, advanced = true, hintRes = R.string.arg_add_hash_footer_kernel_cmdline_hint),
                 AvbArg("--setup_rootfs_from_kernel", R.string.arg_add_hash_footer_setup_rootfs_from_kernel_label, ArgType.FILE, advanced = true),
                 AvbArg("--print_required_libavb_version", R.string.arg_add_hash_footer_print_required_libavb_version_label, ArgType.BOOL, advanced = true),
                 AvbArg("--chain_partition", R.string.arg_add_hash_footer_chain_partition_label, ArgType.CHAIN_PARTITION, repeatable = true, advanced = true),
-                AvbArg("--chain_partition_do_not_use_ab", R.string.arg_add_hash_footer_chain_partition_do_not_use_ab_label, ArgType.TEXT, repeatable = true, advanced = true),
+                AvbArg("--chain_partition_do_not_use_ab", R.string.arg_add_hash_footer_chain_partition_do_not_use_ab_label, ArgType.TEXT, repeatable = true, advanced = true, hintRes = R.string.arg_add_hash_footer_chain_partition_do_not_use_ab_hint),
                 AvbArg("--set_hashtree_disabled_flag", R.string.arg_add_hash_footer_set_hashtree_disabled_flag_label, ArgType.BOOL, advanced = true),
                 AvbArg("--set_verification_disabled_flag", R.string.arg_add_hash_footer_set_verification_disabled_flag_label, ArgType.BOOL, advanced = true),
                 AvbArg("--use_persistent_digest", R.string.arg_add_hash_footer_use_persistent_digest_label, ArgType.BOOL, advanced = true),
@@ -107,7 +108,7 @@ object AvbCommands {
                 AvbArg("--calc_max_image_size", R.string.arg_add_hashtree_footer_calc_max_image_size_label, ArgType.BOOL),
                 AvbArg("--do_not_append_vbmeta_image", R.string.arg_add_hashtree_footer_do_not_append_vbmeta_image_label, ArgType.BOOL),
                 AvbArg("--rollback_index", R.string.arg_add_hashtree_footer_rollback_index_label, ArgType.INT),
-                AvbArg("--prop", R.string.arg_add_hashtree_footer_prop_label, ArgType.TEXT, repeatable = true),
+                AvbArg("--prop", R.string.arg_add_hashtree_footer_prop_label, ArgType.TEXT, repeatable = true, hintRes = R.string.arg_add_hashtree_footer_prop_hint),
                 AvbArg("--chain_partition", R.string.arg_add_hashtree_footer_chain_partition_label, ArgType.CHAIN_PARTITION, repeatable = true),
                 AvbArg("--flags", R.string.arg_add_hashtree_footer_flags_label, ArgType.INT),
                 AvbArg("--include_descriptors_from_image", R.string.arg_add_hashtree_footer_include_descriptors_from_image_label, ArgType.FILE, repeatable = true),
@@ -121,11 +122,11 @@ object AvbCommands {
                 AvbArg("--public_key_metadata", R.string.arg_add_hashtree_footer_public_key_metadata_label, ArgType.FILE, advanced = true),
                 AvbArg("--rollback_index_location", R.string.arg_add_hashtree_footer_rollback_index_location_label, ArgType.INT, advanced = true),
                 AvbArg("--append_to_release_string", R.string.arg_add_hashtree_footer_append_to_release_string_label, ArgType.TEXT, advanced = true),
-                AvbArg("--prop_from_file", R.string.arg_add_hashtree_footer_prop_from_file_label, ArgType.TEXT, repeatable = true, advanced = true),
-                AvbArg("--kernel_cmdline", R.string.arg_add_hashtree_footer_kernel_cmdline_label, ArgType.TEXT, repeatable = true, advanced = true),
+                AvbArg("--prop_from_file", R.string.arg_add_hashtree_footer_prop_from_file_label, ArgType.TEXT, repeatable = true, advanced = true, hintRes = R.string.arg_add_hashtree_footer_prop_from_file_hint),
+                AvbArg("--kernel_cmdline", R.string.arg_add_hashtree_footer_kernel_cmdline_label, ArgType.TEXT, repeatable = true, advanced = true, hintRes = R.string.arg_add_hashtree_footer_kernel_cmdline_hint),
                 AvbArg("--setup_rootfs_from_kernel", R.string.arg_add_hashtree_footer_setup_rootfs_from_kernel_label, ArgType.FILE, advanced = true),
                 AvbArg("--print_required_libavb_version", R.string.arg_add_hashtree_footer_print_required_libavb_version_label, ArgType.BOOL, advanced = true),
-                AvbArg("--chain_partition_do_not_use_ab", R.string.arg_add_hashtree_footer_chain_partition_do_not_use_ab_label, ArgType.TEXT, repeatable = true, advanced = true),
+                AvbArg("--chain_partition_do_not_use_ab", R.string.arg_add_hashtree_footer_chain_partition_do_not_use_ab_label, ArgType.TEXT, repeatable = true, advanced = true, hintRes = R.string.arg_add_hashtree_footer_chain_partition_do_not_use_ab_hint),
                 AvbArg("--set_hashtree_disabled_flag", R.string.arg_add_hashtree_footer_set_hashtree_disabled_flag_label, ArgType.BOOL, advanced = true),
                 AvbArg("--set_verification_disabled_flag", R.string.arg_add_hashtree_footer_set_verification_disabled_flag_label, ArgType.BOOL, advanced = true),
                 AvbArg("--use_persistent_digest", R.string.arg_add_hashtree_footer_use_persistent_digest_label, ArgType.BOOL, advanced = true),
@@ -144,7 +145,7 @@ object AvbCommands {
                 AvbArg("--key", R.string.arg_make_vbmeta_image_key_label, ArgType.FILE),
                 AvbArg("--rollback_index", R.string.arg_make_vbmeta_image_rollback_index_label, ArgType.INT),
                 AvbArg("--rollback_index_location", R.string.arg_make_vbmeta_image_rollback_index_location_label, ArgType.INT),
-                AvbArg("--prop", R.string.arg_make_vbmeta_image_prop_label, ArgType.TEXT, repeatable = true),
+                AvbArg("--prop", R.string.arg_make_vbmeta_image_prop_label, ArgType.TEXT, repeatable = true, hintRes = R.string.arg_make_vbmeta_image_prop_hint),
                 AvbArg("--include_descriptors_from_image", R.string.arg_make_vbmeta_image_include_descriptors_from_image_label, ArgType.FILE, repeatable = true),
                 AvbArg("--chain_partition", R.string.arg_make_vbmeta_image_chain_partition_label, ArgType.CHAIN_PARTITION, repeatable = true),
                 AvbArg("--flags", R.string.arg_make_vbmeta_image_flags_label, ArgType.INT),
@@ -155,11 +156,11 @@ object AvbCommands {
                 AvbArg("--signing_helper_with_files", R.string.arg_make_vbmeta_image_signing_helper_with_files_label, ArgType.TEXT, advanced = true),
                 AvbArg("--public_key_metadata", R.string.arg_make_vbmeta_image_public_key_metadata_label, ArgType.FILE, advanced = true),
                 AvbArg("--append_to_release_string", R.string.arg_make_vbmeta_image_append_to_release_string_label, ArgType.TEXT, advanced = true),
-                AvbArg("--prop_from_file", R.string.arg_make_vbmeta_image_prop_from_file_label, ArgType.TEXT, repeatable = true, advanced = true),
-                AvbArg("--kernel_cmdline", R.string.arg_make_vbmeta_image_kernel_cmdline_label, ArgType.TEXT, repeatable = true, advanced = true),
+                AvbArg("--prop_from_file", R.string.arg_make_vbmeta_image_prop_from_file_label, ArgType.TEXT, repeatable = true, advanced = true, hintRes = R.string.arg_make_vbmeta_image_prop_from_file_hint),
+                AvbArg("--kernel_cmdline", R.string.arg_make_vbmeta_image_kernel_cmdline_label, ArgType.TEXT, repeatable = true, advanced = true, hintRes = R.string.arg_make_vbmeta_image_kernel_cmdline_hint),
                 AvbArg("--setup_rootfs_from_kernel", R.string.arg_make_vbmeta_image_setup_rootfs_from_kernel_label, ArgType.FILE, advanced = true),
                 AvbArg("--print_required_libavb_version", R.string.arg_make_vbmeta_image_print_required_libavb_version_label, ArgType.BOOL, advanced = true),
-                AvbArg("--chain_partition_do_not_use_ab", R.string.arg_make_vbmeta_image_chain_partition_do_not_use_ab_label, ArgType.TEXT, repeatable = true, advanced = true)
+                AvbArg("--chain_partition_do_not_use_ab", R.string.arg_make_vbmeta_image_chain_partition_do_not_use_ab_label, ArgType.TEXT, repeatable = true, advanced = true, hintRes = R.string.arg_make_vbmeta_image_chain_partition_do_not_use_ab_hint)
             ),
             readOnly = false, producesFile = true
         ),

@@ -856,6 +856,7 @@ private fun CommandTextEditDialog(
     var draft by remember(arg.key) { mutableStateOf(initialValue) }
     val title = stringResource(arg.labelRes) + if (arg.required) stringResource(R.string.command_required) else ""
     val keyboardType = if (arg.type == ArgType.INT) KeyboardType.Number else KeyboardType.Text
+    val hint = arg.hintRes?.let { stringResource(it) }
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(title) },
@@ -865,6 +866,7 @@ private fun CommandTextEditDialog(
                 onValueChange = { draft = it },
                 modifier = Modifier.fillMaxWidth(),
                 label = { Text(title) },
+                placeholder = hint?.let { { Text(it) } },
                 keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
                 singleLine = !arg.repeatable,
                 minLines = if (arg.repeatable) 3 else 1,
