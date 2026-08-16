@@ -45,27 +45,45 @@ fun HomeScreen(
                 )
             }
         }
+        val imageTools = AvbCommands.all.filter { it.kind == AvbCommandKind.IMAGE_TOOL }
+        val otherTools = AvbCommands.all.filter { it.kind != AvbCommandKind.IMAGE_TOOL }
+
         preferenceGroup {
-            AvbCommands.all.forEach { command ->
+            imageTools.forEach { command ->
                 row(command.id) {
-                    PreferenceRow(
-                        title = stringResource(command.titleRes),
-                        summary = stringResource(command.descriptionRes),
-                        iconContent = {
-                            Icon(
-                                imageVector = commandIcon(command.id),
-                                contentDescription = null,
-                                modifier = Modifier.size(24.dp),
-                            )
-                        },
-                        onClick = { onOpenCommand(command.id) },
-                    )
+                    CommandRow(command, onOpenCommand)
+                }
+            }
+        }
+
+        if (otherTools.isNotEmpty()) {
+            preferenceGroup {
+                otherTools.forEach { command ->
+                    row(command.id) {
+                        CommandRow(command, onOpenCommand)
+                    }
                 }
             }
         }
     }
 }
 
+
+@Composable
+private fun CommandRow(command: AvbCommand, onOpenCommand: (String) -> Unit) {
+    PreferenceRow(
+        title = stringResource(command.titleRes),
+        summary = stringResource(command.descriptionRes),
+        iconContent = {
+            Icon(
+                imageVector = commandIcon(command.id),
+                contentDescription = null,
+                modifier = Modifier.size(24.dp),
+            )
+        },
+        onClick = { onOpenCommand(command.id) },
+    )
+}
 
 private fun commandIcon(commandId: String): ImageVector = when (commandId) {
     "add_hash_footer" -> Icons.AutoMirrored.Filled.NoteAdd

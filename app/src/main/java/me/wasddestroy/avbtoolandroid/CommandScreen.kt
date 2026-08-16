@@ -111,7 +111,10 @@ fun CommandScreen(
     val runner = remember { AvbTaskRunner(context) }
 
     var values by remember(command.id) {
-        mutableStateOf(command.args.associate { storageKey(it) to (it.defaultValue ?: "") })
+        mutableStateOf(
+            command.inputs.associate { it.key to "" } +
+            command.args.associate { storageKey(it) to (it.defaultValue ?: "") }
+        )
     }
     var running by remember { mutableStateOf(false) }
     var result by remember { mutableStateOf<AvbCommandResult?>(null) }
@@ -156,8 +159,9 @@ fun CommandScreen(
     val chooseImageError = stringResource(R.string.command_choose_image_error)
 
     fun onRun() {
-        val imageUri = values[IMAGE_STORAGE_KEY].orEmpty()
-        if (imageUri.isBlank()) {
+        val imageInput = command.inputs.firstOrNull { it.key == "--image" }
+        val imageUri = if (imageInput != null) values[imageInput.key].orEmpty() else null
+        if (imageInput != null && imageUri.isNullOrBlank()) {
             result = AvbCommandResult(
                 status = AvbResultStatus.FAILED,
                 errors = listOf(chooseImageError),
@@ -169,7 +173,7 @@ fun CommandScreen(
             runCommand(
                 cmd = command,
                 values = values,
-                uri = imageUri.toUri(),
+                uri = imageUri?.toUri(),
                 bridge = bridge,
                 runner = runner,
                 scope = scope,
@@ -228,9 +232,27 @@ fun CommandScreen(
             }
             val switchArgs = command.args.filter { !it.advanced && it.type == ArgType.BOOL }
             val advancedArgs = command.args.filter { it.advanced }
+            val imageSectionTitle = if (command.kind == AvbCommandKind.IMAGE_TOOL) {
+                R.string.command_section_image_configs
+            } else {
+                R.string.command_section_options
+            }
 
-            if (imageArgs.isNotEmpty()) {
-                preferenceGroup(titleRes = R.string.command_section_image_configs) {
+            if (command.inputs.isNotEmpty() || imageArgs.isNotEmpty()) {
+                preferenceGroup(titleRes = imageSectionTitle) {
+                    command.inputs.forEach { input ->
+                        row(input.key) {
+                            FileInputRow(
+                                input = input,
+                                value = values[input.key].orEmpty(),
+                                onPickFile = { key, index ->
+                                    pendingArgKey = key
+                                    pendingArgIndex = index
+                                    openDocument.launch(arrayOf("*/*"))
+                                },
+                            )
+                        }
+                    }
                     imageArgs.forEach { arg ->
                         row(arg.key) {
                             CommandArgRow(
@@ -366,7 +388,7 @@ fun CommandScreen(
                     runCommand(
                         cmd = cmdToRun,
                         values = values,
-                        uri = values[IMAGE_STORAGE_KEY].orEmpty().toUri(),
+                        uri = if (cmdToRun.hasImage) values[IMAGE_STORAGE_KEY].orEmpty().toUri() else null,
                         bridge = bridge,
                         runner = runner,
                         scope = scope,
@@ -587,6 +609,37 @@ private fun ResultView(result: AvbCommandResult) {
             }
         }
     }
+}
+
+@Composable
+private fun FileInputRow(
+    input: AvbFileInput,
+    value: String,
+    onPickFile: (String, Int?) -> Unit,
+) {
+    val lines = value.lines().filter { it.isNotBlank() }
+    val summary = if (input.repeatable) {
+        if (lines.isEmpty()) stringResource(R.string.command_choose_file)
+        else pluralStringResource(R.plurals.command_files_selected, lines.size, lines.size)
+    } else {
+        val fileName = lines.firstOrNull()?.let { runCatching { it.toUri().lastPathSegment }.getOrNull() }
+        when {
+            fileName.isNullOrBlank() -> stringResource(R.string.command_choose_file)
+            else -> fileName
+        }
+    }
+    PreferenceRow(
+        title = stringResource(input.labelRes) + if (input.required) stringResource(R.string.command_required) else "",
+        iconContent = { RowIcon(Icons.Filled.Image) },
+        summary = summary,
+        onClick = {
+            if (input.repeatable) {
+                onPickFile(input.key, null)
+            } else {
+                onPickFile(input.key, 0)
+            }
+        },
+    )
 }
 
 @Composable
@@ -855,7 +908,7 @@ private fun AlgorithmChoiceDialog(
 private fun runCommand(
     cmd: AvbCommand,
     values: Map<String, String>,
-    uri: Uri,
+    uri: Uri?,
     bridge: SafFileBridge,
     runner: AvbTaskRunner,
     scope: CoroutineScope,
@@ -865,43 +918,53 @@ private fun runCommand(
 ) {
     scope.launch {
         onStart()
-        // Some avbtool commands derive sibling image paths from the
-        // selected image path (chain partitions use os.path.join(image_dir,
-        // partition_name + image_ext)). SAF fd pseudo-paths cannot support
-        // those derived sibling paths, so those commands run against a
-        // private copy of the selected file instead.
-        val needsRealDirectory = cmd.id in setOf(
-            "verify_image",
-            "print_partition_digests",
-            "calculate_vbmeta_digest",
-            "calculate_kernel_cmdline"
-        )
-        val inputFd: Int? = when {
-            needsRealDirectory -> null
-            cmd.readOnly -> bridge.openRead(uri)
-            else -> bridge.openReadWrite(uri)
-        }
-        val imagePath: String
-        var closeInputFd = false
-        if (inputFd != null) {
-            imagePath = bridge.pseudoPath(inputFd)
-            closeInputFd = true
-        } else {
-            val copy = bridge.copyToPrivate(uri)
-            if (copy == null) {
-                onDone("", context.getString(R.string.command_error_open_file), null)
-                return@launch
-            }
-            imagePath = copy.absolutePath
-        }
-
         val argv = mutableListOf("avbtool", cmd.id)
         val extraFds = mutableListOf<Int>()
+        var closeInputFd = false
+        var inputFd: Int? = null
+        var imagePath: String? = null
+
+        if (cmd.hasImage) {
+            val uri = uri
+            if (uri == null) {
+                onDone("", context.getString(R.string.command_choose_image_error), null)
+                return@launch
+            }
+            // Some avbtool commands derive sibling image paths from the
+            // selected image path (chain partitions use os.path.join(image_dir,
+            // partition_name + image_ext)). SAF fd pseudo-paths cannot support
+            // those derived sibling paths, so those commands run against a
+            // private copy of the selected file instead.
+            val needsRealDirectory = cmd.id in setOf(
+                "verify_image",
+                "print_partition_digests",
+                "calculate_vbmeta_digest",
+                "calculate_kernel_cmdline"
+            )
+            inputFd = when {
+                needsRealDirectory -> null
+                cmd.readOnly -> bridge.openRead(uri)
+                else -> bridge.openReadWrite(uri)
+            }
+            if (inputFd != null) {
+                imagePath = bridge.pseudoPath(inputFd)
+                closeInputFd = true
+            } else {
+                val copy = bridge.copyToPrivate(uri)
+                if (copy == null) {
+                    onDone("", context.getString(R.string.command_error_open_file), null)
+                    return@launch
+                }
+                imagePath = copy.absolutePath
+            }
+            argv += "--image"
+            argv += imagePath!!
+        }
+
         cmd.args.forEach { arg ->
             when (arg.type) {
                 ArgType.IMAGE -> {
-                    argv += arg.key
-                    argv += imagePath
+                    // kept for compatibility with legacy model entries
                 }
                 ArgType.BOOL -> if ((values[arg.key] ?: "").toBooleanStrictOrNull() == true) argv += arg.key
                 ArgType.TEXT, ArgType.INT, ArgType.ALGORITHM -> {
@@ -937,13 +1000,14 @@ private fun runCommand(
         }
 
         var outputFile: File? = null
-        if (inputFd == null && !cmd.readOnly) {
+        if (cmd.hasImage && inputFd == null && !cmd.readOnly && imagePath != null) {
             // Copy fallback: the private file was modified in place.
             outputFile = File(imagePath)
         }
-        if (cmd.id == "extract_vbmeta_image") {
-            outputFile = bridge.newPrivateOutput(".img")
-            argv += "--output"
+        if (cmd.outputs.isNotEmpty()) {
+            val firstOutput = cmd.outputs.first()
+            outputFile = bridge.newPrivateOutput(firstOutput.suffix)
+            argv += firstOutput.key
             argv += outputFile.absolutePath
         }
 
