@@ -987,7 +987,7 @@ private fun ChainPartitionListDialog(
     val entries = value.lines().filter { it.isNotBlank() }
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(stringResource(arg.labelRes)) },
+        title = { Text(stringResource(R.string.command_chain_partition_edit_title)) },
         text = {
             Column(
                 modifier = Modifier

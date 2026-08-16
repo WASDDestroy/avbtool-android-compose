@@ -11,6 +11,7 @@ import androidx.compose.material.icons.filled.Calculate
 import androidx.compose.material.icons.filled.DeleteSweep
 import androidx.compose.material.icons.filled.Fingerprint
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Key
 import androidx.compose.material.icons.filled.KeyboardCommandKey
 import androidx.compose.material.icons.filled.LayersClear
 import androidx.compose.material.icons.filled.PhotoSizeSelectLarge
@@ -97,5 +98,6 @@ private fun commandIcon(commandId: String): ImageVector = when (commandId) {
     "verify_image" -> Icons.Filled.Verified
     "zero_hashtree" -> Icons.Filled.LayersClear
     "calculate_kernel_cmdline" -> Icons.Filled.KeyboardCommandKey
+    "extract_public_key" -> Icons.Filled.Key
     else -> Icons.Filled.Info
 }
