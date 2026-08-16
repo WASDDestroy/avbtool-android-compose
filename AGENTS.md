@@ -74,9 +74,10 @@ Before building:
 ## Workflow
 
 - Commit every change to the repository before moving on to the next task.
+- Use [Conventional Commits](https://www.conventionalcommits.org/) format: `type(scope): description` (e.g. `feat(gui): add extract_public_key command`).
+- This machine supports GPG-signed Git commits. If GPG signing times out on a commit, retry once. If the retry also fails, skip GPG signing for that commit only (`git commit --no-gpg-sign`).
 
 ## Before committing
 
 - Run `./gradlew :app:assembleDebug` **and** `./gradlew :app:assembleRelease` (both must pass; `lintVitalRelease` catches issues invisible to debug builds, and release-mode Compose brings significant performance improvements).
 - Ensure `git status` does not include build outputs (`app/build/`, `app/release/`, `.kotlin/` are ignored).
-- Use clear, imperative commit messages.
