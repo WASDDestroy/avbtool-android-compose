@@ -152,6 +152,10 @@
     <string name="command_calculate_kernel_cmdline_description">Calculate dm-verity kernel cmdline</string>
     <string name="arg_calculate_kernel_cmdline_image_label">Image file</string>
     <string name="arg_calculate_kernel_cmdline_hashtree_disabled_label">Hashtree disabled</string>
+    <string name="command_extract_public_key_title">Extract public key</string>
+    <string name="command_extract_public_key_description">Extract public key from RSA private key</string>
+    <string name="arg_extract_public_key_key_label">RSA private key (.pem)</string>
+    <string name="arg_extract_public_key_output_label">Output file</string>
     <string name="command_make_vbmeta_image_title">Make vbmeta image</string>
     <string name="command_make_vbmeta_image_description">Generate a vbmeta image</string>
     <string name="arg_make_vbmeta_image_output_label">Output file</string>

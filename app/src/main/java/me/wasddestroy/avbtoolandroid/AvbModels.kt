@@ -245,6 +245,15 @@ object AvbCommands {
             ),
             readOnly = true, producesFile = false
         ),
+        AvbCommand(
+            id = "extract_public_key", titleRes = R.string.command_extract_public_key_title, descriptionRes = R.string.command_extract_public_key_description,
+            kind = AvbCommandKind.IMAGE_TOOL,
+            outputs = listOf(AvbFileOutput("--output", R.string.arg_extract_public_key_output_label, ".bin")),
+            args = listOf(
+                AvbArg("--key", R.string.arg_extract_public_key_key_label, ArgType.FILE, required = true)
+            ),
+            readOnly = true, producesFile = true
+        ),
     )
 
     fun byId(id: String): AvbCommand? = all.find { it.id == id }

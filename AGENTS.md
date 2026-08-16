@@ -71,6 +71,10 @@ Before building:
 - Within sections: text/file fields first, dropdowns second, switches last.
 - Boolean flags use `Switch`, signing algorithm uses a dropdown.
 
+## Workflow
+
+- Commit every change to the repository before moving on to the next task.
+
 ## Before committing
 
 - Run `./gradlew :app:assembleDebug :app:assembleRelease`.
