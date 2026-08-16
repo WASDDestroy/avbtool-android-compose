@@ -56,6 +56,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import me.wasddestroy.avbtoolandroid.ui.components.DialogConfirmButton
@@ -99,7 +100,7 @@ fun CommandScreen(
         mutableStateOf(command.args.associate { storageKey(it) to (it.defaultValue ?: "") })
     }
     var running by remember { mutableStateOf(false) }
-    var resultText by remember { mutableStateOf("") }
+    var result by remember { mutableStateOf<AvbCommandResult?>(null) }
     var copyWarning by remember { mutableStateOf(false) }
     var pendingCommand by remember { mutableStateOf<AvbCommand?>(null) }
     var pendingArgKey by remember { mutableStateOf<String?>(null) }
@@ -141,7 +142,10 @@ fun CommandScreen(
     fun onRun() {
         val imageUri = values[IMAGE_STORAGE_KEY].orEmpty()
         if (imageUri.isBlank()) {
-            resultText = context.getString(R.string.command_choose_image_error)
+            result = AvbCommandResult(
+                status = AvbResultStatus.FAILED,
+                errors = listOf(context.getString(R.string.command_choose_image_error)),
+            )
             return
         }
         pendingCommand = command
@@ -157,7 +161,7 @@ fun CommandScreen(
                 onStart = { running = true },
                 onDone = { stdout, stderr, output ->
                     running = false
-                    resultText = buildResult(argvPreview(command, values), stdout, stderr)
+                    result = parseAvbResult(command.id, stdout, stderr)
                     pendingOutputFile = output
                 },
             )
@@ -326,25 +330,9 @@ fun CommandScreen(
                     }
                 }
             }
-            if (!running && resultText.isNotBlank()) {
-                item("output") {
-                    Column(
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-                    ) {
-                        Text(
-                            text = stringResource(R.string.command_output),
-                            style = MaterialTheme.typography.titleMedium,
-                            modifier = Modifier.padding(vertical = 4.dp),
-                        )
-                        Text(
-                            text = resultText,
-                            fontFamily = FontFamily.Monospace,
-                            fontSize = 12.sp,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .heightIn(min = 40.dp),
-                        )
-                    }
+            if (!running && result != null) {
+                item("result") {
+                    ResultView(result = result!!)
                 }
             }
         }
@@ -370,7 +358,7 @@ fun CommandScreen(
                         onStart = { running = true },
                         onDone = { stdout, stderr, output ->
                             running = false
-                            resultText = buildResult(argvPreview(cmdToRun, values), stdout, stderr)
+                            result = parseAvbResult(cmdToRun.id, stdout, stderr)
                             pendingOutputFile = output
                         },
                     )
@@ -451,6 +439,107 @@ fun CommandScreen(
                 },
             )
         }
+    }
+}
+
+@Composable
+private fun ResultView(result: AvbCommandResult) {
+    var rawExpanded by remember { mutableStateOf(false) }
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+    ) {
+        val statusText = when (result.status) {
+            AvbResultStatus.SUCCESS -> "Success"
+            AvbResultStatus.FAILED -> "Failed"
+            AvbResultStatus.CANCELLED -> "Cancelled"
+            AvbResultStatus.RUNNING -> "Running"
+        }
+        Text(
+            text = statusText,
+            style = MaterialTheme.typography.titleMedium,
+            color = when (result.status) {
+                AvbResultStatus.SUCCESS -> MaterialTheme.colorScheme.primary
+                AvbResultStatus.FAILED -> MaterialTheme.colorScheme.error
+                else -> MaterialTheme.colorScheme.onSurface
+            },
+        )
+
+        result.errors.forEach { error ->
+            Text(
+                text = error,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.error,
+                fontFamily = FontFamily.Monospace,
+                modifier = Modifier.padding(vertical = 2.dp),
+            )
+        }
+
+        result.sections.forEach { section ->
+            Text(
+                text = section.title,
+                style = MaterialTheme.typography.titleSmall,
+                modifier = Modifier.padding(top = 10.dp, bottom = 4.dp),
+            )
+            section.rows.forEach { row ->
+                ResultRowView(row)
+            }
+            section.groups.forEach { group ->
+                Text(
+                    text = group.title,
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.padding(start = 8.dp, top = 6.dp, bottom = 2.dp),
+                )
+                group.rows.forEach { row ->
+                    ResultRowView(row, indent = 16)
+                }
+            }
+        }
+
+        result.warnings.forEach { warning ->
+            Text(
+                text = "Warning: $warning",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.error,
+                modifier = Modifier.padding(vertical = 2.dp),
+            )
+        }
+
+        if (result.rawOutput.isNotBlank()) {
+            TextButton(onClick = { rawExpanded = !rawExpanded }) {
+                Text(if (rawExpanded) "▾ Raw output" else "▸ Raw output")
+            }
+            if (rawExpanded) {
+                Text(
+                    text = result.rawOutput,
+                    fontFamily = FontFamily.Monospace,
+                    fontSize = 12.sp,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun ResultRowView(row: ResultRow, indent: Int = 0) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(start = indent.dp, top = 2.dp, bottom = 2.dp),
+    ) {
+        Text(
+            text = row.title,
+            style = MaterialTheme.typography.bodyMedium,
+            modifier = Modifier.weight(1f),
+        )
+        Text(
+            text = row.value,
+            style = MaterialTheme.typography.bodyMedium,
+            fontFamily = if (row.monospace) FontFamily.Monospace else null,
+            textAlign = TextAlign.End,
+        )
     }
 }
 
