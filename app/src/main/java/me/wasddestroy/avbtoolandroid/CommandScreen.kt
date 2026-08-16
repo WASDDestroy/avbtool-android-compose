@@ -545,17 +545,22 @@ private fun ResultView(result: AvbCommandResult) {
                         onClick = { rawExpanded = !rawExpanded },
                     )
                 }
-            }
-            if (rawExpanded) {
-                SelectionContainer {
-                    Text(
-                        text = result.rawOutput,
-                        fontFamily = FontFamily.Monospace,
-                        fontSize = 12.sp,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 8.dp),
-                    )
+                if (rawExpanded) {
+                    row("raw_output_content") {
+                        PreferenceRow(
+                            title = "",
+                            summaryContent = {
+                                SelectionContainer {
+                                    Text(
+                                        text = result.rawOutput,
+                                        fontFamily = FontFamily.Monospace,
+                                        fontSize = 12.sp,
+                                        modifier = Modifier.fillMaxWidth(),
+                                    )
+                                }
+                            },
+                        )
+                    }
                 }
             }
         }
