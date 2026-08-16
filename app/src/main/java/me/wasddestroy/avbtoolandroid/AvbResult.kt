@@ -130,13 +130,14 @@ private fun parseVerifyImage(stdout: String): List<ResultSection> {
     return listOf(ResultSection(title = "Verification", rows = rows))
 }
 
-private val DESCRIPTOR_PATTERN = Regex("""^\s{4}((?:Chain Partition|Hash|Hashtree) descriptor):""")
-private val PROP_PATTERN = Regex("""^\s{4}Prop:\s*(.+?)\s*->\s*'(.*)'$""")
+private val DESCRIPTOR_PATTERN = Regex("""\s*((?:Chain Partition|Hash|Hashtree) descriptor):""")
+private val PROP_PATTERN = Regex("""\s*Prop:\s*(.+?)\s*->\s*'(.*)'$""")
 
 private fun parseInfoImage(stdout: String): List<ResultSection> {
     val topRows = mutableListOf<ResultRow>()
     val groups = mutableListOf<ResultGroup>()
     var blockType: String? = null
+    var blockIndent = 0
     var blockLines = mutableListOf<Pair<String, String>>()
 
     fun flushBlock() {
@@ -181,11 +182,12 @@ private fun parseInfoImage(stdout: String): List<ResultSection> {
         DESCRIPTOR_PATTERN.matchEntire(rawLine)?.let { match ->
             flushBlock()
             blockType = match.groupValues[1]
+            blockIndent = indent
             blockLines = mutableListOf()
             return@forEach
         }
 
-        if (blockType != null && indent >= 6) {
+        if (blockType != null && indent > blockIndent) {
             val parts = text.split(":", limit = 2)
             val pair = if (parts.size == 2) Pair(parts[0].trim(), parts[1].trim()) else Pair(text, "")
             blockLines += pair
