@@ -130,23 +130,34 @@ private fun parseVerifyImage(stdout: String): List<ResultSection> {
     return listOf(ResultSection(title = "Verification", rows = rows))
 }
 
-private val DESCRIPTOR_PATTERN = Regex("""\s*((?:Chain Partition|Hash|Hashtree) descriptor):""")
-private val PROP_PATTERN = Regex("""\s*Prop:\s*(.+?)\s*->\s*'(.*)'$""")
+private val DESCRIPTOR_RE = Regex("""((?:Chain Partition|Hash|Hashtree) descriptor):""")
+private val PROP_RE = Regex("""Prop:\s*(.+?)\s*->\s*'(.*)'$""")
 
 private fun parseInfoImage(stdout: String): List<ResultSection> {
+    val lines = stdout.lines()
+
+    // Pass 1: collect all unique indent levels (skip blanks)
+    val indentLevels = lines
+        .filter { it.isNotBlank() }
+        .map { it.indexOfFirst { c -> c != ' ' } }
+        .distinct()
+        .sorted()
+        .toIntArray()
+    fun levelOf(indent: Int): Int = indentLevels.binarySearch(indent).coerceAtLeast(0)
+
+    // Pass 2: parse using indent levels
     val topRows = mutableListOf<ResultRow>()
     val groups = mutableListOf<ResultGroup>()
     var blockType: String? = null
-    var blockIndent = 0
     var blockLines = mutableListOf<Pair<String, String>>()
 
     fun flushBlock() {
         val type = blockType ?: return
         if (blockLines.isEmpty()) { blockType = null; return }
-        val partitionName = blockLines.firstOrNull { it.first.trim() == "Partition Name" }?.second
+        val partitionName = blockLines.firstOrNull { it.first == "Partition Name" }?.second
         val title = if (partitionName != null) "$type: $partitionName" else type
-        val summaryLines = blockLines.filter { it.first.trim() != "Partition Name" }
-            .map { "${it.first.trim()}: ${it.second}" }
+        val summaryLines = blockLines.filter { it.first != "Partition Name" }
+            .map { "${it.first}: ${it.second}" }
         groups += ResultGroup(
             title = title,
             rows = listOf(ResultRow(title, summaryLines.joinToString("\n"), monospace = true)),
@@ -155,12 +166,13 @@ private fun parseInfoImage(stdout: String): List<ResultSection> {
         blockLines = mutableListOf()
     }
 
-    stdout.lines().forEach { rawLine ->
-        if (rawLine.isBlank()) return@forEach
+    for (rawLine in lines) {
+        if (rawLine.isBlank()) continue
         val indent = rawLine.indexOfFirst { it != ' ' }
         val text = rawLine.trim()
+        val level = levelOf(indent)
 
-        if (indent == 0) {
+        if (level == 0) {
             flushBlock()
             when (text) {
                 "--", "Descriptors:", "avb_cert certificate:" -> {}
@@ -170,27 +182,26 @@ private fun parseInfoImage(stdout: String): List<ResultSection> {
                     else ResultRow(text, "")
                 }
             }
-            return@forEach
+            continue
         }
 
-        PROP_PATTERN.matchEntire(rawLine)?.let { match ->
+        // level >= 1: inside Descriptors section
+        PROP_RE.find(text)?.let { match ->
             flushBlock()
             topRows += ResultRow("Prop: ${match.groupValues[1]}", match.groupValues[2], monospace = true)
-            return@forEach
+            continue
         }
 
-        DESCRIPTOR_PATTERN.matchEntire(rawLine)?.let { match ->
+        DESCRIPTOR_RE.find(text)?.let { match ->
             flushBlock()
             blockType = match.groupValues[1]
-            blockIndent = indent
             blockLines = mutableListOf()
-            return@forEach
+            continue
         }
 
-        if (blockType != null && indent > blockIndent) {
+        if (blockType != null && level >= 2) {
             val parts = text.split(":", limit = 2)
-            val pair = if (parts.size == 2) Pair(parts[0].trim(), parts[1].trim()) else Pair(text, "")
-            blockLines += pair
+            blockLines += if (parts.size == 2) Pair(parts[0].trim(), parts[1].trim()) else Pair(text, "")
         } else {
             flushBlock()
             val parts = text.split(":", limit = 2)
