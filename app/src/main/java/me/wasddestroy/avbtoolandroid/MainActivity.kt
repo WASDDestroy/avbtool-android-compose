@@ -11,6 +11,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
@@ -20,6 +21,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Terminal
 import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteScaffold
 import androidx.compose.runtime.Composable
@@ -36,6 +38,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import me.wasddestroy.avbtoolandroid.ui.theme.AVBToolAndroidTheme
+import me.wasddestroy.avbtoolandroid.ui.theme.ThemeMode
 import java.util.concurrent.CancellationException
 import kotlinx.coroutines.launch
 
@@ -45,9 +48,7 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         runCatching { PythonRuntime.start(applicationContext) }
         setContent {
-            AVBToolAndroidTheme {
-                AVBToolAndroidApp()
-            }
+            AVBToolAndroidApp()
         }
     }
 }
@@ -58,11 +59,24 @@ enum class AppDestinations(
 ) {
     HOME(R.string.nav_home, Icons.Filled.Home),
     CONSOLE(R.string.nav_console, Icons.Filled.Terminal),
+    SETTINGS(R.string.nav_settings, Icons.Filled.Settings),
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AVBToolAndroidApp() {
+    var dynamicThemeColor by rememberSaveable { mutableStateOf(true) }
+    var themeModeName by rememberSaveable { mutableStateOf(ThemeMode.FOLLOW_SYSTEM.name) }
+    var amoledBlack by rememberSaveable { mutableStateOf(false) }
+    var predictiveBackGesture by rememberSaveable { mutableStateOf(true) }
+
+    val themeMode = runCatching { ThemeMode.valueOf(themeModeName) }.getOrDefault(ThemeMode.FOLLOW_SYSTEM)
+    val darkTheme = when (themeMode) {
+        ThemeMode.LIGHT -> false
+        ThemeMode.DARK -> true
+        ThemeMode.FOLLOW_SYSTEM -> isSystemInDarkTheme()
+    }
+
     var commandId by rememberSaveable { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()
     val commandBackProgress = remember { Animatable(0f) }
@@ -80,7 +94,7 @@ fun AVBToolAndroidApp() {
         closeCommand()
     }
 
-    PredictiveBackHandler(enabled = commandId != null) { progress ->
+    PredictiveBackHandler(enabled = commandId != null && predictiveBackGesture) { progress ->
         try {
             progress.collect { event ->
                 commandBackProgress.snapTo(event.progress)
@@ -103,25 +117,39 @@ fun AVBToolAndroidApp() {
         }
     }
 
-    Box(Modifier.fillMaxSize()) {
-        RootScreen(
-            isTopDestination = commandId == null,
-            onOpenCommand = { id -> commandId = id },
-        )
-
-        val command = commandId?.let { AvbCommands.byId(it) }
-        if (command != null) {
-            CommandScreen(
-                command = command,
-                onBack = ::closeCommand,
-                modifier = Modifier
-                    .fillMaxSize()
-                    .graphicsLayer {
-                        translationX = commandBackProgress.value * size.width
-                    },
+    AVBToolAndroidTheme(
+        darkTheme = darkTheme,
+        dynamicColor = dynamicThemeColor,
+        amoledBlack = amoledBlack,
+    ) {
+        Box(Modifier.fillMaxSize()) {
+            RootScreen(
+                isTopDestination = commandId == null,
+                onOpenCommand = { id -> commandId = id },
+                dynamicThemeColor = dynamicThemeColor,
+                themeMode = themeMode,
+                amoledBlack = amoledBlack,
+                predictiveBackGesture = predictiveBackGesture,
+                onDynamicThemeColorChange = { dynamicThemeColor = it },
+                onThemeModeChange = { themeModeName = it.name },
+                onAmoledBlackChange = { amoledBlack = it },
+                onPredictiveBackGestureChange = { predictiveBackGesture = it },
             )
-        } else if (commandId != null) {
-            LaunchedEffect(Unit) { commandId = null }
+
+            val command = commandId?.let { AvbCommands.byId(it) }
+            if (command != null) {
+                CommandScreen(
+                    command = command,
+                    onBack = ::closeCommand,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .graphicsLayer {
+                            translationX = commandBackProgress.value * size.width
+                        },
+                )
+            } else if (commandId != null) {
+                LaunchedEffect(Unit) { commandId = null }
+            }
         }
     }
 }
@@ -131,6 +159,14 @@ fun AVBToolAndroidApp() {
 private fun RootScreen(
     isTopDestination: Boolean,
     onOpenCommand: (String) -> Unit,
+    dynamicThemeColor: Boolean,
+    themeMode: ThemeMode,
+    amoledBlack: Boolean,
+    predictiveBackGesture: Boolean,
+    onDynamicThemeColorChange: (Boolean) -> Unit,
+    onThemeModeChange: (ThemeMode) -> Unit,
+    onAmoledBlackChange: (Boolean) -> Unit,
+    onPredictiveBackGestureChange: (Boolean) -> Unit,
 ) {
     var currentDestination by rememberSaveable { mutableStateOf(AppDestinations.HOME) }
     val pagerState = rememberPagerState(pageCount = { AppDestinations.entries.size })
@@ -138,22 +174,29 @@ private fun RootScreen(
     val rootScope = rememberCoroutineScope()
     var rootBackGestureInProgress by remember { mutableStateOf(false) }
 
-    // Predictive back from Console returns to Home instead of exiting the app.
+    // Predictive back from Console or Settings returns to Home instead of exiting the app.
     // Drive the pager directly from the gesture so Home is revealed during the
     // swipe, not only after it completes. The enabled flag is scoped to the
     // root destination so the command-screen pop gesture is not intercepted by
     // this handler.
+    BackHandler(
+        enabled = !predictiveBackGesture && isTopDestination && currentDestination != AppDestinations.HOME,
+    ) {
+        currentDestination = AppDestinations.HOME
+    }
+
     PredictiveBackHandler(
-        enabled = isTopDestination && currentDestination != AppDestinations.HOME,
+        enabled = predictiveBackGesture && isTopDestination && currentDestination != AppDestinations.HOME,
     ) { progress ->
         val destination = currentDestination
+        val startPage = destination.ordinal
         var lastProgress = 0f
         rootBackGestureInProgress = true
         try {
             progress.collect { event ->
                 val pageSize = pagerState.layoutInfo.pageSize.toFloat()
                 if (pageSize > 0f) {
-                    val delta = -(event.progress - lastProgress) * pageSize
+                    val delta = -(event.progress - lastProgress) * startPage * pageSize
                     if (delta != 0f) {
                         pagerState.scroll { scrollBy(delta) }
                     }
@@ -222,6 +265,17 @@ private fun RootScreen(
                         modifier = Modifier.fillMaxSize(),
                         isActive = currentDestination == AppDestinations.CONSOLE,
                         onSelectionModeChanged = { terminalSelecting = it },
+                    )
+                    AppDestinations.SETTINGS -> SettingsScreen(
+                        modifier = Modifier.fillMaxSize(),
+                        dynamicThemeColor = dynamicThemeColor,
+                        themeMode = themeMode,
+                        amoledBlack = amoledBlack,
+                        predictiveBackGesture = predictiveBackGesture,
+                        onDynamicThemeColorChange = onDynamicThemeColorChange,
+                        onThemeModeChange = onThemeModeChange,
+                        onAmoledBlackChange = onAmoledBlackChange,
+                        onPredictiveBackGestureChange = onPredictiveBackGestureChange,
                     )
                 }
             }
