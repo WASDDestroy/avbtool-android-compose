@@ -130,53 +130,73 @@ private fun parseVerifyImage(stdout: String): List<ResultSection> {
     return listOf(ResultSection(title = "Verification", rows = rows))
 }
 
+private val DESCRIPTOR_PATTERN = Regex("""^\s{4}((?:Chain Partition|Hash|Hashtree) descriptor):""")
+private val PROP_PATTERN = Regex("""^\s{4}Prop:\s*(.+?)\s*->\s*'(.*)'$""")
+
 private fun parseInfoImage(stdout: String): List<ResultSection> {
     val topRows = mutableListOf<ResultRow>()
     val groups = mutableListOf<ResultGroup>()
-    var currentGroup: MutableList<ResultRow>? = null
-    var currentGroupTitle = ""
+    var blockType: String? = null
+    var blockLines = mutableListOf<Pair<String, String>>()
 
-    fun closeGroup() {
-        val rows = currentGroup
-        if (!rows.isNullOrEmpty()) {
-            groups += ResultGroup(title = currentGroupTitle, rows = rows.toList())
-        }
-        currentGroup = null
-        currentGroupTitle = ""
+    fun flushBlock() {
+        val type = blockType ?: return
+        if (blockLines.isEmpty()) { blockType = null; return }
+        val partitionName = blockLines.firstOrNull { it.first.trim() == "Partition Name" }?.second
+        val title = if (partitionName != null) "$type: $partitionName" else type
+        val summaryLines = blockLines.filter { it.first.trim() != "Partition Name" }
+            .map { "${it.first.trim()}: ${it.second}" }
+        groups += ResultGroup(
+            title = title,
+            rows = listOf(ResultRow(title, summaryLines.joinToString("\n"), monospace = true)),
+        )
+        blockType = null
+        blockLines = mutableListOf()
     }
 
     stdout.lines().forEach { rawLine ->
         if (rawLine.isBlank()) return@forEach
         val indent = rawLine.indexOfFirst { it != ' ' }
         val text = rawLine.trim()
+
         if (indent == 0) {
-            closeGroup()
+            flushBlock()
             when (text) {
-                "--" -> {
-                    // info_image prints a separator between footer and vbmeta.
-                }
-                "Descriptors:", "avb_cert certificate:" -> {
-                    // section marker, not a row
-                }
+                "--", "Descriptors:", "avb_cert certificate:" -> {}
                 else -> {
                     val parts = text.split(":", limit = 2)
-                    topRows += if (parts.size == 2) {
-                        ResultRow(parts[0].trim(), parts[1].trim())
-                    } else {
-                        ResultRow(text, "")
-                    }
+                    topRows += if (parts.size == 2) ResultRow(parts[0].trim(), parts[1].trim())
+                    else ResultRow(text, "")
                 }
             }
-        } else if (indent <= 4 && text.endsWith(":") && !text.contains(": ")) {
-            closeGroup()
-            currentGroupTitle = text.removeSuffix(":")
-            currentGroup = mutableListOf()
+            return@forEach
+        }
+
+        PROP_PATTERN.matchEntire(rawLine)?.let { match ->
+            flushBlock()
+            topRows += ResultRow("Prop: ${match.groupValues[1]}", match.groupValues[2], monospace = true)
+            return@forEach
+        }
+
+        DESCRIPTOR_PATTERN.matchEntire(rawLine)?.let { match ->
+            flushBlock()
+            blockType = match.groupValues[1]
+            blockLines = mutableListOf()
+            return@forEach
+        }
+
+        if (blockType != null && indent >= 6) {
+            val parts = text.split(":", limit = 2)
+            val pair = if (parts.size == 2) Pair(parts[0].trim(), parts[1].trim()) else Pair(text, "")
+            blockLines += pair
         } else {
-            val row = parseIndentedRow(text)
-            if (currentGroup != null) currentGroup!!.add(row) else topRows += row
+            flushBlock()
+            val parts = text.split(":", limit = 2)
+            topRows += if (parts.size == 2) ResultRow(parts[0].trim(), parts[1].trim(), monospace = true)
+            else ResultRow(text, "")
         }
     }
-    closeGroup()
+    flushBlock()
 
     val sections = mutableListOf<ResultSection>()
     if (topRows.isNotEmpty()) {
@@ -186,13 +206,4 @@ private fun parseInfoImage(stdout: String): List<ResultSection> {
         sections += ResultSection(title = "Descriptors", groups = groups)
     }
     return sections
-}
-
-private fun parseIndentedRow(text: String): ResultRow {
-    val parts = text.split(":", limit = 2)
-    return if (parts.size == 2) {
-        ResultRow(parts[0].trim(), parts[1].trim(), monospace = true)
-    } else {
-        ResultRow(text, "")
-    }
 }
