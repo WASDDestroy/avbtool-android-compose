@@ -12,25 +12,24 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.InsertDriveFile
+import androidx.compose.material.icons.automirrored.filled.Label
 import androidx.compose.material.icons.filled.AccountTree
-import androidx.compose.material.icons.filled.CheckBox
 import androidx.compose.material.icons.filled.Calculate
+import androidx.compose.material.icons.filled.CheckBox
 import androidx.compose.material.icons.filled.DataObject
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.Image
-import androidx.compose.material.icons.automirrored.filled.InsertDriveFile
-import androidx.compose.material.icons.automirrored.filled.Label
 import androidx.compose.material.icons.filled.Key
 import androidx.compose.material.icons.filled.LayersClear
 import androidx.compose.material.icons.filled.Lock
@@ -38,8 +37,8 @@ import androidx.compose.material.icons.filled.Numbers
 import androidx.compose.material.icons.filled.Print
 import androidx.compose.material.icons.filled.Terminal
 import androidx.compose.material.icons.filled.TextFields
-import androidx.compose.material.icons.filled.Verified
 import androidx.compose.material.icons.filled.Tune
+import androidx.compose.material.icons.filled.Verified
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -66,24 +65,24 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import me.wasddestroy.avbtoolandroid.ui.components.DialogConfirmButton
-import me.wasddestroy.avbtoolandroid.ui.components.DialogDismissButton
-import me.wasddestroy.avbtoolandroid.ui.components.DialogNeutralButton
-import me.wasddestroy.avbtoolandroid.ui.components.PreferenceGroup
-import me.wasddestroy.avbtoolandroid.ui.components.PreferenceRow
-import me.wasddestroy.avbtoolandroid.ui.components.PreferenceValueRow
-import me.wasddestroy.avbtoolandroid.ui.components.PreferenceSwitchRow
-import me.wasddestroy.avbtoolandroid.ui.components.SettingsList
-import me.wasddestroy.avbtoolandroid.ui.components.preferenceGroup
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
+import me.wasddestroy.avbtoolandroid.ui.components.DialogConfirmButton
+import me.wasddestroy.avbtoolandroid.ui.components.DialogDismissButton
+import me.wasddestroy.avbtoolandroid.ui.components.PreferenceGroup
+import me.wasddestroy.avbtoolandroid.ui.components.PreferenceRow
+import me.wasddestroy.avbtoolandroid.ui.components.PreferenceSwitchRow
+import me.wasddestroy.avbtoolandroid.ui.components.PreferenceValueRow
+import me.wasddestroy.avbtoolandroid.ui.components.SettingsList
+import me.wasddestroy.avbtoolandroid.ui.components.preferenceGroup
 import java.io.File
+import androidx.core.net.toUri
 
 private const val IMAGE_STORAGE_KEY = "__image__"
 
@@ -154,12 +153,14 @@ fun CommandScreen(
         pendingOutputFile = null
     }
 
+    val chooseImageError = stringResource(R.string.command_choose_image_error)
+
     fun onRun() {
         val imageUri = values[IMAGE_STORAGE_KEY].orEmpty()
         if (imageUri.isBlank()) {
             result = AvbCommandResult(
                 status = AvbResultStatus.FAILED,
-                errors = listOf(context.getString(R.string.command_choose_image_error)),
+                errors = listOf(chooseImageError),
             )
             return
         }
@@ -168,7 +169,7 @@ fun CommandScreen(
             runCommand(
                 cmd = command,
                 values = values,
-                uri = Uri.parse(imageUri),
+                uri = imageUri.toUri(),
                 bridge = bridge,
                 runner = runner,
                 scope = scope,
@@ -365,7 +366,7 @@ fun CommandScreen(
                     runCommand(
                         cmd = cmdToRun,
                         values = values,
-                        uri = Uri.parse(values[IMAGE_STORAGE_KEY].orEmpty()),
+                        uri = values[IMAGE_STORAGE_KEY].orEmpty().toUri(),
                         bridge = bridge,
                         runner = runner,
                         scope = scope,
@@ -599,18 +600,17 @@ private fun CommandArgRow(
     onChooseAlgorithm: () -> Unit,
     onToggleBoolean: (Boolean) -> Unit,
 ) {
-    val context = LocalContext.current
     when (arg.type) {
         ArgType.IMAGE, ArgType.FILE -> {
             val key = storageKey(arg)
             val lines = value.lines().filter { it.isNotBlank() }
             val summary = if (arg.repeatable) {
-                if (lines.isEmpty()) context.getString(R.string.command_choose_file)
-                else context.resources.getQuantityString(R.plurals.command_files_selected, lines.size, lines.size)
+                if (lines.isEmpty()) stringResource(R.string.command_choose_file)
+                else pluralStringResource(R.plurals.command_files_selected, lines.size, lines.size)
             } else {
-                val fileName = lines.firstOrNull()?.let { runCatching { Uri.parse(it).lastPathSegment }.getOrNull() }
+                val fileName = lines.firstOrNull()?.let { runCatching { it.toUri().lastPathSegment }.getOrNull() }
                 when {
-                    fileName.isNullOrBlank() -> context.getString(R.string.command_choose_file)
+                    fileName.isNullOrBlank() -> stringResource(R.string.command_choose_file)
                     else -> fileName
                 }
             }
@@ -771,7 +771,6 @@ private fun CommandFileListDialog(
     onRemove: (Int) -> Unit,
 ) {
     val lines = value.lines().filter { it.isNotBlank() }
-    val context = LocalContext.current
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(arg.labelRes)) },
@@ -783,7 +782,7 @@ private fun CommandFileListDialog(
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 lines.forEachIndexed { index, item ->
-                    val fileName = runCatching { Uri.parse(item).lastPathSegment }.getOrNull()
+                    val fileName = runCatching { item.toUri().lastPathSegment }.getOrNull()
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         verticalAlignment = Alignment.CenterVertically,
@@ -851,38 +850,6 @@ private fun AlgorithmChoiceDialog(
             }
         },
     )
-}
-
-private fun argvPreview(cmd: AvbCommand, values: Map<String, String>): List<String> {
-    val argv = mutableListOf("avbtool", cmd.id, "--image", values[IMAGE_STORAGE_KEY] ?: "")
-    cmd.args.forEach { arg ->
-        when (arg.type) {
-            ArgType.BOOL -> if ((values[arg.key] ?: "").toBooleanStrictOrNull() == true) argv += arg.key
-            ArgType.TEXT, ArgType.INT, ArgType.FILE, ArgType.ALGORITHM -> {
-                val raw = values[arg.key].orEmpty()
-                val vals = if (arg.repeatable) raw.lines().filter { it.isNotBlank() } else listOf(raw)
-                vals.forEach { v ->
-                    if (v.isNotBlank()) {
-                        argv += arg.key
-                        argv += v
-                    }
-                }
-            }
-            ArgType.IMAGE -> Unit
-        }
-    }
-    return argv
-}
-
-private fun buildResult(argv: List<String>, stdout: String, stderr: String): String {
-    return buildString {
-        append("> ${argv.joinToString(" ")}\n\n")
-        append(stdout)
-        if (stderr.isNotBlank()) {
-            append("\n[stderr]\n")
-            append(stderr)
-        }
-    }
 }
 
 private fun runCommand(
@@ -953,7 +920,7 @@ private fun runCommand(
                     vals.forEach { v ->
                         if (v.isNotBlank()) {
                             if (v.startsWith("content://")) {
-                                val fd = bridge.openRead(Uri.parse(v))
+                                val fd = bridge.openRead(v.toUri())
                                 if (fd != null) {
                                     extraFds += fd
                                     argv += arg.key

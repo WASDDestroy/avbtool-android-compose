@@ -61,7 +61,7 @@ class MainActivity : ComponentActivity() {
 }
 
 enum class AppDestinations(
-    @StringRes val labelRes: Int,
+    @param:StringRes val labelRes: Int,
     val icon: ImageVector,
 ) {
     HOME(R.string.nav_home, Icons.Filled.Home),
@@ -70,7 +70,7 @@ enum class AppDestinations(
 }
 
 enum class LanguageMode(
-    @StringRes val labelRes: Int,
+    @param:StringRes val labelRes: Int,
     val tag: String?,
 ) {
     FOLLOW_SYSTEM(R.string.settings_language_follow_system, null),
@@ -233,7 +233,7 @@ private fun RootScreen(
             currentDestination = AppDestinations.HOME
             rootBackGestureInProgress = false
         } catch (e: CancellationException) {
-            // Gesture cancelled: snap back to the page the gesture started
+            // Gesture canceled: snap back to the page the gesture started
             // from. Keep the settled-page observer disabled until the snap-back
             // finishes so an intermediate pager currentPage cannot disable the
             // predictive back handler or start a conflicting animation.

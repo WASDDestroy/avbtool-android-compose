@@ -28,6 +28,7 @@ object PythonRuntime {
         }
     }
 
+    @Suppress("unused")
     fun isStarted(): Boolean = started
 }
 
@@ -41,7 +42,7 @@ class AvbTaskRunner(private val context: Context) {
     suspend fun run(argv: List<String>): AvbRunResult = withContext(Dispatchers.IO) {
         try {
             PythonRuntime.start(context.applicationContext)
-            val bridge = PythonRuntime.pyBridge()
+            val bridge = pyBridge()
             val result = bridge.callAttr("run_avbtool", PyObject.fromJava(argv.toTypedArray()))
             val items = result.asList()
             AvbRunResult(
@@ -60,7 +61,7 @@ class AvbTaskRunner(private val context: Context) {
     }
 }
 
-private fun PythonRuntime.pyBridge(): PyObject {
+private fun pyBridge(): PyObject {
     return Python.getInstance().getModule("android_bridge")
 }
 
@@ -72,7 +73,7 @@ class SafFileBridge(private val context: Context) {
     fun openRead(uri: Uri): Int? {
         return try {
             resolver.openFileDescriptor(uri, "r")?.detachFd()
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             null
         }
     }
@@ -80,11 +81,12 @@ class SafFileBridge(private val context: Context) {
     fun openReadWrite(uri: Uri): Int? {
         return try {
             resolver.openFileDescriptor(uri, "rw")?.detachFd()
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             null
         }
     }
 
+    @Suppress("unused")
     fun openWrite(uri: Uri): Int? {
         return try {
             resolver.openFileDescriptor(uri, "rwt")?.detachFd()
@@ -97,7 +99,7 @@ class SafFileBridge(private val context: Context) {
         if (fd >= 0) {
             try {
                 ParcelFileDescriptor.adoptFd(fd).close()
-            } catch (e: Exception) {
+            } catch (_: Exception) {
                 // already closed or invalid
             }
         }
@@ -109,7 +111,7 @@ class SafFileBridge(private val context: Context) {
                 val idx = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
                 if (idx >= 0 && cursor.moveToFirst()) cursor.getString(idx) else null
             } ?: uri.lastPathSegment ?: "image.img"
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             uri.lastPathSegment ?: "image.img"
         }
     }
@@ -124,7 +126,7 @@ class SafFileBridge(private val context: Context) {
                 target.outputStream().use { output -> input.copyTo(output) }
             }
             target
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             null
         }
     }

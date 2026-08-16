@@ -1,5 +1,6 @@
 package me.wasddestroy.avbtoolandroid
 
+import android.annotation.SuppressLint
 import android.content.Context
 import android.util.DisplayMetrics
 import android.view.MotionEvent
@@ -14,6 +15,7 @@ import jackpal.androidterm.emulatorview.TermSession
  * selection mode, dragging selects terminal text and releasing copies it to
  * the clipboard.
  */
+@SuppressLint("ViewConstructor")
 class CopyableEmulatorView(
     context: Context,
     session: TermSession,

@@ -80,8 +80,8 @@ fun PreferenceGroup(
 
 @Composable
 fun PreferenceGroup(
-    titleRes: Int? = null,
     modifier: Modifier = Modifier,
+    titleRes: Int? = null,
     content: PreferenceGroupScope.() -> Unit,
 ) {
     PreferenceGroupWithTitleText(titleText = titleRes?.let { stringResource(it) }, modifier = modifier, content = content)
@@ -120,6 +120,7 @@ private fun PreferenceGroupWithTitleText(
 }
 
 class PreferenceGroupScope(private val items: MutableList<@Composable () -> Unit>) {
+    @Suppress("unused")
     fun row(key: Any? = null, content: @Composable () -> Unit) {
         items += content
     }
@@ -301,6 +302,7 @@ fun DialogConfirmButton(
     content = content,
 )
 
+@Suppress("unused")
 @Composable
 fun DialogNeutralButton(
     onClick: () -> Unit,

@@ -7,19 +7,19 @@ enum class ArgType { IMAGE, TEXT, INT, BOOL, FILE, ALGORITHM }
 
 data class AvbArg(
     val key: String,
-    @StringRes val labelRes: Int,
+    @param:StringRes val labelRes: Int,
     val type: ArgType,
     val required: Boolean = false,
     val defaultValue: String? = null,
-    @StringRes val helpRes: Int? = null,
+    @param:StringRes val helpRes: Int? = null,
     val advanced: Boolean = false,
     val repeatable: Boolean = false
 )
 
 data class AvbCommand(
     val id: String,
-    @StringRes val titleRes: Int,
-    @StringRes val descriptionRes: Int,
+    @param:StringRes val titleRes: Int,
+    @param:StringRes val descriptionRes: Int,
     val args: List<AvbArg>,
     val readOnly: Boolean = true,
     val producesFile: Boolean = false

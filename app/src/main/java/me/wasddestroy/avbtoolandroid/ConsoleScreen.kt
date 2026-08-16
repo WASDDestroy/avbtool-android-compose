@@ -14,26 +14,24 @@ import android.view.inputmethod.InputMethodManager
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.navigationBars
-import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.ime
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
-import androidx.compose.material3.Surface
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.res.stringResource
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -41,15 +39,15 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.viewinterop.AndroidView
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
-import jackpal.androidterm.emulatorview.EmulatorView
+import androidx.core.net.toUri
 
 private fun hasStoragePermission(context: Context): Boolean {
     return if (Build.VERSION.SDK_INT >= 30) {
@@ -62,9 +60,11 @@ private fun hasStoragePermission(context: Context): Boolean {
 
 private fun storagePermissionIntent(context: Context): Intent {
     return if (Build.VERSION.SDK_INT >= 30) {
-        Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION, Uri.parse("package:" + context.packageName))
+        Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION,
+            ("package:" + context.packageName).toUri())
     } else {
-        Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:" + context.packageName))
+        Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+            ("package:" + context.packageName).toUri())
     }
 }
 
@@ -84,6 +84,7 @@ fun ConsoleScreen(
     fun showIme(view: CopyableEmulatorView) {
         view.requestFocus()
         val imm = context.getSystemService(Context.INPUT_METHOD_SERVICE) as? InputMethodManager
+        @Suppress("DEPRECATION")
         imm?.showSoftInput(view, InputMethodManager.SHOW_IMPLICIT)
     }
 
@@ -184,6 +185,7 @@ fun ConsoleScreen(
                             }
                             MotionEvent.ACTION_UP -> {
                                 if (!moved && !(v as CopyableEmulatorView).selectingText) {
+                                    v.performClick()
                                     showIme(v)
                                 }
                             }
@@ -193,7 +195,7 @@ fun ConsoleScreen(
                 }
             },
             update = { view ->
-                if (view.getTermSession() !== session) {
+                if (view.termSession !== session) {
                     view.attachSession(view.context, session)
                 }
             },

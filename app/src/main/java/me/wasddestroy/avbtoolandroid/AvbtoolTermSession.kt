@@ -27,11 +27,11 @@ class AvbtoolTermSession(
         // TermSession normally bridges a PTY process. We run Python in-process,
         // so provide dummy streams so the legacy reader/writer threads exit/idle
         // without NPEs. Our overridden write() handles keyboard input directly.
-        setTermIn(ByteArrayInputStream(ByteArray(0)))
-        setTermOut(object : OutputStream() {
+        termIn = ByteArrayInputStream(ByteArray(0))
+        termOut = object : OutputStream() {
             override fun write(b: Int) = Unit
             override fun write(b: ByteArray, off: Int, len: Int) = Unit
-        })
+        }
     }
 
     fun insertText(text: String) {
@@ -174,7 +174,7 @@ class AvbtoolTermSession(
 
             val argv = parseConsoleCommand(command)
             if (argv == null) {
-                appendOutput("? cannot parse: " + command + "\r\n")
+                appendOutput("? cannot parse: $command\r\n")
             } else {
                 scope.launch {
                     val result = runner.run(argv)

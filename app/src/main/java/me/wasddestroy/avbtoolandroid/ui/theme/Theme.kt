@@ -13,7 +13,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import me.wasddestroy.avbtoolandroid.R
 
-enum class ThemeMode(@StringRes val labelRes: Int) {
+enum class ThemeMode(@param:StringRes val labelRes: Int) {
     LIGHT(R.string.settings_theme_mode_light),
     DARK(R.string.settings_theme_mode_dark),
     FOLLOW_SYSTEM(R.string.settings_theme_mode_follow_system),

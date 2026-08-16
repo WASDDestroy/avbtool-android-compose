@@ -4,14 +4,13 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.Brightness6
+import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Palette
@@ -32,7 +31,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.core.content.pm.PackageInfoCompat
@@ -251,6 +249,7 @@ private fun AboutDialog(onDismiss: () -> Unit) {
     }
     val versionName = packageInfo?.versionName ?: stringResource(R.string.settings_about_version_unknown)
     val versionCode = packageInfo?.let { PackageInfoCompat.getLongVersionCode(it) } ?: 0L
+    val aboutGitHubUrl = stringResource(R.string.settings_about_github_url)
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -263,7 +262,7 @@ private fun AboutDialog(onDismiss: () -> Unit) {
         dismissButton = {
             TextButton(
                 onClick = {
-                    runCatching { uriHandler.openUri(context.getString(R.string.settings_about_github_url)) }
+                    runCatching { uriHandler.openUri(aboutGitHubUrl) }
                     onDismiss()
                 },
             ) {

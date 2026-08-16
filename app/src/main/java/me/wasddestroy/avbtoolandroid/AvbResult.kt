@@ -1,7 +1,6 @@
 package me.wasddestroy.avbtoolandroid
 
 import org.json.JSONObject
-import java.io.File
 
 enum class AvbResultStatus { RUNNING, SUCCESS, FAILED, CANCELLED }
 
@@ -112,14 +111,14 @@ private fun parsePartitionDigests(stdout: String): List<ResultSection> {
 }
 
 private fun parseVerifyImage(stdout: String): List<ResultSection> {
-    val rows = stdout.lines().filter { it.isNotBlank() }.mapNotNull { line ->
+    val rows = stdout.lines().filter { it.isNotBlank() }.map { line ->
         val trimmed = line.trim()
         when {
             trimmed.startsWith("Verifying image") -> ResultRow("Image", trimmed.removePrefix("Verifying image ").trim())
             trimmed.contains("Successfully verified") -> {
                 val prefix = trimmed.substringBefore(": Successfully verified", missingDelimiterValue = "")
                 ResultRow(
-                    title = if (prefix.isBlank()) "Verification" else prefix,
+                    title = prefix.ifBlank { "Verification" },
                     value = "Success",
                 )
             }
@@ -139,7 +138,7 @@ private fun parseInfoImage(stdout: String): List<ResultSection> {
 
     fun closeGroup() {
         val rows = currentGroup
-        if (rows != null && rows.isNotEmpty()) {
+        if (!rows.isNullOrEmpty()) {
             groups += ResultGroup(title = currentGroupTitle, rows = rows.toList())
         }
         currentGroup = null
@@ -152,16 +151,20 @@ private fun parseInfoImage(stdout: String): List<ResultSection> {
         val text = rawLine.trim()
         if (indent == 0) {
             closeGroup()
-            if (text == "--") {
-                // info_image prints a separator between footer and vbmeta.
-            } else if (text == "Descriptors:" || text == "avb_cert certificate:") {
-                // section marker, not a row
-            } else {
-                val parts = text.split(":", limit = 2)
-                if (parts.size == 2) {
-                    topRows += ResultRow(parts[0].trim(), parts[1].trim())
-                } else {
-                    topRows += ResultRow(text, "")
+            when (text) {
+                "--" -> {
+                    // info_image prints a separator between footer and vbmeta.
+                }
+                "Descriptors:", "avb_cert certificate:" -> {
+                    // section marker, not a row
+                }
+                else -> {
+                    val parts = text.split(":", limit = 2)
+                    topRows += if (parts.size == 2) {
+                        ResultRow(parts[0].trim(), parts[1].trim())
+                    } else {
+                        ResultRow(text, "")
+                    }
                 }
             }
         } else if (indent <= 4 && text.endsWith(":") && !text.contains(": ")) {
