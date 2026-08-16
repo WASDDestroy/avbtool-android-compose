@@ -41,11 +41,11 @@ fun HomeScreen(
         item("header") {
             Column(Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
                 Text(
-                    text = stringResource(R.string.home_commands_title),
+                    text = stringResource(R.string.home_avbdroid_title),
                     style = MaterialTheme.typography.headlineSmall,
                 )
                 Text(
-                    text = stringResource(R.string.home_commands_subtitle),
+                    text = stringResource(R.string.home_gui_features_subtitle),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
