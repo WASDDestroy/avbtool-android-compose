@@ -104,7 +104,7 @@ class AvbtoolTermSession(
             s.endsWith("H") -> moveCursor(Int.MIN_VALUE)
             s.endsWith("F") -> moveCursor(Int.MAX_VALUE)
         }
-        if (b.toChar() in 'A'..'Z' || b.toChar() in 'a'..'z') {
+        if (b.toChar() in 'A'..'Z' || b.toChar() in 'a'..'z' || b.toChar() == '~') {
             escapeActive = false
             escapeBuffer.setLength(0)
         }

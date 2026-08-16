@@ -17,6 +17,9 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -37,9 +40,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import jackpal.androidterm.emulatorview.EmulatorView
-import kotlinx.coroutines.delay
 
 private fun hasStoragePermission(context: Context): Boolean {
     return if (Build.VERSION.SDK_INT >= 30) {
@@ -85,10 +88,7 @@ fun ConsoleScreen(
 
     LaunchedEffect(isActive, terminalView) {
         val view = terminalView ?: return@LaunchedEffect
-        if (isActive) {
-            delay(100)
-            showIme(view)
-        } else {
+        if (!isActive) {
             hideIme(view)
         }
     }
@@ -166,6 +166,45 @@ fun ConsoleScreen(
                 .fillMaxWidth()
                 .weight(1f)
         )
+
+        SoftKeyBar(session = session)
+    }
+}
+
+@Composable
+private fun SoftKeyBar(session: AvbtoolTermSession) {
+    val keys = listOf(
+        "Ctrl" to "",
+        "Tab" to "	",
+        "Esc" to "",
+        "PgUp" to "[5~",
+        "PgDn" to "[6~",
+        "←" to "[D",
+        "↑" to "[A",
+        "↓" to "[B",
+        "→" to "[C",
+        "Home" to "[H",
+        "End" to "[F",
+    )
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .imePadding()
+            .padding(horizontal = 4.dp, vertical = 2.dp),
+        horizontalArrangement = Arrangement.spacedBy(2.dp),
+    ) {
+        keys.forEach { (label, seq) ->
+            TextButton(
+                onClick = {
+                    val bytes = seq.toByteArray()
+                    session.write(bytes, 0, bytes.size)
+                },
+                contentPadding = PaddingValues(horizontal = 6.dp, vertical = 0.dp),
+                modifier = Modifier.height(36.dp),
+            ) {
+                Text(label, fontSize = 12.sp)
+            }
+        }
     }
 }
 
