@@ -620,12 +620,6 @@ private fun ResultView(result: AvbCommandResult) {
                     }
                 }
                 section.groups.forEach { group ->
-                    row(group.title) {
-                        PreferenceValueRow(
-                            title = group.title,
-                            value = "",
-                        )
-                    }
                     group.rows.forEach { rowData ->
                         row(group.title + ":" + rowData.title) {
                             PreferenceValueRow(
