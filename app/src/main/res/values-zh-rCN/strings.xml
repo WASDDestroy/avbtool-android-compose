@@ -194,7 +194,9 @@
     <string name="command_edit">编辑</string>
     <string name="command_chain_partition_edit_title">链式分区</string>
     <string name="command_chain_partition_name">分区名</string>
-    <string name="command_chain_partition_index">Rollback index</string>
+    <string name="command_chain_partition_index">回滚索引位置</string>
+    <string name="command_add_chain_partition">添加链式分区</string>
+    <string name="command_chain_partition_summary_empty">添加一组链式分区配置</string>
     <string name="command_chain_partition_key">密钥文件</string>
     <plurals name="command_chain_partitions_count">
         <item quantity="one">%d 个链式分区</item>

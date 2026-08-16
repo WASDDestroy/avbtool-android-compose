@@ -761,7 +761,7 @@ private fun CommandArgRow(
             PreferenceRow(
                 title = stringResource(arg.labelRes) + if (arg.required) stringResource(R.string.command_required) else "",
                 iconContent = { RowIcon(Icons.Filled.Link) },
-                summary = if (entries.isEmpty()) stringResource(R.string.command_choose_file)
+                summary = if (entries.isEmpty()) stringResource(R.string.command_chain_partition_summary_empty)
                           else pluralStringResource(R.plurals.command_chain_partitions_count, entries.size, entries.size),
                 onClick = onManageChain,
             )
@@ -1018,7 +1018,7 @@ private fun ChainPartitionListDialog(
                     }
                 }
                 TextButton(onClick = onAdd) {
-                    Text(stringResource(R.string.command_add_file))
+                    Text(stringResource(R.string.command_add_chain_partition))
                 }
             }
         },

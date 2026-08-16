@@ -194,7 +194,9 @@
     <string name="command_edit">Edit</string>
     <string name="command_chain_partition_edit_title">Chain partition</string>
     <string name="command_chain_partition_name">Partition name</string>
-    <string name="command_chain_partition_index">Rollback index</string>
+    <string name="command_chain_partition_index">Rollback index location</string>
+    <string name="command_add_chain_partition">Add chain partition</string>
+    <string name="command_chain_partition_summary_empty">Add a chain partition configuration</string>
     <string name="command_chain_partition_key">Key file</string>
     <plurals name="command_chain_partitions_count">
         <item quantity="one">%d chain partition</item>
