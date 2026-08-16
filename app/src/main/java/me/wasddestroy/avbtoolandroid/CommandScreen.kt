@@ -239,7 +239,7 @@ fun CommandScreen(
             }
 
             if (command.inputs.isNotEmpty() || imageArgs.isNotEmpty()) {
-                preferenceGroup(titleRes = imageSectionTitle) {
+                preferenceGroup(key = "main_options", titleRes = imageSectionTitle) {
                     command.inputs.forEach { input ->
                         row(input.key) {
                             FileInputRow(
@@ -276,7 +276,7 @@ fun CommandScreen(
                 }
             }
             if (keyArgs.isNotEmpty()) {
-                preferenceGroup(titleRes = R.string.command_section_key_configs) {
+                preferenceGroup(key = "key_configs", titleRes = R.string.command_section_key_configs) {
                     keyArgs.forEach { arg ->
                         row(arg.key) {
                             CommandArgRow(
@@ -300,7 +300,7 @@ fun CommandScreen(
                 }
             }
             if (switchArgs.isNotEmpty()) {
-                preferenceGroup(titleRes = R.string.command_section_options) {
+                preferenceGroup(key = "switch_options", titleRes = R.string.command_section_options) {
                     switchArgs.forEach { arg ->
                         row(arg.key) {
                             PreferenceSwitchRow(
@@ -317,7 +317,7 @@ fun CommandScreen(
             }
     
             if (advancedArgs.isNotEmpty()) {
-                preferenceGroup(titleRes = R.string.command_section_advanced) {
+                preferenceGroup(key = "advanced_options", titleRes = R.string.command_section_advanced) {
                     if (advancedExpanded) {
                         advancedArgs.forEach { arg ->
                             row(arg.key) {
