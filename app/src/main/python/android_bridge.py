@@ -70,6 +70,18 @@ class _SafFileWrapper(object):
     def __iter__(self):
         return iter(self._fileobj)
 
+    def close(self):
+        try:
+            self._fileobj.close()
+        finally:
+            self.closed = True
+
+    def __del__(self):
+        try:
+            self._fileobj.close()
+        except Exception:
+            pass
+
     def __next__(self):
         return next(self._fileobj)
 

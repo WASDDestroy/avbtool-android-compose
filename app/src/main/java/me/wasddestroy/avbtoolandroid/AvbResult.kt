@@ -39,9 +39,9 @@ fun parseAvbResult(commandId: String, stdout: String, stderr: String): AvbComman
         }
     }
     val stderrLines = stderr.lines().filter { it.isNotBlank() }
-    val errors = stderrLines.filter { isErrorLine(it) }
-    val warnings = stderrLines.filter { !isErrorLine(it) }
-    val failed = errors.isNotEmpty() || stderr.contains("Traceback")
+    val failed = stderrLines.any { isErrorLine(it) } || stderr.contains("Traceback")
+    val errors = if (failed) stderrLines else stderrLines.filter { isErrorLine(it) }
+    val warnings = if (failed) emptyList() else stderrLines.filter { !isErrorLine(it) }
     val status = if (failed) AvbResultStatus.FAILED else AvbResultStatus.SUCCESS
 
     val sections = when (commandId) {
