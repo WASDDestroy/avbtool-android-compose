@@ -77,6 +77,6 @@ Before building:
 
 ## Before committing
 
-- Run `./gradlew :app:assembleDebug :app:assembleRelease`.
+- Run `./gradlew :app:assembleDebug` **and** `./gradlew :app:assembleRelease` (both must pass; `lintVitalRelease` catches issues invisible to debug builds, and release-mode Compose brings significant performance improvements).
 - Ensure `git status` does not include build outputs (`app/build/`, `app/release/`, `.kotlin/` are ignored).
 - Use clear, imperative commit messages.
