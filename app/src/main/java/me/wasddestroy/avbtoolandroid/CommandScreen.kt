@@ -31,6 +31,7 @@ import androidx.compose.material.icons.filled.DataObject
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.Key
+import androidx.compose.material.icons.filled.Link
 import androidx.compose.material.icons.filled.LayersClear
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Numbers
@@ -126,9 +127,17 @@ fun CommandScreen(
     var editingArg by remember { mutableStateOf<AvbArg?>(null) }
     var choosingAlgorithm by remember { mutableStateOf(false) }
     var managingFileArg by remember { mutableStateOf<AvbArg?>(null) }
+    var managingChainArg by remember { mutableStateOf<AvbArg?>(null) }
+    var chainEditor by remember { mutableStateOf<Pair<AvbArg, Int?>?>(null) }
+    var chainKeyPickRequest by remember { mutableStateOf<((Uri) -> Unit)?>(null) }
     var advancedExpanded by remember { mutableStateOf(false) }
 
     val openDocument = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri: Uri? ->
+        chainKeyPickRequest?.let { callback ->
+            chainKeyPickRequest = null
+            if (uri != null) callback(uri)
+            return@rememberLauncherForActivityResult
+        }
         val key = pendingArgKey ?: return@rememberLauncherForActivityResult
         uri ?: return@rememberLauncherForActivityResult
         val index = pendingArgIndex
@@ -265,6 +274,7 @@ fun CommandScreen(
                                     openDocument.launch(arrayOf("*/*"))
                                 },
                                 onManageFile = { managingFileArg = arg },
+                                onManageChain = { managingChainArg = arg },
                                 onEditText = { editingArg = arg },
                                 onChooseAlgorithm = { choosingAlgorithm = true },
                                 onToggleBoolean = { checked ->
@@ -289,6 +299,7 @@ fun CommandScreen(
                                     openDocument.launch(arrayOf("*/*"))
                                 },
                                 onManageFile = { managingFileArg = arg },
+                                onManageChain = { managingChainArg = arg },
                                 onEditText = { editingArg = arg },
                                 onChooseAlgorithm = { choosingAlgorithm = true },
                                 onToggleBoolean = { checked ->
@@ -341,6 +352,7 @@ fun CommandScreen(
                                             openDocument.launch(arrayOf("*/*"))
                                         },
                                         onManageFile = { managingFileArg = arg },
+                                        onManageChain = { managingChainArg = arg },
                                         onEditText = { editingArg = arg },
                                         onChooseAlgorithm = { choosingAlgorithm = true },
                                         onToggleBoolean = { checked ->
@@ -460,6 +472,53 @@ fun CommandScreen(
                 val lines = old.lines().filter { it.isNotBlank() }.toMutableList()
                 if (index in lines.indices) lines.removeAt(index)
                 values = values + (key to lines.joinToString("\n"))
+            },
+        )
+    }
+
+    managingChainArg?.let { arg ->
+        ChainPartitionListDialog(
+            arg = arg,
+            value = values[storageKey(arg)].orEmpty(),
+            onDismiss = { managingChainArg = null },
+            onAdd = {
+                managingChainArg = null
+                chainEditor = arg to null
+            },
+            onEdit = { index ->
+                managingChainArg = null
+                chainEditor = arg to index
+            },
+            onRemove = { index ->
+                val key = storageKey(arg)
+                val old = values[key].orEmpty()
+                val lines = old.lines().filter { it.isNotBlank() }.toMutableList()
+                if (index in lines.indices) lines.removeAt(index)
+                values = values + (key to lines.joinToString("\n"))
+            },
+        )
+    }
+
+    chainEditor?.let { (arg, editIndex) ->
+        val key = storageKey(arg)
+        val entries = (values[key].orEmpty()).lines().filter { it.isNotBlank() }
+        val initial = if (editIndex != null && editIndex in entries.indices) entries[editIndex] else ""
+        ChainPartitionEditDialog(
+            initial = initial,
+            onDismiss = { chainEditor = null },
+            onPickKey = { callback ->
+                chainKeyPickRequest = callback
+                openDocument.launch(arrayOf("*/*"))
+            },
+            onConfirm = { entry ->
+                val newEntries = entries.toMutableList()
+                if (editIndex != null && editIndex in newEntries.indices) {
+                    newEntries[editIndex] = entry
+                } else {
+                    newEntries.add(entry)
+                }
+                values = values + (key to newEntries.joinToString("\n"))
+                chainEditor = null
             },
         )
     }
@@ -649,6 +708,7 @@ private fun CommandArgRow(
     values: Map<String, String>,
     onPickFile: (String, Int?) -> Unit,
     onManageFile: () -> Unit,
+    onManageChain: () -> Unit,
     onEditText: () -> Unit,
     onChooseAlgorithm: () -> Unit,
     onToggleBoolean: (Boolean) -> Unit,
@@ -694,6 +754,16 @@ private fun CommandArgRow(
                 iconContent = { ArgIcon(arg) },
                 summary = value.ifBlank { "NONE" },
                 onClick = onChooseAlgorithm,
+            )
+        }
+        ArgType.CHAIN_PARTITION -> {
+            val entries = value.lines().filter { it.isNotBlank() }
+            PreferenceRow(
+                title = stringResource(arg.labelRes) + if (arg.required) stringResource(R.string.command_required) else "",
+                iconContent = { RowIcon(Icons.Filled.Link) },
+                summary = if (entries.isEmpty()) stringResource(R.string.command_choose_file)
+                          else pluralStringResource(R.plurals.command_chain_partitions_count, entries.size, entries.size),
+                onClick = onManageChain,
             )
         }
         ArgType.BOOL -> {
@@ -905,6 +975,127 @@ private fun AlgorithmChoiceDialog(
     )
 }
 
+@Composable
+private fun ChainPartitionListDialog(
+    arg: AvbArg,
+    value: String,
+    onDismiss: () -> Unit,
+    onAdd: () -> Unit,
+    onEdit: (Int) -> Unit,
+    onRemove: (Int) -> Unit,
+) {
+    val entries = value.lines().filter { it.isNotBlank() }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(arg.labelRes)) },
+        text = {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                entries.forEachIndexed { index, entry ->
+                    val keyPart = entry.substringAfterLast(':')
+                    val keyName = runCatching { keyPart.toUri().lastPathSegment }.getOrNull()
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        Text(
+                            text = entry.replace(keyPart, keyName ?: keyPart),
+                            modifier = Modifier.weight(1f),
+                            style = MaterialTheme.typography.bodyMedium,
+                        )
+                        TextButton(onClick = { onEdit(index) }) {
+                            Text(stringResource(R.string.command_edit))
+                        }
+                        TextButton(onClick = { onRemove(index) }) {
+                            Text(stringResource(R.string.command_remove_file))
+                        }
+                    }
+                }
+                TextButton(onClick = onAdd) {
+                    Text(stringResource(R.string.command_add_file))
+                }
+            }
+        },
+        confirmButton = {
+            DialogDismissButton(onClick = onDismiss) {
+                Text(stringResource(android.R.string.ok))
+            }
+        },
+    )
+}
+
+@Composable
+private fun ChainPartitionEditDialog(
+    initial: String,
+    onDismiss: () -> Unit,
+    onPickKey: ((Uri) -> Unit) -> Unit,
+    onConfirm: (String) -> Unit,
+) {
+    val tokens = initial.split(":")
+    var partition by remember { mutableStateOf(tokens.getOrElse(0) { "" }) }
+    var rollbackIndex by remember { mutableStateOf(tokens.getOrElse(1) { "" }) }
+    var keyUri by remember { mutableStateOf(tokens.drop(2).joinToString(":")) }
+    val keyName = runCatching { keyUri.toUri().lastPathSegment }.getOrNull() ?: keyUri
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.command_chain_partition_edit_title)) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedTextField(
+                    value = partition,
+                    onValueChange = { partition = it },
+                    label = { Text(stringResource(R.string.command_chain_partition_name)) },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                OutlinedTextField(
+                    value = rollbackIndex,
+                    onValueChange = { rollbackIndex = it },
+                    label = { Text(stringResource(R.string.command_chain_partition_index)) },
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = stringResource(R.string.command_chain_partition_key) + ": " + keyName,
+                        modifier = Modifier.weight(1f),
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                    TextButton(onClick = { onPickKey { uri -> keyUri = uri.toString() } }) {
+                        Text(stringResource(R.string.command_choose_file))
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            DialogConfirmButton(
+                onClick = {
+                    val p = partition.trim()
+                    val r = rollbackIndex.trim()
+                    val k = keyUri.trim()
+                    if (p.isNotBlank() && r.isNotBlank() && k.isNotBlank()) {
+                        onConfirm("$p:$r:$k")
+                    }
+                },
+            ) {
+                Text(stringResource(android.R.string.ok))
+            }
+        },
+        dismissButton = {
+            DialogDismissButton(onClick = onDismiss) {
+                Text(stringResource(android.R.string.cancel))
+            }
+        },
+    )
+}
+
 private fun runCommand(
     cmd: AvbCommand,
     values: Map<String, String>,
@@ -992,6 +1183,32 @@ private fun runCommand(
                             } else {
                                 argv += arg.key
                                 argv += v
+                            }
+                        }
+                    }
+                }
+                ArgType.CHAIN_PARTITION -> {
+                    val raw = values[arg.key].orEmpty()
+                    raw.lines().filter { it.isNotBlank() }.forEach { entry ->
+                        val first = entry.indexOf(':')
+                        val second = entry.indexOf(':', first + 1)
+                        if (first < 0 || second < 0) {
+                            argv += arg.key
+                            argv += entry
+                        } else {
+                            val partition = entry.substring(0, first)
+                            val rollbackIndex = entry.substring(first + 1, second)
+                            val keyPath = entry.substring(second + 1)
+                            if (keyPath.startsWith("content://")) {
+                                val fd = bridge.openRead(keyPath.toUri())
+                                if (fd != null) {
+                                    extraFds += fd
+                                    argv += arg.key
+                                    argv += "$partition:$rollbackIndex:${bridge.pseudoPath(fd)}"
+                                }
+                            } else {
+                                argv += arg.key
+                                argv += entry
                             }
                         }
                     }

@@ -175,6 +175,15 @@
     <string name="arg_make_vbmeta_image_setup_rootfs_from_kernel_label">Generate dm-verity cmdline from image</string>
     <string name="arg_make_vbmeta_image_print_required_libavb_version_label">Print required libavb version</string>
     <string name="arg_make_vbmeta_image_chain_partition_do_not_use_ab_label">Chain partitions without A/B (one per line)</string>
+    <string name="command_edit">Edit</string>
+    <string name="command_chain_partition_edit_title">Chain partition</string>
+    <string name="command_chain_partition_name">Partition name</string>
+    <string name="command_chain_partition_index">Rollback index</string>
+    <string name="command_chain_partition_key">Key file</string>
+    <plurals name="command_chain_partitions_count">
+        <item quantity="one">%d chain partition</item>
+        <item quantity="other">%d chain partitions</item>
+    </plurals>
     <plurals name="command_files_selected">
         <item quantity="one">%d file selected</item>
         <item quantity="other">%d files selected</item>
