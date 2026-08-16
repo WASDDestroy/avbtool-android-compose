@@ -27,6 +27,7 @@ import androidx.compose.material.icons.automirrored.filled.Label
 import androidx.compose.material.icons.filled.AccountTree
 import androidx.compose.material.icons.filled.Calculate
 import androidx.compose.material.icons.filled.CheckBox
+import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.DataObject
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.Image
@@ -65,8 +66,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.input.KeyboardType
@@ -637,6 +640,8 @@ private fun ResultView(result: AvbCommandResult) {
         }
 
         if (result.rawOutput.isNotBlank()) {
+            @Suppress("DEPRECATION")
+            val clipboard = LocalClipboardManager.current
             PreferenceGroup {
                 row("raw_output_toggle") {
                     PreferenceRow(
@@ -645,6 +650,11 @@ private fun ResultView(result: AvbCommandResult) {
                             if (rawExpanded) R.string.command_raw_output_collapse
                             else R.string.command_raw_output_expand
                         ),
+                        trailing = {
+                            IconButton(onClick = { clipboard.setText(AnnotatedString(result.rawOutput)) }) {
+                                Icon(Icons.Filled.ContentCopy, contentDescription = "Copy")
+                            }
+                        },
                         onClick = { rawExpanded = !rawExpanded },
                     )
                 }
