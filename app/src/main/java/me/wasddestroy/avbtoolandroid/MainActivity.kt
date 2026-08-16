@@ -277,7 +277,7 @@ private fun RootScreen(
             HorizontalPager(
                 state = pagerState,
                 beyondViewportPageCount = 1,
-                userScrollEnabled = !terminalSelecting,
+                userScrollEnabled = currentDestination != AppDestinations.CONSOLE && !terminalSelecting,
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(innerPadding),

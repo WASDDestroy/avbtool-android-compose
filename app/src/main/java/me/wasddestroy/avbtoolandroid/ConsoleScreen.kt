@@ -18,11 +18,11 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
+import androidx.compose.material3.Surface
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -186,23 +186,24 @@ private fun SoftKeyBar(session: AvbtoolTermSession) {
         "Home" to "[H",
         "End" to "[F",
     )
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .imePadding()
-            .padding(horizontal = 4.dp, vertical = 2.dp),
-        horizontalArrangement = Arrangement.spacedBy(2.dp),
-    ) {
-        keys.forEach { (label, seq) ->
-            TextButton(
-                onClick = {
-                    val bytes = seq.toByteArray()
-                    session.write(bytes, 0, bytes.size)
-                },
-                contentPadding = PaddingValues(horizontal = 6.dp, vertical = 0.dp),
-                modifier = Modifier.height(36.dp),
-            ) {
-                Text(label, fontSize = 12.sp)
+    Surface(tonalElevation = 3.dp) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 4.dp, vertical = 2.dp),
+            horizontalArrangement = Arrangement.spacedBy(2.dp),
+        ) {
+            keys.forEach { (label, seq) ->
+                TextButton(
+                    onClick = {
+                        val bytes = seq.toByteArray()
+                        session.write(bytes, 0, bytes.size)
+                    },
+                    contentPadding = PaddingValues(horizontal = 6.dp, vertical = 0.dp),
+                    modifier = Modifier.height(36.dp),
+                ) {
+                    Text(label, fontSize = 12.sp)
+                }
             }
         }
     }
