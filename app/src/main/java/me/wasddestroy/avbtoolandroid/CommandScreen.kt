@@ -4,6 +4,7 @@ import android.content.Context
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -22,20 +23,29 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.AccountTree
 import androidx.compose.material.icons.filled.CheckBox
+import androidx.compose.material.icons.filled.Calculate
+import androidx.compose.material.icons.filled.DataObject
+import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.automirrored.filled.InsertDriveFile
 import androidx.compose.material.icons.automirrored.filled.Label
 import androidx.compose.material.icons.filled.Key
+import androidx.compose.material.icons.filled.LayersClear
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Numbers
+import androidx.compose.material.icons.filled.Print
+import androidx.compose.material.icons.filled.Terminal
 import androidx.compose.material.icons.filled.TextFields
+import androidx.compose.material.icons.filled.Verified
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
@@ -53,6 +63,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -272,7 +283,7 @@ fun CommandScreen(
                             PreferenceSwitchRow(
                                 checked = (values[arg.key] ?: "").toBooleanStrictOrNull() == true,
                                 title = stringResource(arg.labelRes),
-                                iconContent = { RowIcon(argIcon(arg)) },
+                                iconContent = { ArgIcon(arg) },
                                 onCheckedChange = { checked ->
                                     values = values + (arg.key to checked.toString())
                                 },
@@ -291,7 +302,7 @@ fun CommandScreen(
                                     PreferenceSwitchRow(
                                         checked = (values[arg.key] ?: "").toBooleanStrictOrNull() == true,
                                         title = stringResource(arg.labelRes),
-                                        iconContent = { RowIcon(argIcon(arg)) },
+                                        iconContent = { ArgIcon(arg) },
                                         onCheckedChange = { checked ->
                                             values = values + (arg.key to checked.toString())
                                         },
@@ -605,7 +616,7 @@ private fun CommandArgRow(
             }
             PreferenceRow(
                 title = stringResource(arg.labelRes) + if (arg.required) stringResource(R.string.command_required) else "",
-                iconContent = { RowIcon(argIcon(arg)) },
+                iconContent = { ArgIcon(arg) },
                 summary = summary,
                 onClick = {
                     if (arg.repeatable) {
@@ -619,7 +630,7 @@ private fun CommandArgRow(
         ArgType.TEXT, ArgType.INT -> {
             PreferenceRow(
                 title = stringResource(arg.labelRes) + if (arg.required) stringResource(R.string.command_required) else "",
-                iconContent = { RowIcon(argIcon(arg)) },
+                iconContent = { ArgIcon(arg) },
                 summary = value.ifBlank { null },
                 onClick = onEditText,
             )
@@ -627,7 +638,7 @@ private fun CommandArgRow(
         ArgType.ALGORITHM -> {
             PreferenceRow(
                 title = stringResource(arg.labelRes) + if (arg.required) stringResource(R.string.command_required) else "",
-                iconContent = { RowIcon(argIcon(arg)) },
+                iconContent = { ArgIcon(arg) },
                 summary = value.ifBlank { "NONE" },
                 onClick = onChooseAlgorithm,
             )
@@ -636,8 +647,46 @@ private fun CommandArgRow(
             PreferenceSwitchRow(
                 checked = (values[arg.key] ?: "").toBooleanStrictOrNull() == true,
                 title = stringResource(arg.labelRes),
-                iconContent = { RowIcon(argIcon(arg)) },
+                iconContent = { ArgIcon(arg) },
                 onCheckedChange = onToggleBoolean,
+            )
+        }
+    }
+}
+
+private val DISABLED_ARG_KEYS = setOf(
+    "--hashtree_disabled",
+    "--no_hashtree",
+    "--set_hashtree_disabled_flag",
+    "--set_verification_disabled_flag",
+)
+
+@Composable
+private fun ArgIcon(arg: AvbArg) {
+    val icon = argIcon(arg)
+    if (arg.key in DISABLED_ARG_KEYS) {
+        IconWithSlash(icon)
+    } else {
+        RowIcon(icon)
+    }
+}
+
+@Composable
+private fun IconWithSlash(icon: ImageVector) {
+    val color = LocalContentColor.current
+    androidx.compose.foundation.layout.Box(Modifier.size(24.dp)) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            modifier = Modifier.fillMaxSize(),
+            tint = color,
+        )
+        Canvas(Modifier.fillMaxSize()) {
+            drawLine(
+                color = color,
+                start = Offset(size.width, 0f),
+                end = Offset(0f, size.height),
+                strokeWidth = 2.dp.toPx(),
             )
         }
     }
@@ -655,6 +704,17 @@ private fun RowIcon(icon: ImageVector) {
 private fun argIcon(arg: AvbArg): ImageVector = when {
     arg.key == "--key" -> Icons.Filled.Key
     arg.key == "--algorithm" -> Icons.Filled.Lock
+    arg.key == "--cert" -> Icons.Filled.Verified
+    arg.key == "--json" -> Icons.Filled.DataObject
+    arg.key == "--dynamic_partition_size" -> Icons.Filled.Calculate
+    arg.key == "--calc_max_image_size" -> Icons.Filled.Calculate
+    arg.key == "--do_not_append_vbmeta_image" -> Icons.Filled.LayersClear
+    arg.key == "--output_vbmeta_image" -> Icons.Filled.Folder
+    arg.key == "--print_required_libavb_version" -> Icons.Filled.Print
+    arg.key == "--setup_as_rootfs_from_kernel" -> Icons.Filled.Terminal
+    arg.key == "--hashtree_disabled" || arg.key == "--no_hashtree" ||
+            arg.key == "--set_hashtree_disabled_flag" -> Icons.Filled.AccountTree
+    arg.key == "--set_verification_disabled_flag" -> Icons.Filled.Verified
     arg.type == ArgType.IMAGE -> Icons.Filled.Image
     arg.type == ArgType.FILE -> Icons.AutoMirrored.Filled.InsertDriveFile
     arg.key == "--partition_name" -> Icons.AutoMirrored.Filled.Label

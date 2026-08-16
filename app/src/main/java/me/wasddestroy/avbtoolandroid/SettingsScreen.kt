@@ -1,6 +1,5 @@
 package me.wasddestroy.avbtoolandroid
 
-import android.graphics.drawable.Icon
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -11,7 +10,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Brightness4
+import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.Brightness6
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Language
@@ -94,7 +93,7 @@ fun SettingsScreen(
                     onCheckedChange = onAmoledBlackChange,
                     title = stringResource(R.string.settings_amoled_black),
                     summary = stringResource(R.string.settings_amoled_black_summary),
-                    iconContent = { SettingsIcon(Icons.Filled.Brightness4) },
+                    iconContent = { SettingsIcon(Icons.Filled.DarkMode) },
                 )
             }
             row("predictive_back_gesture") {
@@ -209,10 +208,10 @@ private fun AboutDialog(onDismiss: () -> Unit) {
             )
         },
         title = {
-            Text(stringResource(R.string.settings_about_dialog_title, versionName, versionCode.toString()))
+            Text(stringResource(R.string.settings_about_dialog_title))
         },
         text = {
-            Text(stringResource(R.string.settings_about_dialog_message))
+            Text(stringResource(R.string.settings_about_dialog_message, versionName, versionCode.toString()))
         },
         dismissButton = {
             TextButton(
