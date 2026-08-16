@@ -14,10 +14,12 @@ import android.view.inputmethod.InputMethodManager
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.padding
@@ -37,6 +39,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.viewinterop.AndroidView
@@ -194,39 +197,69 @@ fun ConsoleScreen(
 
 @Composable
 private fun SoftKeyBar(session: AvbtoolTermSession) {
-    val keys = listOf(
+    val topKeys = listOf(
         "Ctrl" to "",
         "Tab" to "	",
         "Esc" to "",
+        "Home" to "[H",
+        "End" to "[F",
+    )
+    val bottomKeys = listOf(
         "PgUp" to "[5~",
         "PgDn" to "[6~",
         "←" to "[D",
         "↑" to "[A",
         "↓" to "[B",
         "→" to "[C",
-        "Home" to "[H",
-        "End" to "[F",
     )
-    Surface(tonalElevation = 3.dp) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 4.dp, vertical = 2.dp),
-            horizontalArrangement = Arrangement.spacedBy(2.dp),
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .imePadding(),
+        contentAlignment = Alignment.BottomCenter,
+    ) {
+        Surface(
+            tonalElevation = 3.dp,
+            modifier = Modifier.fillMaxWidth(),
         ) {
-            keys.forEach { (label, seq) ->
-                TextButton(
-                    onClick = {
-                        val bytes = seq.toByteArray()
-                        session.write(bytes, 0, bytes.size)
-                    },
-                    contentPadding = PaddingValues(horizontal = 6.dp, vertical = 0.dp),
-                    modifier = Modifier.height(36.dp),
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 4.dp, vertical = 2.dp),
+                verticalArrangement = Arrangement.spacedBy(2.dp),
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(2.dp),
                 ) {
-                    Text(label, fontSize = 12.sp)
+                    topKeys.forEach { (label, seq) ->
+                        SoftKeyButton(session, label, seq)
+                    }
+                }
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(2.dp),
+                ) {
+                    bottomKeys.forEach { (label, seq) ->
+                        SoftKeyButton(session, label, seq)
+                    }
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun SoftKeyButton(session: AvbtoolTermSession, label: String, seq: String) {
+    TextButton(
+        onClick = {
+            val bytes = seq.toByteArray()
+            session.write(bytes, 0, bytes.size)
+        },
+        contentPadding = PaddingValues(horizontal = 6.dp, vertical = 0.dp),
+        modifier = Modifier.height(36.dp),
+    ) {
+        Text(label, fontSize = 12.sp)
     }
 }
 
