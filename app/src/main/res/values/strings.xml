@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">AVBTool Android</string>
+    <string name="app_name">AVBDroid</string>
     <string name="nav_home">Home</string>
     <string name="nav_console">Console</string>
     <string name="home_commands_title">Commands</string>
@@ -173,7 +173,7 @@
     <string name="settings_language">Language</string>
     <string name="settings_language_placeholder">Placeholder</string>
     <string name="settings_about">About</string>
-    <string name="settings_about_dialog_title">AVBTool Android - Version %1$s(%2$s)</string>
+    <string name="settings_about_dialog_title">AVBDroid - Version %1$s(%2$s)</string>
     <string name="settings_about_dialog_message">WASDDestroy (Powered by Deepseek with Deepseek Harness)</string>
     <string name="settings_about_github">GitHub</string>
     <string name="settings_about_github_url">https://github.com/WASDDestroy/avbtool-android-compose</string>
