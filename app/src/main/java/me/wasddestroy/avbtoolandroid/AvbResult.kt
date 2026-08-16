@@ -152,7 +152,9 @@ private fun parseInfoImage(stdout: String): List<ResultSection> {
         val text = rawLine.trim()
         if (indent == 0) {
             closeGroup()
-            if (text == "Descriptors:" || text == "avb_cert certificate:") {
+            if (text == "--") {
+                // info_image prints a separator between footer and vbmeta.
+            } else if (text == "Descriptors:" || text == "avb_cert certificate:") {
                 // section marker, not a row
             } else {
                 val parts = text.split(":", limit = 2)

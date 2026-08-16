@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
@@ -453,22 +454,34 @@ private fun ResultView(result: AvbCommandResult) {
             .fillMaxWidth()
             .padding(vertical = 8.dp),
     ) {
-        val statusText = when (result.status) {
-            AvbResultStatus.SUCCESS -> "Success"
-            AvbResultStatus.FAILED -> "Failed"
-            AvbResultStatus.CANCELLED -> "Cancelled"
-            AvbResultStatus.RUNNING -> "Running"
+        val statusTextRes = when (result.status) {
+            AvbResultStatus.SUCCESS -> R.string.command_result_success
+            AvbResultStatus.FAILED -> R.string.command_result_failed
+            AvbResultStatus.CANCELLED -> R.string.command_result_cancelled
+            AvbResultStatus.RUNNING -> R.string.command_result_running
         }
-        Text(
-            text = statusText,
-            style = MaterialTheme.typography.titleMedium,
+        Surface(
+            shape = RoundedCornerShape(16.dp),
             color = when (result.status) {
-                AvbResultStatus.SUCCESS -> MaterialTheme.colorScheme.primary
-                AvbResultStatus.FAILED -> MaterialTheme.colorScheme.error
-                else -> MaterialTheme.colorScheme.onSurface
+                AvbResultStatus.SUCCESS -> MaterialTheme.colorScheme.primaryContainer
+                AvbResultStatus.FAILED -> MaterialTheme.colorScheme.errorContainer
+                else -> MaterialTheme.colorScheme.surfaceContainer
             },
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
-        )
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 4.dp),
+        ) {
+            Text(
+                text = stringResource(statusTextRes),
+                style = MaterialTheme.typography.titleMedium,
+                color = when (result.status) {
+                    AvbResultStatus.SUCCESS -> MaterialTheme.colorScheme.onPrimaryContainer
+                    AvbResultStatus.FAILED -> MaterialTheme.colorScheme.onErrorContainer
+                    else -> MaterialTheme.colorScheme.onSurface
+                },
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+            )
+        }
 
         result.errors.forEach { error ->
             Text(
@@ -524,8 +537,11 @@ private fun ResultView(result: AvbCommandResult) {
             PreferenceGroup {
                 row("raw_output_toggle") {
                     PreferenceRow(
-                        title = "Raw output",
-                        summary = if (rawExpanded) "Tap to collapse" else "Tap to expand",
+                        title = stringResource(R.string.command_raw_output),
+                        summary = stringResource(
+                            if (rawExpanded) R.string.command_raw_output_collapse
+                            else R.string.command_raw_output_expand
+                        ),
                         onClick = { rawExpanded = !rawExpanded },
                     )
                 }

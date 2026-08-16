@@ -9,6 +9,13 @@
     <string name="command_run">Run</string>
     <string name="command_running">Running...</string>
     <string name="command_output">Output</string>
+    <string name="command_result_success">Success</string>
+    <string name="command_result_failed">Failed</string>
+    <string name="command_result_cancelled">Cancelled</string>
+    <string name="command_result_running">Running</string>
+    <string name="command_raw_output">Raw output</string>
+    <string name="command_raw_output_expand">Tap to expand</string>
+    <string name="command_raw_output_collapse">Tap to collapse</string>
     <string name="command_section_image_configs">Image configs</string>
     <string name="command_section_key_configs">Key configs</string>
     <string name="command_section_options">Options</string>
