@@ -173,8 +173,8 @@
     <string name="settings_language">Language</string>
     <string name="settings_language_placeholder">Placeholder</string>
     <string name="settings_about">About</string>
-    <string name="settings_about_dialog_title">AVBDroid - Version %1$s(%2$s)</string>
-    <string name="settings_about_dialog_message">WASDDestroy (Powered by Deepseek with Deepseek Harness)</string>
+    <string name="settings_about_dialog_title">AVBDroid</string>
+    <string name="settings_about_dialog_message">Version %1$s (%2$s)\nAuthor: WASDDestroy (Powered by Deepseek with Deepseek Harness)</string>
     <string name="settings_about_github">GitHub</string>
     <string name="settings_about_github_url">https://github.com/WASDDestroy/avbtool-android-compose</string>
     <string name="settings_ok">OK</string>
