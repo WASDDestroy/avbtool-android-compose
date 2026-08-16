@@ -9,6 +9,7 @@ import android.os.Build
 import android.os.Environment
 import android.provider.Settings
 import android.view.MotionEvent
+import android.view.ViewConfiguration
 import android.view.inputmethod.InputMethodManager
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -149,9 +150,29 @@ fun ConsoleScreen(
                     setBackKeyCharacter(0x7f)
                     this.onSelectionModeChanged = onSelectionModeChanged
                     terminalView = this
+                    val touchSlop = ViewConfiguration.get(viewContext).scaledTouchSlop
+                    var downX = 0f
+                    var downY = 0f
+                    var moved = false
                     setOnTouchListener { v, event ->
-                        if (event.actionMasked == MotionEvent.ACTION_UP && !(v as CopyableEmulatorView).selectingText) {
-                            showIme(v)
+                        when (event.actionMasked) {
+                            MotionEvent.ACTION_DOWN -> {
+                                downX = event.x
+                                downY = event.y
+                                moved = false
+                            }
+                            MotionEvent.ACTION_MOVE -> {
+                                if (kotlin.math.abs(event.x - downX) > touchSlop ||
+                                    kotlin.math.abs(event.y - downY) > touchSlop
+                                ) {
+                                    moved = true
+                                }
+                            }
+                            MotionEvent.ACTION_UP -> {
+                                if (!moved && !(v as CopyableEmulatorView).selectingText) {
+                                    showIme(v)
+                                }
+                            }
                         }
                         false
                     }
