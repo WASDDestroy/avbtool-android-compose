@@ -1,6 +1,9 @@
 package me.wasddestroy.avbtoolandroid
 
+import android.util.Log
 import org.json.JSONObject
+
+private const val TAG = "AvbResultParser"
 
 enum class AvbResultStatus { RUNNING, SUCCESS, FAILED, CANCELLED }
 
@@ -143,6 +146,7 @@ private fun parseInfoImage(stdout: String): List<ResultSection> {
         .distinct()
         .sorted()
         .toIntArray()
+    Log.d(TAG, "indentLevels=${indentLevels.contentToString()}")
     fun levelOf(indent: Int): Int = indentLevels.binarySearch(indent).coerceAtLeast(0)
 
     // Pass 2: parse using indent levels
@@ -153,11 +157,15 @@ private fun parseInfoImage(stdout: String): List<ResultSection> {
 
     fun flushBlock() {
         val type = blockType ?: return
-        if (blockLines.isEmpty()) { blockType = null; return }
+        if (blockLines.isEmpty()) {
+            Log.d(TAG, "flushBlock: skip (empty) type=$type")
+            blockType = null; return
+        }
         val partitionName = blockLines.firstOrNull { it.first == "Partition Name" }?.second
         val title = if (partitionName != null) "$type: $partitionName" else type
         val summaryLines = blockLines.filter { it.first != "Partition Name" }
             .map { "${it.first}: ${it.second}" }
+        Log.d(TAG, "flushBlock: group='$title', fields=${blockLines.size}")
         groups += ResultGroup(
             title = title,
             rows = listOf(ResultRow(title, summaryLines.joinToString("\n"), monospace = true)),
@@ -175,41 +183,61 @@ private fun parseInfoImage(stdout: String): List<ResultSection> {
         if (level == 0) {
             flushBlock()
             when (text) {
-                "--", "Descriptors:", "avb_cert certificate:" -> {}
+                "--", "Descriptors:", "avb_cert certificate:" -> {
+                    Log.d(TAG, "L0 marker: '$text'")
+                }
                 else -> {
                     val parts = text.split(":", limit = 2)
-                    topRows += if (parts.size == 2) ResultRow(parts[0].trim(), parts[1].trim())
+                    val row = if (parts.size == 2) ResultRow(parts[0].trim(), parts[1].trim())
                     else ResultRow(text, "")
+                    Log.d(TAG, "L0 row: '${row.title}' = '${row.value}'")
+                    topRows += row
                 }
             }
             continue
         }
 
         // level >= 1: inside Descriptors section
-        PROP_RE.find(text)?.let { match ->
+        val propMatch = PROP_RE.find(text)
+        if (propMatch != null) {
             flushBlock()
-            topRows += ResultRow("Prop: ${match.groupValues[1]}", match.groupValues[2], monospace = true)
+            val row = ResultRow("Prop: ${propMatch.groupValues[1]}", propMatch.groupValues[2], monospace = true)
+            Log.d(TAG, "L$level prop: '${row.title}' = '${row.value}'")
+            topRows += row
             continue
         }
 
-        DESCRIPTOR_RE.find(text)?.let { match ->
+        val descMatch = DESCRIPTOR_RE.find(text)
+        if (descMatch != null) {
             flushBlock()
-            blockType = match.groupValues[1]
+            blockType = descMatch.groupValues[1]
             blockLines = mutableListOf()
+            Log.d(TAG, "L$level block start: type='$blockType'")
             continue
         }
 
         if (blockType != null && level >= 2) {
             val parts = text.split(":", limit = 2)
-            blockLines += if (parts.size == 2) Pair(parts[0].trim(), parts[1].trim()) else Pair(text, "")
+            val pair = if (parts.size == 2) Pair(parts[0].trim(), parts[1].trim()) else Pair(text, "")
+            blockLines += pair
+            Log.d(TAG, "L$level block field: '${pair.first}' = '${pair.second}'")
         } else {
             flushBlock()
             val parts = text.split(":", limit = 2)
-            topRows += if (parts.size == 2) ResultRow(parts[0].trim(), parts[1].trim(), monospace = true)
+            val row = if (parts.size == 2) ResultRow(parts[0].trim(), parts[1].trim(), monospace = true)
             else ResultRow(text, "")
+            Log.d(TAG, "L$level fallback row: '${row.title}' = '${row.value}'")
+            topRows += row
         }
     }
     flushBlock()
+
+    Log.d(TAG, "result: topRows=${topRows.size}, groups=${groups.size}")
+    topRows.forEach { Log.d(TAG, "  topRow: '${it.title}'") }
+    groups.forEach { g ->
+        Log.d(TAG, "  group: '${g.title}', rows=${g.rows.size}")
+        g.rows.forEach { Log.d(TAG, "    row: '${it.title}' valueLen=${it.value.length}") }
+    }
 
     val sections = mutableListOf<ResultSection>()
     if (topRows.isNotEmpty()) {
