@@ -62,6 +62,15 @@ class AvbtoolTermSession(
         }
     }
 
+    fun clearScreen() {
+        if (!emulatorReady) return
+        appendToEmulator("[2J[H".toByteArray(), 0, 7)
+        line.setLength(0)
+        savedLine = null
+        notifyUpdate()
+        writePrompt()
+    }
+
     override fun initializeEmulator(columns: Int, rows: Int) {
         super.initializeEmulator(columns, rows)
         emulatorReady = true
@@ -151,6 +160,10 @@ class AvbtoolTermSession(
         val command = line.toString().trim()
         line.setLength(0)
         appendOutput("\r\n")
+        if (command == "clear") {
+            clearScreen()
+            return
+        }
         if (command.isNotEmpty()) {
             history.add(command)
             historyIndex = history.size
