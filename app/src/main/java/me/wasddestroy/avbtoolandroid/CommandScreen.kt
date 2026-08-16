@@ -451,7 +451,7 @@ private fun ResultView(result: AvbCommandResult) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 8.dp),
+            .padding(vertical = 8.dp),
     ) {
         val statusText = when (result.status) {
             AvbResultStatus.SUCCESS -> "Success"
@@ -467,7 +467,7 @@ private fun ResultView(result: AvbCommandResult) {
                 AvbResultStatus.FAILED -> MaterialTheme.colorScheme.error
                 else -> MaterialTheme.colorScheme.onSurface
             },
-            modifier = Modifier.padding(vertical = 4.dp),
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
         )
 
         result.errors.forEach { error ->
@@ -476,7 +476,7 @@ private fun ResultView(result: AvbCommandResult) {
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.error,
                 fontFamily = FontFamily.Monospace,
-                modifier = Modifier.padding(vertical = 2.dp),
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 2.dp),
             )
         }
 
@@ -485,7 +485,7 @@ private fun ResultView(result: AvbCommandResult) {
                 text = "Warning: $warning",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.error,
-                modifier = Modifier.padding(vertical = 2.dp),
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 2.dp),
             )
         }
 
