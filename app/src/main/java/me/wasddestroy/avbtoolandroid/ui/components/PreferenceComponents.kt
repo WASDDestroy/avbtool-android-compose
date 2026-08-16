@@ -33,6 +33,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 
@@ -70,7 +71,25 @@ fun LazyListScope.preferenceGroup(
 
 @Composable
 fun PreferenceGroup(
+    title: String?,
+    modifier: Modifier = Modifier,
+    content: PreferenceGroupScope.() -> Unit,
+) {
+    PreferenceGroupWithTitleText(titleText = title, modifier = modifier, content = content)
+}
+
+@Composable
+fun PreferenceGroup(
     titleRes: Int? = null,
+    modifier: Modifier = Modifier,
+    content: PreferenceGroupScope.() -> Unit,
+) {
+    PreferenceGroupWithTitleText(titleText = titleRes?.let { stringResource(it) }, modifier = modifier, content = content)
+}
+
+@Composable
+private fun PreferenceGroupWithTitleText(
+    titleText: String?,
     modifier: Modifier = Modifier,
     content: PreferenceGroupScope.() -> Unit,
 ) {
@@ -82,9 +101,9 @@ fun PreferenceGroup(
             .padding(horizontal = 16.dp, vertical = 4.dp),
         verticalArrangement = Arrangement.spacedBy(PreferenceSegmentedGap),
     ) {
-        titleRes?.let {
+        titleText?.let {
             Text(
-                text = stringResource(it),
+                text = it,
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
                 fontWeight = FontWeight.SemiBold,
                 style = MaterialTheme.typography.labelLarge,
@@ -219,6 +238,34 @@ fun PreferenceSwitchRow(
                 enabled = enabled,
             )
         },
+    )
+}
+
+@Composable
+fun PreferenceValueRow(
+    title: String,
+    value: String,
+    modifier: Modifier = Modifier,
+    monospace: Boolean = false,
+    onClick: (() -> Unit)? = null,
+) {
+    PreferenceRow(
+        title = title,
+        modifier = modifier,
+        summary = value,
+        summaryContent = if (monospace) {
+            {
+                Text(
+                    text = value,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    fontFamily = FontFamily.Monospace,
+                )
+            }
+        } else {
+            null
+        },
+        onClick = onClick,
     )
 }
 

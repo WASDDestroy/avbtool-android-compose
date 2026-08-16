@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -62,7 +63,9 @@ import androidx.compose.ui.unit.sp
 import me.wasddestroy.avbtoolandroid.ui.components.DialogConfirmButton
 import me.wasddestroy.avbtoolandroid.ui.components.DialogDismissButton
 import me.wasddestroy.avbtoolandroid.ui.components.DialogNeutralButton
+import me.wasddestroy.avbtoolandroid.ui.components.PreferenceGroup
 import me.wasddestroy.avbtoolandroid.ui.components.PreferenceRow
+import me.wasddestroy.avbtoolandroid.ui.components.PreferenceValueRow
 import me.wasddestroy.avbtoolandroid.ui.components.PreferenceSwitchRow
 import me.wasddestroy.avbtoolandroid.ui.components.SettingsList
 import me.wasddestroy.avbtoolandroid.ui.components.preferenceGroup
@@ -464,6 +467,7 @@ private fun ResultView(result: AvbCommandResult) {
                 AvbResultStatus.FAILED -> MaterialTheme.colorScheme.error
                 else -> MaterialTheme.colorScheme.onSurface
             },
+            modifier = Modifier.padding(vertical = 4.dp),
         )
 
         result.errors.forEach { error ->
@@ -476,27 +480,6 @@ private fun ResultView(result: AvbCommandResult) {
             )
         }
 
-        result.sections.forEach { section ->
-            Text(
-                text = section.title,
-                style = MaterialTheme.typography.titleSmall,
-                modifier = Modifier.padding(top = 10.dp, bottom = 4.dp),
-            )
-            section.rows.forEach { row ->
-                ResultRowView(row)
-            }
-            section.groups.forEach { group ->
-                Text(
-                    text = group.title,
-                    style = MaterialTheme.typography.bodyMedium,
-                    modifier = Modifier.padding(start = 8.dp, top = 6.dp, bottom = 2.dp),
-                )
-                group.rows.forEach { row ->
-                    ResultRowView(row, indent = 16)
-                }
-            }
-        }
-
         result.warnings.forEach { warning ->
             Text(
                 text = "Warning: $warning",
@@ -506,40 +489,60 @@ private fun ResultView(result: AvbCommandResult) {
             )
         }
 
-        if (result.rawOutput.isNotBlank()) {
-            TextButton(onClick = { rawExpanded = !rawExpanded }) {
-                Text(if (rawExpanded) "▾ Raw output" else "▸ Raw output")
-            }
-            if (rawExpanded) {
-                Text(
-                    text = result.rawOutput,
-                    fontFamily = FontFamily.Monospace,
-                    fontSize = 12.sp,
-                    modifier = Modifier.fillMaxWidth(),
-                )
+        result.sections.forEach { section ->
+            PreferenceGroup(title = section.title) {
+                section.rows.forEach { rowData ->
+                    row(rowData.title) {
+                        PreferenceValueRow(
+                            title = rowData.title,
+                            value = rowData.value,
+                            monospace = rowData.monospace,
+                        )
+                    }
+                }
+                section.groups.forEach { group ->
+                    row(group.title) {
+                        PreferenceValueRow(
+                            title = group.title,
+                            value = "",
+                        )
+                    }
+                    group.rows.forEach { rowData ->
+                        row(group.title + ":" + rowData.title) {
+                            PreferenceValueRow(
+                                title = rowData.title,
+                                value = rowData.value,
+                                monospace = rowData.monospace,
+                            )
+                        }
+                    }
+                }
             }
         }
-    }
-}
 
-@Composable
-private fun ResultRowView(row: ResultRow, indent: Int = 0) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(start = indent.dp, top = 2.dp, bottom = 2.dp),
-    ) {
-        Text(
-            text = row.title,
-            style = MaterialTheme.typography.bodyMedium,
-            modifier = Modifier.weight(1f),
-        )
-        Text(
-            text = row.value,
-            style = MaterialTheme.typography.bodyMedium,
-            fontFamily = if (row.monospace) FontFamily.Monospace else null,
-            textAlign = TextAlign.End,
-        )
+        if (result.rawOutput.isNotBlank()) {
+            PreferenceGroup {
+                row("raw_output_toggle") {
+                    PreferenceRow(
+                        title = "Raw output",
+                        summary = if (rawExpanded) "Tap to collapse" else "Tap to expand",
+                        onClick = { rawExpanded = !rawExpanded },
+                    )
+                }
+            }
+            if (rawExpanded) {
+                SelectionContainer {
+                    Text(
+                        text = result.rawOutput,
+                        fontFamily = FontFamily.Monospace,
+                        fontSize = 12.sp,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 8.dp),
+                    )
+                }
+            }
+        }
     }
 }
 
