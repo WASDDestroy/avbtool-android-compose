@@ -483,14 +483,24 @@ private fun ResultView(result: AvbCommandResult) {
             )
         }
 
-        result.errors.forEach { error ->
-            Text(
-                text = error,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.error,
-                fontFamily = FontFamily.Monospace,
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 2.dp),
-            )
+        if (result.errors.isNotEmpty()) {
+            PreferenceGroup {
+                result.errors.forEachIndexed { index, error ->
+                    row("error_$index") {
+                        PreferenceRow(
+                            title = stringResource(R.string.command_result_error),
+                            summaryContent = {
+                                Text(
+                                    text = error,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.error,
+                                    fontFamily = FontFamily.Monospace,
+                                )
+                            },
+                        )
+                    }
+                }
+            }
         }
 
         result.warnings.forEach { warning ->
