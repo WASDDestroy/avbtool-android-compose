@@ -116,7 +116,7 @@ fun ConsoleScreen(
         onDispose { session.finish() }
     }
 
-    Column(modifier = modifier.fillMaxSize()) {
+    Column(modifier = modifier.fillMaxSize().imePadding()) {
         if (!storageGranted) {
             Card(
                 modifier = Modifier.fillMaxWidth().padding(8.dp),
@@ -212,37 +212,30 @@ private fun SoftKeyBar(session: AvbtoolTermSession) {
         "↓" to "[B",
         "→" to "[C",
     )
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .imePadding(),
-        contentAlignment = Alignment.BottomCenter,
+    Surface(
+        tonalElevation = 3.dp,
+        modifier = Modifier.fillMaxWidth(),
     ) {
-        Surface(
-            tonalElevation = 3.dp,
-            modifier = Modifier.fillMaxWidth(),
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 4.dp, vertical = 2.dp),
+            verticalArrangement = Arrangement.spacedBy(2.dp),
         ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 4.dp, vertical = 2.dp),
-                verticalArrangement = Arrangement.spacedBy(2.dp),
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(2.dp),
             ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(2.dp),
-                ) {
-                    topKeys.forEach { (label, seq) ->
-                        SoftKeyButton(session, label, seq)
-                    }
+                topKeys.forEach { (label, seq) ->
+                    SoftKeyButton(session, label, seq)
                 }
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(2.dp),
-                ) {
-                    bottomKeys.forEach { (label, seq) ->
-                        SoftKeyButton(session, label, seq)
-                    }
+            }
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(2.dp),
+            ) {
+                bottomKeys.forEach { (label, seq) ->
+                    SoftKeyButton(session, label, seq)
                 }
             }
         }
