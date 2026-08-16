@@ -1,3 +1,12 @@
+// SPDX-License-Identifier: Apache-2.0
+//
+// AVBTool Android native FEC bridge.
+//
+// This file is part of the AVBTool Android project and is licensed
+// under the Apache License, Version 2.0. It dynamically links against
+// libfec_rs.so, which contains LGPL-2.1-licensed Reed-Solomon code
+// (Copyright 2002-2004 Phil Karn, KA9Q). See fec_rs/ for source.
+
 #include <cstdint>
 #include <cstdio>
 #include <cstring>

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: Apache-2.0
 """Android-specific helpers for the bundled avbtool.py.
 
 This module replaces avbtool's two external subprocess dependencies:
@@ -19,12 +20,19 @@ import os
 
 
 _libfec = None
+_libfec_rs = None
 
 
 def init(native_lib_dir):
     """Must be called once after Python starts and before running avbtool."""
-    global _libfec
+    global _libfec, _libfec_rs
     if _libfec is None:
+        # libavbfec.so has a DT_NEEDED dependency on libfec_rs.so.
+        # Preload libfec_rs.so by absolute path so the dynamic linker can
+        # resolve that dependency regardless of the Android linker search
+        # path. Keep the handle alive for the lifetime of the process.
+        if _libfec_rs is None:
+            _libfec_rs = ctypes.CDLL(os.path.join(native_lib_dir, "libfec_rs.so"))
         path = os.path.join(native_lib_dir, "libavbfec.so")
         _libfec = ctypes.CDLL(path)
         _libfec.avb_fec_print_size.argtypes = [ctypes.c_uint64, ctypes.c_int]

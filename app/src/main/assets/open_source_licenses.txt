@@ -1,0 +1,92 @@
+OPEN SOURCE LICENSES AND NOTICES
+
+AVBTool Android (AVBDroid)
+
+This product includes the following open source software. The full
+license text for LGPL-2.1 is provided in the file LGPL-2.1.txt
+shipped with this application, and in the source repository at
+LICENSES/LGPL-2.1.txt.
+
+============================================================
+Reed-Solomon codec (libfec_rs.so)
+
+Source path in repository: app/src/main/cpp/fec_rs/
+
+Copyright (C) 2002-2004 Phil Karn, KA9Q
+
+May be used under the terms of the GNU Lesser General Public
+License (LGPL), version 2.1, as published by the Free Software
+Foundation.
+
+This library is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+Lesser General Public License for more details.
+
+You should have received a copy of the GNU Lesser General Public
+License along with this library; if not, write to the Free Software
+Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
+MA 02110-1301 USA.
+
+The source code for this component is available at:
+https://github.com/WASDDestroy/avbtool-android-compose
+under app/src/main/cpp/fec_rs/.
+============================================================
+
+avbtool.py
+
+Copyright 2016, The Android Open Source Project
+
+Permission is hereby granted, free of charge, to any person
+obtaining a copy of this software and associated documentation
+files (the "Software"), to deal in the Software without
+restriction, including without limitation the rights to use, copy,
+modify, merge, publish, distribute, sublicense, and/or sell copies
+of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be
+included in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS
+BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN
+ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+============================================================
+
+TermOnePlus emulatorview
+
+Copyright (C) 2007 The Android Open Source Project
+Copyright (C) 2011 Jack Palevich
+Copyright (C) 2012 Steven Luo
+Copyright (C) 2018-2020 Roumen Petrov
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
+implied. See the License for the specific language governing
+permissions and limitations under the License.
+============================================================
+
+Chaquopy
+
+Copyright Malcolm Smith and contributors
+Licensed under the MIT license.
+See https://chaquo.com/chaquopy/ for details.
+============================================================
+
+Python runtime
+
+Python is distributed under the Python Software Foundation License
+(PSF-2.0). libffi is distributed under the MIT license.
+============================================================

@@ -82,6 +82,24 @@ fec --encode --roots 2 selftest.img ref.fec
 sha256sum selftest.img ref.fec
 ```
 
+## License
+
+The project's own source code is licensed under the **Apache License 2.0**
+(`LICENSE`), with the following explicit exceptions:
+
+- `app/src/main/cpp/fec_rs/*` — **LGPL-2.1**.
+  Copyright (C) 2002-2004 Phil Karn, KA9Q.
+  These files are kept in their own `libfec_rs.so` shared library so the
+  LGPL component can be replaced/relinked independently. Full text:
+  `LICENSES/LGPL-2.1.txt` and `app/src/main/assets/LGPL-2.1.txt`.
+- `app/src/main/python/avbtool.py` — **MIT**.
+  Copyright 2016, The Android Open Source Project.
+- TermOnePlus emulatorview — **Apache-2.0**.
+- Chaquopy — **MIT**.
+
+Open source notices shipped in the APK:
+`app/src/main/assets/open_source_licenses.txt`.
+
 ## Known limitations
 
 - FEC generation is raw-image only.

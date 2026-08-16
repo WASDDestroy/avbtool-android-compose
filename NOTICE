@@ -1,0 +1,27 @@
+AVBTool Android
+Copyright (C) 2026 WASDDestroy and contributors
+
+This product includes software developed by third parties:
+
+- Reed-Solomon codec (app/src/main/cpp/fec_rs/)
+  Copyright (C) 2002-2004 Phil Karn, KA9Q
+  Licensed under the GNU Lesser General Public License, version 2.1.
+  License text: LICENSES/LGPL-2.1.txt
+
+- avbtool.py
+  Copyright 2016, The Android Open Source Project
+  Licensed under the MIT license.
+
+- TermOnePlus emulatorview
+  Copyright (C) 2007 The Android Open Source Project
+  Copyright (C) 2011 Jack Palevich
+  Copyright (C) 2012 Steven Luo
+  Copyright (C) 2018-2020 Roumen Petrov
+  Licensed under the Apache License, Version 2.0.
+
+- Chaquopy
+  Copyright Malcolm Smith and contributors
+  Licensed under the MIT license.
+
+- Python and its runtime components retain their own respective
+  notices (PSF-2.0, MIT, etc.).

@@ -27,7 +27,17 @@ Before building:
 - `app/src/main/python/android_bridge.py` — native FEC binding, SAF fd hook, avbtool runner, FEC self-test.
 - `app/src/main/java/me/wasddestroy/avbtoolandroid/` — Compose UI and runtime.
 - `app/src/main/cpp/` — native FEC encoder and AOSP `libfec_rs` sources.
+  - `libfec_rs.so` is built from `fec_rs/` and is **LGPL-2.1**; keep it a separate shared library.
+  - `libavbfec.so` links dynamically to `libfec_rs.so`.
 - `app/src/main/java/jackpal/androidterm/emulatorview/` — vendored TermOnePlus emulator view.
+
+## License
+
+- Project code: Apache-2.0 (`LICENSE`), except:
+  - `app/src/main/cpp/fec_rs/*`: LGPL-2.1 (`LICENSES/LGPL-2.1.txt`)
+  - `app/src/main/python/avbtool.py`: MIT
+- `app/src/main/assets/open_source_licenses.txt` and `app/src/main/assets/LGPL-2.1.txt`
+  are shipped in the APK. Keep both when changing native code.
 
 ## Important gotchas
 

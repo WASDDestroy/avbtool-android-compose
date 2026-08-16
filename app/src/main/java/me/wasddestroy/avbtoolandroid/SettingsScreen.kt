@@ -257,7 +257,14 @@ private fun AboutDialog(onDismiss: () -> Unit) {
             Text(stringResource(R.string.settings_about_dialog_title))
         },
         text = {
-            Text(stringResource(R.string.settings_about_dialog_message, versionName, versionCode.toString()))
+            Column {
+                Text(stringResource(R.string.settings_about_dialog_message, versionName, versionCode.toString()))
+                Text(
+                    text = stringResource(R.string.settings_about_license_notice),
+                    style = MaterialTheme.typography.bodySmall,
+                    modifier = Modifier.padding(top = 8.dp),
+                )
+            }
         },
         dismissButton = {
             TextButton(
