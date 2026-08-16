@@ -6,7 +6,7 @@
     <string name="home_empty">No commands available.</string>
     <string name="command_back">Back</string>
     <string name="command_run">Run</string>
-    <string name="command_running">Running...</string>
+    <string name="command_running">Running…</string>
     <string name="command_output">Output</string>
     <string name="command_result_success">Success</string>
     <string name="command_result_error">Error</string>
@@ -173,7 +173,7 @@
     <string name="settings_language_placeholder">Placeholder</string>
     <string name="settings_about">About</string>
     <string name="settings_about_dialog_title">AVBDroid</string>
-    <string name="settings_about_dialog_message">Version %1$s (%2$s)\nAuthor: WASDDestroy (Powered by Deepseek with Deepseek Harness)</string>
+    <string name="settings_about_dialog_message">Version %1$s (%2$s)\nAuthor: WASDDestroy (Built by Deepseek with Deepseek Harness)</string>
     <string name="settings_about_github">GitHub</string>
     <string name="settings_about_github_url">https://github.com/WASDDestroy/avbtool-android-compose</string>
     <string name="settings_ok">OK</string>

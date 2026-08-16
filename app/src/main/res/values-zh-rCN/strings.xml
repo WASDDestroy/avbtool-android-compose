@@ -6,7 +6,7 @@
     <string name="home_empty">没有可用命令。</string>
     <string name="command_back">返回</string>
     <string name="command_run">运行</string>
-    <string name="command_running">正在运行...</string>
+    <string name="command_running">正在运行…</string>
     <string name="command_output">输出</string>
     <string name="command_result_success">成功</string>
     <string name="command_result_error">错误</string>
@@ -153,7 +153,6 @@
     <string name="arg_calculate_kernel_cmdline_image_label">映像文件</string>
     <string name="arg_calculate_kernel_cmdline_hashtree_disabled_label">哈希树已禁用</string>
     <plurals name="command_files_selected">
-        <item quantity="one">已选择 %d 个文件</item>
         <item quantity="other">已选择 %d 个文件</item>
     </plurals>
     <string name="nav_settings">设置</string>
@@ -166,14 +165,14 @@
     <string name="settings_theme_mode_follow_system">跟随系统</string>
     <string name="settings_theme_mode_dialog_title">主题模式</string>
     <string name="settings_amoled_black">AMOLED 黑色</string>
-    <string name="settings_amoled_black_summary">深色主题下使用纯黑表面</string>
+    <string name="settings_amoled_black_summary">深色主题下使用纯黑表面色</string>
     <string name="settings_predictive_back">预测性返回手势</string>
     <string name="settings_predictive_back_summary">启用系统预测性返回动画</string>
     <string name="settings_language">语言</string>
     <string name="settings_language_placeholder">占位符</string>
     <string name="settings_about">关于</string>
     <string name="settings_about_dialog_title">AVBDroid</string>
-    <string name="settings_about_dialog_message">版本 %1$s (%2$s)\n作者：WASDDestroy（由 Deepseek 与 Deepseek Harness 提供支持）</string>
+    <string name="settings_about_dialog_message">版本 %1$s (%2$s)\n作者：WASDDestroy（由 Deepseek 在 Deepseek Harness 下构建）</string>
     <string name="settings_about_github">GitHub</string>
     <string name="settings_about_github_url">https://github.com/WASDDestroy/avbtool-android-compose</string>
     <string name="settings_ok">确定</string>
