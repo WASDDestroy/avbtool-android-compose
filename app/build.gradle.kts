@@ -1,8 +1,24 @@
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
     id("com.chaquo.python")
 }
+
+fun gitCommitCount(): Int {
+    val process = ProcessBuilder("git", "rev-list", "--count", "HEAD")
+        .directory(rootProject.projectDir)
+        .redirectErrorStream(true)
+        .start()
+    val count = process.inputStream.bufferedReader().readText().trim().toIntOrNull()
+    process.waitFor()
+    return count ?: 1
+}
+
+val commitCount = gitCommitCount()
+val versionDate = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"))
 
 android {
     namespace = "me.wasddestroy.avbtoolandroid"
@@ -15,8 +31,8 @@ android {
         applicationId = "me.wasddestroy.avbtoolandroid"
         minSdk = 27
         targetSdk = 36
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = commitCount
+        versionName = "$versionDate-c$commitCount"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
