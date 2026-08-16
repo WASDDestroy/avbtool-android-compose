@@ -170,6 +170,10 @@
     <string name="settings_predictive_back">Predictive back gesture</string>
     <string name="settings_predictive_back_summary">Enable system predictive back animations</string>
     <string name="settings_language">Language</string>
+    <string name="settings_language_follow_system">Follow System</string>
+    <string name="settings_language_english">English</string>
+    <string name="settings_language_chinese">简体中文</string>
+    <string name="settings_language_dialog_title">Language</string>
     <string name="settings_language_placeholder">Placeholder</string>
     <string name="settings_about">About</string>
     <string name="settings_about_dialog_title">AVBDroid</string>

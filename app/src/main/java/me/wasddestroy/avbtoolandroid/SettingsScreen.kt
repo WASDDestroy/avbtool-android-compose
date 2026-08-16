@@ -49,12 +49,15 @@ fun SettingsScreen(
     themeMode: ThemeMode,
     amoledBlack: Boolean,
     predictiveBackGesture: Boolean,
+    languageMode: LanguageMode,
     onDynamicThemeColorChange: (Boolean) -> Unit,
     onThemeModeChange: (ThemeMode) -> Unit,
     onAmoledBlackChange: (Boolean) -> Unit,
     onPredictiveBackGestureChange: (Boolean) -> Unit,
+    onLanguageModeChange: (LanguageMode) -> Unit,
 ) {
     var showThemeModeDialog by rememberSaveable { mutableStateOf(false) }
+    var showLanguageDialog by rememberSaveable { mutableStateOf(false) }
     var showAboutDialog by rememberSaveable { mutableStateOf(false) }
 
     SettingsList(
@@ -108,9 +111,9 @@ fun SettingsScreen(
             row("language") {
                 PreferenceRow(
                     title = stringResource(R.string.settings_language),
-                    summary = stringResource(R.string.settings_language_placeholder),
+                    summary = stringResource(languageMode.labelRes),
                     iconContent = { SettingsIcon(Icons.Filled.Language) },
-                    onClick = { },
+                    onClick = { showLanguageDialog = true },
                 )
             }
             row("about") {
@@ -131,6 +134,17 @@ fun SettingsScreen(
                 showThemeModeDialog = false
             },
             onDismiss = { showThemeModeDialog = false },
+        )
+    }
+
+    if (showLanguageDialog) {
+        LanguageDialog(
+            currentMode = languageMode,
+            onSelect = {
+                onLanguageModeChange(it)
+                showLanguageDialog = false
+            },
+            onDismiss = { showLanguageDialog = false },
         )
     }
 
@@ -189,6 +203,46 @@ private fun ThemeModeDialog(
 }
 
 @Composable
+private fun LanguageDialog(
+    currentMode: LanguageMode,
+    onSelect: (LanguageMode) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.settings_language_dialog_title)) },
+        text = {
+            Column {
+                LanguageMode.entries.forEach { mode ->
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { onSelect(mode) }
+                            .padding(vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        RadioButton(
+                            selected = mode == currentMode,
+                            onClick = null,
+                        )
+                        Text(
+                            text = stringResource(mode.labelRes),
+                            modifier = Modifier.padding(start = 8.dp),
+                            style = MaterialTheme.typography.bodyLarge,
+                        )
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.settings_ok))
+            }
+        },
+    )
+}
+
+@Composable
 private fun AboutDialog(onDismiss: () -> Unit) {
     val context = LocalContext.current
     val uriHandler = LocalUriHandler.current
@@ -200,13 +254,6 @@ private fun AboutDialog(onDismiss: () -> Unit) {
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        icon = {
-            Icon(
-                painter = painterResource(R.drawable.ic_launcher_foreground),
-                contentDescription = null,
-                modifier = Modifier.size(48.dp),
-            )
-        },
         title = {
             Text(stringResource(R.string.settings_about_dialog_title))
         },

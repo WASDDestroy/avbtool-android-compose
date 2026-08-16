@@ -2,6 +2,7 @@ package me.wasddestroy.avbtoolandroid
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.annotation.StringRes
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.PredictiveBackHandler
 import androidx.activity.compose.setContent
@@ -36,6 +37,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
+import android.app.Activity
+import android.content.Context
+import android.content.res.Configuration
+import android.os.Build
+import android.os.LocaleList
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import me.wasddestroy.avbtoolandroid.ui.theme.AVBToolAndroidTheme
 import me.wasddestroy.avbtoolandroid.ui.theme.ThemeMode
@@ -54,12 +61,21 @@ class MainActivity : ComponentActivity() {
 }
 
 enum class AppDestinations(
-    @androidx.annotation.StringRes val labelRes: Int,
+    @StringRes val labelRes: Int,
     val icon: ImageVector,
 ) {
     HOME(R.string.nav_home, Icons.Filled.Home),
     CONSOLE(R.string.nav_console, Icons.Filled.Terminal),
     SETTINGS(R.string.nav_settings, Icons.Filled.Settings),
+}
+
+enum class LanguageMode(
+    @StringRes val labelRes: Int,
+    val tag: String?,
+) {
+    FOLLOW_SYSTEM(R.string.settings_language_follow_system, null),
+    ENGLISH(R.string.settings_language_english, "en"),
+    CHINESE(R.string.settings_language_chinese, "zh-CN"),
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -69,8 +85,11 @@ fun AVBToolAndroidApp() {
     var themeModeName by rememberSaveable { mutableStateOf(ThemeMode.FOLLOW_SYSTEM.name) }
     var amoledBlack by rememberSaveable { mutableStateOf(false) }
     var predictiveBackGesture by rememberSaveable { mutableStateOf(true) }
+    var languageModeName by rememberSaveable { mutableStateOf(LanguageMode.FOLLOW_SYSTEM.name) }
+    val context = LocalContext.current
 
     val themeMode = runCatching { ThemeMode.valueOf(themeModeName) }.getOrDefault(ThemeMode.FOLLOW_SYSTEM)
+    val languageMode = runCatching { LanguageMode.valueOf(languageModeName) }.getOrDefault(LanguageMode.FOLLOW_SYSTEM)
     val darkTheme = when (themeMode) {
         ThemeMode.LIGHT -> false
         ThemeMode.DARK -> true
@@ -130,10 +149,15 @@ fun AVBToolAndroidApp() {
                 themeMode = themeMode,
                 amoledBlack = amoledBlack,
                 predictiveBackGesture = predictiveBackGesture,
+                languageMode = languageMode,
                 onDynamicThemeColorChange = { dynamicThemeColor = it },
                 onThemeModeChange = { themeModeName = it.name },
                 onAmoledBlackChange = { amoledBlack = it },
                 onPredictiveBackGestureChange = { predictiveBackGesture = it },
+                onLanguageModeChange = { mode ->
+                    languageModeName = mode.name
+                    applyAppLanguage(context, mode.tag)
+                },
             )
 
             val command = commandId?.let { AvbCommands.byId(it) }
@@ -163,10 +187,12 @@ private fun RootScreen(
     themeMode: ThemeMode,
     amoledBlack: Boolean,
     predictiveBackGesture: Boolean,
+    languageMode: LanguageMode,
     onDynamicThemeColorChange: (Boolean) -> Unit,
     onThemeModeChange: (ThemeMode) -> Unit,
     onAmoledBlackChange: (Boolean) -> Unit,
     onPredictiveBackGestureChange: (Boolean) -> Unit,
+    onLanguageModeChange: (LanguageMode) -> Unit,
 ) {
     var currentDestination by rememberSaveable { mutableStateOf(AppDestinations.HOME) }
     val pagerState = rememberPagerState(pageCount = { AppDestinations.entries.size })
@@ -272,13 +298,32 @@ private fun RootScreen(
                         themeMode = themeMode,
                         amoledBlack = amoledBlack,
                         predictiveBackGesture = predictiveBackGesture,
+                        languageMode = languageMode,
                         onDynamicThemeColorChange = onDynamicThemeColorChange,
                         onThemeModeChange = onThemeModeChange,
                         onAmoledBlackChange = onAmoledBlackChange,
                         onPredictiveBackGestureChange = onPredictiveBackGestureChange,
+                        onLanguageModeChange = onLanguageModeChange,
                     )
                 }
             }
         }
+    }
+}
+
+
+private fun applyAppLanguage(context: Context, tag: String?) {
+    if (Build.VERSION.SDK_INT >= 33) {
+        val localeManager = context.getSystemService(android.app.LocaleManager::class.java)
+        localeManager.applicationLocales =
+            if (tag.isNullOrBlank()) LocaleList.getEmptyLocaleList()
+            else LocaleList.forLanguageTags(tag)
+    } else {
+        @Suppress("DEPRECATION")
+        val config = Configuration(context.resources.configuration)
+        config.setLocale(if (tag.isNullOrBlank()) java.util.Locale.getDefault() else java.util.Locale.forLanguageTag(tag))
+        @Suppress("DEPRECATION")
+        context.resources.updateConfiguration(config, context.resources.displayMetrics)
+        (context as? Activity)?.recreate()
     }
 }
