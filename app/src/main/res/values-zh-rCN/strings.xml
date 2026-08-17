@@ -262,4 +262,5 @@
     <string name="info_desc_hash_fmt">哈希描述符: %1$s</string>
     <string name="info_desc_hashtree">哈希树描述符</string>
     <string name="info_desc_hashtree_fmt">哈希树描述符: %1$s</string>
+    <string name="info_key_prop">属性:</string>
 </resources>

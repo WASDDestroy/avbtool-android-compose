@@ -152,6 +152,8 @@ private val INFO_IMAGE_KEY_RES = mapOf(
     "Flags" to R.string.info_key_flags,
     "Rollback Index Location" to R.string.info_key_rollback_index_location,
     "Release String" to R.string.info_key_release_string,
+    // Prop prefix
+    "Prop:" to R.string.info_key_prop,
     // Descriptor field keys
     "Partition Name" to R.string.info_key_partition_name,
     "Image Size" to R.string.info_key_image_size,
@@ -249,7 +251,7 @@ private fun parseInfoImage(stdout: String): List<ResultSection> {
         val propMatch = PROP_RE.find(text)
         if (propMatch != null) {
             flushBlock()
-            val row = ResultRow("Prop: ${propMatch.groupValues[1]}", propMatch.groupValues[2], monospace = true)
+            val row = ResultRow("Prop: ${propMatch.groupValues[1]}", propMatch.groupValues[2], monospace = true, localizedNameRes = INFO_IMAGE_KEY_RES["Prop:"])
             Log.d(TAG, "L$level prop: '${row.title}' = '${row.value}'")
             topRows += row
             continue

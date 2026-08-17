@@ -579,8 +579,13 @@ private fun ResultView(result: AvbCommandResult) {
                 section.rows.forEach { rowData ->
                     row(rowData.title) {
                         val displayTitle = rowData.localizedNameRes?.let { stringResource(it) } ?: rowData.title
+                        val finalTitle = if (rowData.title.startsWith("Prop:")) {
+                            displayTitle + rowData.title.removePrefix("Prop:")
+                        } else {
+                            displayTitle
+                        }
                         PreferenceValueRow(
-                            title = displayTitle,
+                            title = finalTitle,
                             value = rowData.value,
                             monospace = rowData.monospace,
                         )
