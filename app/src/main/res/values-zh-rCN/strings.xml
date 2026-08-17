@@ -222,6 +222,17 @@
     <string name="settings_color_spec_2021">SPEC_2021</string>
     <string name="settings_color_spec_2025">SPEC_2025</string>
     <string name="settings_color_spec_dialog_title">调色板标准</string>
+    <string name="settings_color_variant">色彩方案</string>
+    <string name="settings_color_variant_tonal_spot">TONAL_SPOT</string>
+    <string name="settings_color_variant_expressive">EXPRESSIVE</string>
+    <string name="settings_color_variant_vibrant">VIBRANT</string>
+    <string name="settings_color_variant_content">CONTENT</string>
+    <string name="settings_color_variant_fidelity">FIDELITY</string>
+    <string name="settings_color_variant_rainbow">RAINBOW</string>
+    <string name="settings_color_variant_fruit_salad">FRUIT_SALAD</string>
+    <string name="settings_color_variant_neutral">NEUTRAL</string>
+    <string name="settings_color_variant_monochrome">MONOCHROME</string>
+    <string name="settings_color_variant_dialog_title">色彩方案</string>
     <string name="settings_function_keyboard">功能键盘</string>
     <string name="settings_function_keyboard_summary">在控制台中显示 Esc、Tab、方向键等功能按键</string>
     <string name="settings_language">语言</string>

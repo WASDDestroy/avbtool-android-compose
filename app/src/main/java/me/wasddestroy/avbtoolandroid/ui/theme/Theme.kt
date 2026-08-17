@@ -25,6 +25,18 @@ enum class ColorSpecVersion(@param:StringRes val labelRes: Int) {
     SPEC_2025(R.string.settings_color_spec_2025),
 }
 
+enum class ColorVariant(@param:StringRes val labelRes: Int) {
+    TONAL_SPOT(R.string.settings_color_variant_tonal_spot),
+    EXPRESSIVE(R.string.settings_color_variant_expressive),
+    VIBRANT(R.string.settings_color_variant_vibrant),
+    CONTENT(R.string.settings_color_variant_content),
+    FIDELITY(R.string.settings_color_variant_fidelity),
+    RAINBOW(R.string.settings_color_variant_rainbow),
+    FRUIT_SALAD(R.string.settings_color_variant_fruit_salad),
+    NEUTRAL(R.string.settings_color_variant_neutral),
+    MONOCHROME(R.string.settings_color_variant_monochrome),
+}
+
 fun ColorSpecVersion.toLibrarySpec(): ColorSpec.SpecVersion = when (this) {
     ColorSpecVersion.SPEC_2021 -> ColorSpec.SpecVersion.SPEC_2021
     ColorSpecVersion.SPEC_2025 -> ColorSpec.SpecVersion.SPEC_2025
@@ -36,22 +48,21 @@ fun AVBToolAndroidTheme(
     dynamicColor: Boolean = true,
     amoledBlack: Boolean = false,
     colorSpecVersion: ColorSpecVersion = ColorSpecVersion.SPEC_2021,
+    colorVariant: ColorVariant = ColorVariant.TONAL_SPOT,
     content: @Composable () -> Unit
 ) {
     val spec = colorSpecVersion.toLibrarySpec()
     val colorScheme = when {
-        darkTheme && amoledBlack -> buildAmoledBlackScheme(spec)
+        darkTheme && amoledBlack -> buildAmoledBlackScheme(spec, colorVariant)
         dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
             val context = LocalContext.current
-            // Extract the wallpaper seed from the system's scheme, then
-            // re-derive with the user-selected spec version.
             val systemScheme = if (darkTheme) dynamicDarkColorScheme(context)
                                else dynamicLightColorScheme(context)
             val seedArgb = systemScheme.primary.toArgb()
-            buildDynamicSchemeColorScheme(seedArgb, darkTheme, spec)
+            buildSchemeFromSeed(seedArgb, darkTheme, spec, colorVariant)
         }
-        darkTheme -> buildSchemeColorScheme(isDark = true, specVersion = spec)
-        else -> buildSchemeColorScheme(isDark = false, specVersion = spec)
+        darkTheme -> buildSchemeFromSeed(SEED_COLOR, true, spec, colorVariant)
+        else -> buildSchemeFromSeed(SEED_COLOR, false, spec, colorVariant)
     }
 
     MaterialTheme(
@@ -61,11 +72,11 @@ fun AVBToolAndroidTheme(
     )
 }
 
-// AMOLED: same accent colors as the derived dark scheme, but every surface
-// is pure black. Derived via .copy() so accent colors stay in sync with
-// the current spec version.
-private fun buildAmoledBlackScheme(specVersion: ColorSpec.SpecVersion): ColorScheme {
-    val base = buildSchemeColorScheme(isDark = true, specVersion)
+private fun buildAmoledBlackScheme(
+    specVersion: ColorSpec.SpecVersion,
+    variant: ColorVariant,
+): ColorScheme {
+    val base = buildSchemeFromSeed(SEED_COLOR, isDark = true, specVersion, variant)
     return base.copy(
         background = Color.Black,
         surface = Color.Black,

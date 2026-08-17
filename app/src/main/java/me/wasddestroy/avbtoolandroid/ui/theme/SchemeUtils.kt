@@ -7,36 +7,41 @@ import androidx.compose.ui.graphics.Color
 import com.materialkolor.dynamiccolor.ColorSpec
 import com.materialkolor.dynamiccolor.MaterialDynamicColors
 import com.materialkolor.hct.Hct
+import com.materialkolor.scheme.DynamicScheme
+import com.materialkolor.scheme.SchemeContent
+import com.materialkolor.scheme.SchemeExpressive
+import com.materialkolor.scheme.SchemeFidelity
+import com.materialkolor.scheme.SchemeFruitSalad
+import com.materialkolor.scheme.SchemeMonochrome
+import com.materialkolor.scheme.SchemeNeutral
+import com.materialkolor.scheme.SchemeRainbow
 import com.materialkolor.scheme.SchemeTonalSpot
+import com.materialkolor.scheme.SchemeVibrant
 
 const val SEED_COLOR = 0xFF0061A4.toInt()
 
-fun buildSchemeColorScheme(
-    isDark: Boolean,
-    specVersion: ColorSpec.SpecVersion,
-): ColorScheme = schemeToColorScheme(
-    SchemeTonalSpot(
-        sourceColorHct = Hct.fromInt(SEED_COLOR),
-        isDark = isDark,
-        contrastLevel = 0.0,
-        specVersion = specVersion,
-    )
-)
-
-fun buildDynamicSchemeColorScheme(
+fun buildSchemeFromSeed(
     seedArgb: Int,
     isDark: Boolean,
     specVersion: ColorSpec.SpecVersion,
-): ColorScheme = schemeToColorScheme(
-    SchemeTonalSpot(
-        sourceColorHct = Hct.fromInt(seedArgb),
-        isDark = isDark,
-        contrastLevel = 0.0,
-        specVersion = specVersion,
-    )
-)
+    variant: ColorVariant,
+): ColorScheme {
+    val hct = Hct.fromInt(seedArgb)
+    val scheme: DynamicScheme = when (variant) {
+        ColorVariant.TONAL_SPOT -> SchemeTonalSpot(hct, isDark, 0.0, specVersion)
+        ColorVariant.EXPRESSIVE -> SchemeExpressive(hct, isDark, 0.0, specVersion)
+        ColorVariant.VIBRANT -> SchemeVibrant(hct, isDark, 0.0, specVersion)
+        ColorVariant.CONTENT -> SchemeContent(hct, isDark, 0.0, specVersion)
+        ColorVariant.FIDELITY -> SchemeFidelity(hct, isDark, 0.0, specVersion)
+        ColorVariant.RAINBOW -> SchemeRainbow(hct, isDark, 0.0, specVersion)
+        ColorVariant.FRUIT_SALAD -> SchemeFruitSalad(hct, isDark, 0.0, specVersion)
+        ColorVariant.NEUTRAL -> SchemeNeutral(hct, isDark, 0.0, specVersion)
+        ColorVariant.MONOCHROME -> SchemeMonochrome(hct, isDark, 0.0, specVersion)
+    }
+    return schemeToColorScheme(scheme)
+}
 
-private fun schemeToColorScheme(scheme: SchemeTonalSpot): ColorScheme {
+private fun schemeToColorScheme(scheme: DynamicScheme): ColorScheme {
     val c = MaterialDynamicColors()
     val builder = if (scheme.isDark) darkColorScheme() else lightColorScheme()
     return builder.copy(

@@ -223,6 +223,17 @@
     <string name="settings_color_spec_2021">SPEC_2021</string>
     <string name="settings_color_spec_2025">SPEC_2025</string>
     <string name="settings_color_spec_dialog_title">Color palette</string>
+    <string name="settings_color_variant">Color variant</string>
+    <string name="settings_color_variant_tonal_spot">TONAL_SPOT</string>
+    <string name="settings_color_variant_expressive">EXPRESSIVE</string>
+    <string name="settings_color_variant_vibrant">VIBRANT</string>
+    <string name="settings_color_variant_content">CONTENT</string>
+    <string name="settings_color_variant_fidelity">FIDELITY</string>
+    <string name="settings_color_variant_rainbow">RAINBOW</string>
+    <string name="settings_color_variant_fruit_salad">FRUIT_SALAD</string>
+    <string name="settings_color_variant_neutral">NEUTRAL</string>
+    <string name="settings_color_variant_monochrome">MONOCHROME</string>
+    <string name="settings_color_variant_dialog_title">Color variant</string>
     <string name="settings_function_keyboard">Function keyboard</string>
     <string name="settings_function_keyboard_summary">Show Esc, Tab, arrow keys and other function keys in Console</string>
     <string name="settings_language">Language</string>

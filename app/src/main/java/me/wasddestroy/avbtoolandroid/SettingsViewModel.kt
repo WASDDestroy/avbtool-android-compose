@@ -6,6 +6,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import me.wasddestroy.avbtoolandroid.ui.theme.ColorSpecVersion
+import me.wasddestroy.avbtoolandroid.ui.theme.ColorVariant
 import me.wasddestroy.avbtoolandroid.ui.theme.ThemeMode
 
 data class SettingsUiState(
@@ -16,6 +17,7 @@ data class SettingsUiState(
     val languageMode: LanguageMode = LanguageMode.FOLLOW_SYSTEM,
     val showFunctionKeyboard: Boolean = true,
     val colorSpecVersion: ColorSpecVersion = ColorSpecVersion.SPEC_2021,
+    val colorVariant: ColorVariant = ColorVariant.TONAL_SPOT,
 )
 
 /**
@@ -40,4 +42,6 @@ class SettingsViewModel : ViewModel() {
     fun setShowFunctionKeyboard(value: Boolean) = _uiState.update { it.copy(showFunctionKeyboard = value) }
 
     fun setColorSpecVersion(value: ColorSpecVersion) = _uiState.update { it.copy(colorSpecVersion = value) }
+
+    fun setColorVariant(value: ColorVariant) = _uiState.update { it.copy(colorVariant = value) }
 }
