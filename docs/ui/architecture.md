@@ -15,6 +15,9 @@ Key sources:
 - `app/src/main/java/me/wasddestroy/avbtoolandroid/ui/components/PreferenceComponents.kt`
 - `app/src/main/java/me/wasddestroy/avbtoolandroid/ui/theme/Theme.kt`
 - `app/src/main/java/me/wasddestroy/avbtoolandroid/AvbModels.kt`
+- `app/src/main/java/me/wasddestroy/avbtoolandroid/CommandViewModel.kt`
+- `app/src/main/java/me/wasddestroy/avbtoolandroid/ConsoleViewModel.kt`
+- `app/src/main/java/me/wasddestroy/avbtoolandroid/SettingsViewModel.kt`
 
 ## 2. Theme and styling
 
@@ -36,10 +39,11 @@ All navigation is kept in `MainActivity.kt`.
 
 ### Root destinations
 
-`AppDestinations` contains the two tab destinations:
+`AppDestinations` contains the three tab destinations:
 
 - `HOME` (`Icons.Filled.Home`)
 - `CONSOLE` (`Icons.Filled.Terminal`)
+- `SETTINGS` (`Icons.Filled.Settings`)
 
 `RootScreen` renders:
 
@@ -132,7 +136,49 @@ The most important components are:
 | `PreferenceSwitchRow` | The standard switch row. |
 | `DialogConfirmButton` / `DialogNeutralButton` / `DialogDismissButton` | Material 3 dialog button hierarchy. |
 
-## 6. Data layer for UI
+## 6. State management
+
+The app uses ViewModels for business state and plain Compose `remember` for
+transient UI state. There is no DI framework; each ViewModel exposes a
+`companion object` factory built with `viewModelFactory { initializer { ... } }`.
+
+| ViewModel | Scope | Holds |
+|---|---|---|
+| `CommandViewModel` | `viewModel(key = command.id)` — one per command | `CommandUiState`: `running`, `result`, `outputFile`. Owns argv construction, SAF fd lifetime, and result parsing. |
+| `ConsoleViewModel` | Activity | `AvbtoolTermSession` (bound to `viewModelScope`) and the storage-permission flag. |
+| `SettingsViewModel` | Activity | `SettingsUiState`: theme, AMOLED, dynamic color, predictive back, language. In-memory only — not persisted. |
+
+State is exposed as `StateFlow<UiState>` and collected with
+`collectAsStateWithLifecycle()`.
+
+### What deliberately stays in composables
+
+- **Navigation state** — `commandId`, `commandBackProgress`, and the
+  `PredictiveBackHandler` logic stay in `AVBToolAndroidApp` / `RootScreen`.
+  Navigation is intentionally small (see section 3).
+- **`CommandScreen` form values** — `values` remains a `remember(command.id)`
+  map. It drives argument editing (file-picker line appends, chain editor),
+  and moving it would pull that UI logic into the ViewModel.
+- **Dialog and editing flags** — `copyWarning`, `editingArg`,
+  `choosingAlgorithm`, `managingFileArg`, `managingChainArg`, `chainEditor`,
+  `advancedExpanded`, `rawExpanded`, and the three `SettingsScreen` dialog
+  flags.
+- **`ConsoleScreen` platform-bound objects** — `terminalView` (a ViewModel must
+  never hold a `View`), the `rememberLauncherForActivityResult` launchers
+  (Activity Result API is bound to the Activity), and the IME show/hide
+  helpers.
+- **Language side effect** — `applyAppLanguage()` calls
+  `Activity.recreate()` below API 33, so it runs from a
+  `LaunchedEffect(settings.languageMode)` in `AVBToolAndroidApp`, not from the
+  ViewModel. The ViewModel stores only the selected `LanguageMode`.
+
+### Consequences of ViewModel lifetimes
+
+- A command's result survives leaving and re-entering that command's screen.
+- The console session survives configuration changes and tab switches;
+  `session.finish()` runs from `ConsoleViewModel.onCleared()`.
+
+## 7. Data layer for UI
 
 `AvbModels.kt` contains `AvbCommand` and `AvbArg`. All user-visible labels,
 titles, and descriptions are stored as `@StringRes` resource IDs and resolved
