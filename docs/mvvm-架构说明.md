@@ -223,10 +223,7 @@ inverse、outline 等约 30 个 color role）。
 
 ## 7. 相关文档
 
-- [`ui/architecture.md`](ui/architecture.md) —— UI 架构总览（英文），第 6 节是状态管理。
-- [`superpowers/specs/2026-08-17-mvvm-refactor-design.md`](superpowers/specs/2026-08-17-mvvm-refactor-design.md)
-  —— 本次重构的设计文档，记录了目标、非目标与决策依据。
-- [`superpowers/plans/2026-08-17-mvvm-refactor.md`](superpowers/plans/2026-08-17-mvvm-refactor.md)
-  —— 实施计划，逐任务逐步骤的改动清单。
-- `../AGENTS.md` —— 给贡献者和 AI 助手的硬性约定，"State management" 一节是本文的
-  精简版。
+- [`ui/architecture.md`](ui/architecture.md) —— UI 架构总览（英文），第 6 节是状态管理，
+  第 2 节是主题与配色。
+- [`../AGENTS.md`](../AGENTS.md) —— 给贡献者和 AI 助手的硬性约定，"State management"
+  与 "Theme" 两节是本文的精简版。
