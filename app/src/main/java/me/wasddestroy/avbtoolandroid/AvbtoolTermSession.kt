@@ -22,6 +22,7 @@ class AvbtoolTermSession(
     private val escapeBuffer = StringBuilder()
     private var bannerShown = false
     private var emulatorReady = false
+    private var cursorPos = 0
 
     init {
         // TermSession normally bridges a PTY process. We run Python in-process,
@@ -37,6 +38,7 @@ class AvbtoolTermSession(
     fun insertText(text: String) {
         if (!emulatorReady) return
         line.append(text)
+        cursorPos = line.length
         appendToEmulator(text.toByteArray(), 0, text.toByteArray().size)
         notifyUpdate()
     }
@@ -66,6 +68,7 @@ class AvbtoolTermSession(
         if (!emulatorReady) return
         appendToEmulator("[2J[H".toByteArray(), 0, 7)
         line.setLength(0)
+        cursorPos = 0
         savedLine = null
         notifyUpdate()
         writePrompt()
@@ -93,8 +96,23 @@ class AvbtoolTermSession(
                 else -> {
                     if (b >= 0x20) {
                         val ch = b.toChar()
-                        line.append(ch)
-                        appendToEmulator(byteArrayOf(ch.code.toByte()), 0, 1)
+                        if (cursorPos < line.length) {
+                            // Insert at cursor position
+                            line.insert(cursorPos, ch)
+                            // Re-render from cursor position
+                            val remaining = line.substring(cursorPos)
+                            appendToEmulator(remaining.toByteArray(), 0, remaining.length)
+                            // Move cursor back to correct position
+                            val backspaces = remaining.length - 1
+                            if (backspaces > 0) {
+                                appendToEmulator(("\u001b[D".repeat(backspaces)).toByteArray(), 0, backspaces * 3)
+                            }
+                        } else {
+                            // Append at end
+                            line.append(ch)
+                            appendToEmulator(byteArrayOf(ch.code.toByte()), 0, 1)
+                        }
+                        cursorPos++
                         notifyUpdate()
                     }
                 }
@@ -120,9 +138,21 @@ class AvbtoolTermSession(
     }
 
     private fun backspace() {
-        if (line.isNotEmpty()) {
-            line.deleteCharAt(line.length - 1)
-            appendToEmulator("\b \b".toByteArray(), 0, 3)
+        if (line.isNotEmpty() && cursorPos > 0) {
+            line.deleteCharAt(cursorPos - 1)
+            cursorPos--
+            // Move cursor left, erase to end of line, re-render remaining text
+            appendToEmulator("\b".toByteArray(), 0, 1)
+            appendToEmulator("\u001b[K".toByteArray(), 0, 3)
+            val remaining = line.substring(cursorPos)
+            if (remaining.isNotEmpty()) {
+                appendToEmulator(remaining.toByteArray(), 0, remaining.length)
+                // Move cursor back to correct position
+                val backspaces = remaining.length
+                if (backspaces > 0) {
+                    appendToEmulator(("\u001b[D".repeat(backspaces)).toByteArray(), 0, backspaces * 3)
+                }
+            }
             notifyUpdate()
         }
     }
@@ -130,17 +160,46 @@ class AvbtoolTermSession(
     private fun cancelLine() {
         appendOutput("^C\r\n")
         line.setLength(0)
+        cursorPos = 0
         savedLine = null
         writePrompt()
     }
 
     private fun moveCursor(delta: Int) {
-        // Minimal cursor movement support. Home/End clear and re-echo the line.
-        if (delta == Int.MIN_VALUE || delta == Int.MAX_VALUE) {
-            appendToEmulator("\r".toByteArray(), 0, 1)
-            appendToEmulator("\u001b[K".toByteArray(), 0, 2)
-            appendToEmulator(line.toString().toByteArray(), 0, line.length)
-            notifyUpdate()
+        when {
+            delta == Int.MIN_VALUE -> {
+                // Home: move to beginning
+                if (cursorPos > 0) {
+                    appendToEmulator("\r".toByteArray(), 0, 1)
+                    cursorPos = 0
+                    notifyUpdate()
+                }
+            }
+            delta == Int.MAX_VALUE -> {
+                // End: move to end
+                if (cursorPos < line.length) {
+                    val remaining = line.substring(cursorPos)
+                    appendToEmulator(remaining.toByteArray(), 0, remaining.length)
+                    cursorPos = line.length
+                    notifyUpdate()
+                }
+            }
+            delta < 0 -> {
+                // Left arrow: move cursor left
+                if (cursorPos > 0) {
+                    appendToEmulator("\u001b[D".toByteArray(), 0, 3)
+                    cursorPos--
+                    notifyUpdate()
+                }
+            }
+            delta > 0 -> {
+                // Right arrow: move cursor right
+                if (cursorPos < line.length) {
+                    appendToEmulator("\u001b[C".toByteArray(), 0, 3)
+                    cursorPos++
+                    notifyUpdate()
+                }
+            }
         }
     }
 
@@ -151,6 +210,7 @@ class AvbtoolTermSession(
         val newLine = if (historyIndex < 0) savedLine.orEmpty() else history[historyIndex]
         line.setLength(0)
         line.append(newLine)
+        cursorPos = line.length
         appendToEmulator("\r\u001b[K".toByteArray(), 0, 4)
         appendToEmulator(newLine.toByteArray(), 0, newLine.length)
         notifyUpdate()
@@ -159,6 +219,7 @@ class AvbtoolTermSession(
     private fun executeLine() {
         val command = line.toString().trim()
         line.setLength(0)
+        cursorPos = 0
         appendOutput("\r\n")
         if (command == "clear") {
             clearScreen()
