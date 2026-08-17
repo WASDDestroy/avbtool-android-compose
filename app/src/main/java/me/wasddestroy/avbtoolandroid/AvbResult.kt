@@ -1,6 +1,7 @@
 package me.wasddestroy.avbtoolandroid
 
 import android.util.Log
+import androidx.annotation.StringRes
 import org.json.JSONObject
 
 private const val TAG = "AvbResultParser"
@@ -11,11 +12,14 @@ data class ResultRow(
     val title: String,
     val value: String,
     val monospace: Boolean = false,
+    @param:StringRes val localizedNameRes: Int? = null,
 )
 
 data class ResultGroup(
     val title: String,
     val rows: List<ResultRow>,
+    @param:StringRes val localizedNameRes: Int? = null,
+    val nameFormatArg: String? = null,
 )
 
 data class ResultSection(
@@ -136,6 +140,47 @@ private fun parseVerifyImage(stdout: String): List<ResultSection> {
 private val DESCRIPTOR_RE = Regex("""((?:Chain Partition|Hash|Hashtree) descriptor):""")
 private val PROP_RE = Regex("""Prop:\s*(.+?)\s*->\s*'(.*)'$""")
 
+private val INFO_IMAGE_KEY_RES = mapOf(
+    // Top-level keys
+    "Minimum libavb version" to R.string.info_key_minimum_libavb_version,
+    "Header Block" to R.string.info_key_header_block,
+    "Authentication Block" to R.string.info_key_authentication_block,
+    "Auxiliary Block" to R.string.info_key_auxiliary_block,
+    "Public key (sha1)" to R.string.info_key_public_key_sha1,
+    "Algorithm" to R.string.info_key_algorithm,
+    "Rollback Index" to R.string.info_key_rollback_index,
+    "Flags" to R.string.info_key_flags,
+    "Rollback Index Location" to R.string.info_key_rollback_index_location,
+    "Release String" to R.string.info_key_release_string,
+    // Descriptor field keys
+    "Partition Name" to R.string.info_key_partition_name,
+    "Image Size" to R.string.info_key_image_size,
+    "Hash Algorithm" to R.string.info_key_hash_algorithm,
+    "Salt" to R.string.info_key_salt,
+    "Digest" to R.string.info_key_digest,
+    "Root Digest" to R.string.info_key_root_digest,
+    "Version of dm-verity" to R.string.info_key_version_of_dm_verity,
+    "Tree Offset" to R.string.info_key_tree_offset,
+    "Tree Size" to R.string.info_key_tree_size,
+    "Data Block Size" to R.string.info_key_data_block_size,
+    "Hash Block Size" to R.string.info_key_hash_block_size,
+    "FEC num roots" to R.string.info_key_fec_num_roots,
+    "FEC offset" to R.string.info_key_fec_offset,
+    "FEC size" to R.string.info_key_fec_size,
+)
+
+private val DESCRIPTOR_TYPE_RES = mapOf(
+    "Chain Partition descriptor" to R.string.info_desc_chain_partition,
+    "Hash descriptor" to R.string.info_desc_hash,
+    "Hashtree descriptor" to R.string.info_desc_hashtree,
+)
+
+private val DESCRIPTOR_FMT_RES = mapOf(
+    "Chain Partition descriptor" to R.string.info_desc_chain_partition_fmt,
+    "Hash descriptor" to R.string.info_desc_hash_fmt,
+    "Hashtree descriptor" to R.string.info_desc_hashtree_fmt,
+)
+
 private fun parseInfoImage(stdout: String): List<ResultSection> {
     val lines = stdout.lines()
 
@@ -169,6 +214,8 @@ private fun parseInfoImage(stdout: String): List<ResultSection> {
         groups += ResultGroup(
             title = title,
             rows = listOf(ResultRow(title, summaryLines.joinToString("\n"), monospace = true)),
+            localizedNameRes = DESCRIPTOR_FMT_RES[type] ?: DESCRIPTOR_TYPE_RES[type],
+            nameFormatArg = partitionName,
         )
         blockType = null
         blockLines = mutableListOf()
@@ -188,8 +235,9 @@ private fun parseInfoImage(stdout: String): List<ResultSection> {
                 }
                 else -> {
                     val parts = text.split(":", limit = 2)
-                    val row = if (parts.size == 2) ResultRow(parts[0].trim(), parts[1].trim())
-                    else ResultRow(text, "")
+                    val key = if (parts.size == 2) parts[0].trim() else text
+                    val value = if (parts.size == 2) parts[1].trim() else ""
+                    val row = ResultRow(key, value, localizedNameRes = INFO_IMAGE_KEY_RES[key])
                     Log.d(TAG, "L0 row: '${row.title}' = '${row.value}'")
                     topRows += row
                 }

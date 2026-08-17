@@ -578,8 +578,9 @@ private fun ResultView(result: AvbCommandResult) {
             PreferenceGroup(title = section.title) {
                 section.rows.forEach { rowData ->
                     row(rowData.title) {
+                        val displayTitle = rowData.localizedNameRes?.let { stringResource(it) } ?: rowData.title
                         PreferenceValueRow(
-                            title = rowData.title,
+                            title = displayTitle,
                             value = rowData.value,
                             monospace = rowData.monospace,
                         )
@@ -588,8 +589,12 @@ private fun ResultView(result: AvbCommandResult) {
                 section.groups.forEach { group ->
                     group.rows.forEach { rowData ->
                         row(group.title + ":" + rowData.title) {
+                            val groupDisplayTitle = group.localizedNameRes?.let { res ->
+                                if (group.nameFormatArg != null) stringResource(res, group.nameFormatArg)
+                                else stringResource(res)
+                            } ?: group.title
                             PreferenceValueRow(
-                                title = rowData.title,
+                                title = groupDisplayTitle,
                                 value = rowData.value,
                                 monospace = rowData.monospace,
                             )

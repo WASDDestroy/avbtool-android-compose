@@ -233,4 +233,35 @@
     <string name="settings_about_github_url">https://github.com/WASDDestroy/avbtool-android-compose</string>
     <string name="settings_ok">OK</string>
     <string name="settings_about_version_unknown">Unknown</string>
+    <!-- info_image localized keys -->
+    <string name="info_key_minimum_libavb_version">Minimum libavb version</string>
+    <string name="info_key_header_block">Header Block</string>
+    <string name="info_key_authentication_block">Authentication Block</string>
+    <string name="info_key_auxiliary_block">Auxiliary Block</string>
+    <string name="info_key_public_key_sha1">Public key (sha1)</string>
+    <string name="info_key_algorithm">Algorithm</string>
+    <string name="info_key_rollback_index">Rollback Index</string>
+    <string name="info_key_flags">Flags</string>
+    <string name="info_key_rollback_index_location">Rollback Index Location</string>
+    <string name="info_key_release_string">Release String</string>
+    <string name="info_key_partition_name">Partition Name</string>
+    <string name="info_key_image_size">Image Size</string>
+    <string name="info_key_hash_algorithm">Hash Algorithm</string>
+    <string name="info_key_salt">Salt</string>
+    <string name="info_key_digest">Digest</string>
+    <string name="info_key_root_digest">Root Digest</string>
+    <string name="info_key_version_of_dm_verity">Version of dm-verity</string>
+    <string name="info_key_tree_offset">Tree Offset</string>
+    <string name="info_key_tree_size">Tree Size</string>
+    <string name="info_key_data_block_size">Data Block Size</string>
+    <string name="info_key_hash_block_size">Hash Block Size</string>
+    <string name="info_key_fec_num_roots">FEC num roots</string>
+    <string name="info_key_fec_offset">FEC offset</string>
+    <string name="info_key_fec_size">FEC size</string>
+    <string name="info_desc_chain_partition">Chain Partition descriptor</string>
+    <string name="info_desc_chain_partition_fmt">Chain Partition descriptor: %1$s</string>
+    <string name="info_desc_hash">Hash descriptor</string>
+    <string name="info_desc_hash_fmt">Hash descriptor: %1$s</string>
+    <string name="info_desc_hashtree">Hashtree descriptor</string>
+    <string name="info_desc_hashtree_fmt">Hashtree descriptor: %1$s</string>
 </resources>

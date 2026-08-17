@@ -231,4 +231,35 @@
     <string name="settings_about_github_url">https://github.com/WASDDestroy/avbtool-android-compose</string>
     <string name="settings_ok">确定</string>
     <string name="settings_about_version_unknown">未知</string>
+    <!-- info_image 本地化键 -->
+    <string name="info_key_minimum_libavb_version">最低 libavb 版本</string>
+    <string name="info_key_header_block">头部块</string>
+    <string name="info_key_authentication_block">认证块</string>
+    <string name="info_key_auxiliary_block">辅助块</string>
+    <string name="info_key_public_key_sha1">公钥 (sha1)</string>
+    <string name="info_key_algorithm">算法</string>
+    <string name="info_key_rollback_index">回滚索引</string>
+    <string name="info_key_flags">标志</string>
+    <string name="info_key_rollback_index_location">回滚索引位置</string>
+    <string name="info_key_release_string">发布字符串</string>
+    <string name="info_key_partition_name">分区名</string>
+    <string name="info_key_image_size">映像大小</string>
+    <string name="info_key_hash_algorithm">哈希算法</string>
+    <string name="info_key_salt">盐值</string>
+    <string name="info_key_digest">摘要</string>
+    <string name="info_key_root_digest">根摘要</string>
+    <string name="info_key_version_of_dm_verity">dm-verity 版本</string>
+    <string name="info_key_tree_offset">哈希树偏移</string>
+    <string name="info_key_tree_size">哈希树大小</string>
+    <string name="info_key_data_block_size">数据块大小</string>
+    <string name="info_key_hash_block_size">哈希块大小</string>
+    <string name="info_key_fec_num_roots">FEC 根数</string>
+    <string name="info_key_fec_offset">FEC 偏移</string>
+    <string name="info_key_fec_size">FEC 大小</string>
+    <string name="info_desc_chain_partition">链式分区描述符</string>
+    <string name="info_desc_chain_partition_fmt">链式分区描述符: %1$s</string>
+    <string name="info_desc_hash">哈希描述符</string>
+    <string name="info_desc_hash_fmt">哈希描述符: %1$s</string>
+    <string name="info_desc_hashtree">哈希树描述符</string>
+    <string name="info_desc_hashtree_fmt">哈希树描述符: %1$s</string>
 </resources>
