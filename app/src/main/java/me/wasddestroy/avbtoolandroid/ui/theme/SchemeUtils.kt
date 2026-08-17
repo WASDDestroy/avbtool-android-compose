@@ -1,8 +1,5 @@
 package me.wasddestroy.avbtoolandroid.ui.theme
 
-import android.app.WallpaperManager
-import android.content.Context
-import android.os.Build
 import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
@@ -12,7 +9,7 @@ import com.materialkolor.dynamiccolor.MaterialDynamicColors
 import com.materialkolor.hct.Hct
 import com.materialkolor.scheme.SchemeTonalSpot
 
-private const val SEED_COLOR = 0xFF0061A4.toInt()
+const val SEED_COLOR = 0xFF0061A4.toInt()
 
 fun buildSchemeColorScheme(
     isDark: Boolean,
@@ -27,30 +24,17 @@ fun buildSchemeColorScheme(
 )
 
 fun buildDynamicSchemeColorScheme(
-    context: Context,
+    seedArgb: Int,
     isDark: Boolean,
     specVersion: ColorSpec.SpecVersion,
-): ColorScheme {
-    val seed = extractWallpaperSeed(context)
-    return schemeToColorScheme(
-        SchemeTonalSpot(
-            sourceColorHct = Hct.fromInt(seed),
-            isDark = isDark,
-            contrastLevel = 0.0,
-            specVersion = specVersion,
-        )
+): ColorScheme = schemeToColorScheme(
+    SchemeTonalSpot(
+        sourceColorHct = Hct.fromInt(seedArgb),
+        isDark = isDark,
+        contrastLevel = 0.0,
+        specVersion = specVersion,
     )
-}
-
-private fun extractWallpaperSeed(context: Context): Int {
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-        val wm = WallpaperManager.getInstance(context)
-        val colors = wm.getWallpaperColors(WallpaperManager.FLAG_SYSTEM)
-        val primary = colors?.primaryColor?.toArgb()
-        if (primary != null) return primary
-    }
-    return SEED_COLOR
-}
+)
 
 private fun schemeToColorScheme(scheme: SchemeTonalSpot): ColorScheme {
     val c = MaterialDynamicColors()

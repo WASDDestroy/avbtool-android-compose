@@ -5,8 +5,11 @@ import androidx.annotation.StringRes
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.dynamicDarkColorScheme
+import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import com.materialkolor.dynamiccolor.ColorSpec
 import me.wasddestroy.avbtoolandroid.R
@@ -40,7 +43,12 @@ fun AVBToolAndroidTheme(
         darkTheme && amoledBlack -> buildAmoledBlackScheme(spec)
         dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
             val context = LocalContext.current
-            buildDynamicSchemeColorScheme(context, darkTheme, spec)
+            // Extract the wallpaper seed from the system's scheme, then
+            // re-derive with the user-selected spec version.
+            val systemScheme = if (darkTheme) dynamicDarkColorScheme(context)
+                               else dynamicLightColorScheme(context)
+            val seedArgb = systemScheme.primary.toArgb()
+            buildDynamicSchemeColorScheme(seedArgb, darkTheme, spec)
         }
         darkTheme -> buildSchemeColorScheme(isDark = true, specVersion = spec)
         else -> buildSchemeColorScheme(isDark = false, specVersion = spec)
