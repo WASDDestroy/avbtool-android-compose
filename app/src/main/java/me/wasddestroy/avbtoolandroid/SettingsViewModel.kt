@@ -5,6 +5,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import me.wasddestroy.avbtoolandroid.ui.theme.ColorSpecVersion
 import me.wasddestroy.avbtoolandroid.ui.theme.ThemeMode
 
 data class SettingsUiState(
@@ -14,6 +15,7 @@ data class SettingsUiState(
     val predictiveBackGesture: Boolean = true,
     val languageMode: LanguageMode = LanguageMode.FOLLOW_SYSTEM,
     val showFunctionKeyboard: Boolean = true,
+    val colorSpecVersion: ColorSpecVersion = ColorSpecVersion.SPEC_2021,
 )
 
 /**
@@ -36,4 +38,6 @@ class SettingsViewModel : ViewModel() {
     fun setLanguageMode(value: LanguageMode) = _uiState.update { it.copy(languageMode = value) }
 
     fun setShowFunctionKeyboard(value: Boolean) = _uiState.update { it.copy(showFunctionKeyboard = value) }
+
+    fun setColorSpecVersion(value: ColorSpecVersion) = _uiState.update { it.copy(colorSpecVersion = value) }
 }

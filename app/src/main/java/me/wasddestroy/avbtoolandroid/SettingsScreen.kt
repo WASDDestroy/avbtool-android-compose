@@ -15,6 +15,7 @@ import androidx.compose.material.icons.filled.Keyboard
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Palette
+import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -40,6 +41,7 @@ import me.wasddestroy.avbtoolandroid.ui.components.PreferenceRow
 import me.wasddestroy.avbtoolandroid.ui.components.PreferenceSwitchRow
 import me.wasddestroy.avbtoolandroid.ui.components.SettingsList
 import me.wasddestroy.avbtoolandroid.ui.components.preferenceGroup
+import me.wasddestroy.avbtoolandroid.ui.theme.ColorSpecVersion
 import me.wasddestroy.avbtoolandroid.ui.theme.ThemeMode
 
 @Composable
@@ -50,6 +52,7 @@ fun SettingsScreen(
     val settings by viewModel.uiState.collectAsStateWithLifecycle()
     var showThemeModeDialog by rememberSaveable { mutableStateOf(false) }
     var showLanguageDialog by rememberSaveable { mutableStateOf(false) }
+    var showColorSpecDialog by rememberSaveable { mutableStateOf(false) }
     var showAboutDialog by rememberSaveable { mutableStateOf(false) }
 
     SettingsList(
@@ -73,6 +76,16 @@ fun SettingsScreen(
                     summary = stringResource(R.string.settings_dynamic_theme_color_summary),
                     iconContent = { SettingsIcon(Icons.Filled.Palette) },
                 )
+            }
+            if (!settings.dynamicThemeColor) {
+                row("color_spec_version") {
+                    PreferenceRow(
+                        title = stringResource(R.string.settings_color_spec),
+                        summary = stringResource(settings.colorSpecVersion.labelRes),
+                        iconContent = { SettingsIcon(Icons.Filled.Tune) },
+                        onClick = { showColorSpecDialog = true },
+                    )
+                }
             }
             row("theme_mode") {
                 PreferenceRow(
@@ -138,6 +151,17 @@ fun SettingsScreen(
         )
     }
 
+    if (showColorSpecDialog) {
+        ColorSpecDialog(
+            currentSpec = settings.colorSpecVersion,
+            onSelect = {
+                viewModel.setColorSpecVersion(it)
+                showColorSpecDialog = false
+            },
+            onDismiss = { showColorSpecDialog = false },
+        )
+    }
+
     if (showLanguageDialog) {
         LanguageDialog(
             currentMode = settings.languageMode,
@@ -188,6 +212,46 @@ private fun ThemeModeDialog(
                         )
                         Text(
                             text = stringResource(mode.labelRes),
+                            modifier = Modifier.padding(start = 8.dp),
+                            style = MaterialTheme.typography.bodyLarge,
+                        )
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.settings_ok))
+            }
+        },
+    )
+}
+
+@Composable
+private fun ColorSpecDialog(
+    currentSpec: ColorSpecVersion,
+    onSelect: (ColorSpecVersion) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.settings_color_spec_dialog_title)) },
+        text = {
+            Column {
+                ColorSpecVersion.entries.forEach { spec ->
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { onSelect(spec) }
+                            .padding(vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        RadioButton(
+                            selected = spec == currentSpec,
+                            onClick = null,
+                        )
+                        Text(
+                            text = stringResource(spec.labelRes),
                             modifier = Modifier.padding(start = 8.dp),
                             style = MaterialTheme.typography.bodyLarge,
                         )

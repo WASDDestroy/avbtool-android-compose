@@ -218,6 +218,10 @@
     <string name="settings_amoled_black_summary">深色主题下使用纯黑表面色</string>
     <string name="settings_predictive_back">预测性返回手势</string>
     <string name="settings_predictive_back_summary">启用系统预测性返回动画</string>
+    <string name="settings_color_spec">调色板标准</string>
+    <string name="settings_color_spec_2021">SPEC_2021</string>
+    <string name="settings_color_spec_2025">SPEC_2025</string>
+    <string name="settings_color_spec_dialog_title">调色板标准</string>
     <string name="settings_function_keyboard">功能键盘</string>
     <string name="settings_function_keyboard_summary">在控制台中显示 Esc、Tab、方向键等功能按键</string>
     <string name="settings_language">语言</string>

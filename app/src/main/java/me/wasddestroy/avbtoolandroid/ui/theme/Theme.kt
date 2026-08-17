@@ -3,14 +3,14 @@ package me.wasddestroy.avbtoolandroid.ui.theme
 import android.os.Build
 import androidx.annotation.StringRes
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
-import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import com.materialkolor.dynamiccolor.ColorSpec
 import me.wasddestroy.avbtoolandroid.R
 
 enum class ThemeMode(@param:StringRes val labelRes: Int) {
@@ -19,22 +19,32 @@ enum class ThemeMode(@param:StringRes val labelRes: Int) {
     FOLLOW_SYSTEM(R.string.settings_theme_mode_follow_system),
 }
 
+enum class ColorSpecVersion(@param:StringRes val labelRes: Int) {
+    SPEC_2021(R.string.settings_color_spec_2021),
+    SPEC_2025(R.string.settings_color_spec_2025),
+}
+
+fun ColorSpecVersion.toLibrarySpec(): ColorSpec.SpecVersion = when (this) {
+    ColorSpecVersion.SPEC_2021 -> ColorSpec.SpecVersion.SPEC_2021
+    ColorSpecVersion.SPEC_2025 -> ColorSpec.SpecVersion.SPEC_2025
+}
+
 @Composable
 fun AVBToolAndroidTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
     dynamicColor: Boolean = true,
     amoledBlack: Boolean = false,
+    colorSpecVersion: ColorSpecVersion = ColorSpecVersion.SPEC_2021,
     content: @Composable () -> Unit
 ) {
     val colorScheme = when {
-        darkTheme && amoledBlack -> AmoledBlackColorScheme
+        darkTheme && amoledBlack -> buildAmoledBlackScheme(colorSpecVersion)
         dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
             val context = LocalContext.current
             if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
         }
-
-        darkTheme -> DarkColorScheme
-        else -> LightColorScheme
+        darkTheme -> buildSchemeColorScheme(isDark = true, colorSpecVersion.toLibrarySpec())
+        else -> buildSchemeColorScheme(isDark = false, colorSpecVersion.toLibrarySpec())
     }
 
     MaterialTheme(
@@ -44,94 +54,20 @@ fun AVBToolAndroidTheme(
     )
 }
 
-private val LightColorScheme = lightColorScheme(
-    primary = LightPrimary,
-    onPrimary = LightOnPrimary,
-    primaryContainer = LightPrimaryContainer,
-    onPrimaryContainer = LightOnPrimaryContainer,
-    secondary = LightSecondary,
-    onSecondary = LightOnSecondary,
-    secondaryContainer = LightSecondaryContainer,
-    onSecondaryContainer = LightOnSecondaryContainer,
-    tertiary = LightTertiary,
-    onTertiary = LightOnTertiary,
-    tertiaryContainer = LightTertiaryContainer,
-    onTertiaryContainer = LightOnTertiaryContainer,
-    error = LightError,
-    onError = LightOnError,
-    errorContainer = LightErrorContainer,
-    onErrorContainer = LightOnErrorContainer,
-    background = LightBackground,
-    onBackground = LightOnBackground,
-    surface = LightSurface,
-    onSurface = LightOnSurface,
-    surfaceVariant = LightSurfaceVariant,
-    onSurfaceVariant = LightOnSurfaceVariant,
-    outline = LightOutline,
-    outlineVariant = LightOutlineVariant,
-    surfaceContainerLowest = LightSurfaceContainerLowest,
-    surfaceContainerLow = LightSurfaceContainerLow,
-    surfaceContainer = LightSurfaceContainer,
-    surfaceContainerHigh = LightSurfaceContainerHigh,
-    surfaceContainerHighest = LightSurfaceContainerHighest,
-    surfaceDim = LightSurfaceDim,
-    surfaceBright = LightSurfaceBright,
-    inverseSurface = LightInverseSurface,
-    inverseOnSurface = LightInverseOnSurface,
-    inversePrimary = LightInversePrimary,
-    scrim = LightScrim,
-)
-
-private val DarkColorScheme = darkColorScheme(
-    primary = DarkPrimary,
-    onPrimary = DarkOnPrimary,
-    primaryContainer = DarkPrimaryContainer,
-    onPrimaryContainer = DarkOnPrimaryContainer,
-    secondary = DarkSecondary,
-    onSecondary = DarkOnSecondary,
-    secondaryContainer = DarkSecondaryContainer,
-    onSecondaryContainer = DarkOnSecondaryContainer,
-    tertiary = DarkTertiary,
-    onTertiary = DarkOnTertiary,
-    tertiaryContainer = DarkTertiaryContainer,
-    onTertiaryContainer = DarkOnTertiaryContainer,
-    error = DarkError,
-    onError = DarkOnError,
-    errorContainer = DarkErrorContainer,
-    onErrorContainer = DarkOnErrorContainer,
-    background = DarkBackground,
-    onBackground = DarkOnBackground,
-    surface = DarkSurface,
-    onSurface = DarkOnSurface,
-    surfaceVariant = DarkSurfaceVariant,
-    onSurfaceVariant = DarkOnSurfaceVariant,
-    outline = DarkOutline,
-    outlineVariant = DarkOutlineVariant,
-    surfaceContainerLowest = DarkSurfaceContainerLowest,
-    surfaceContainerLow = DarkSurfaceContainerLow,
-    surfaceContainer = DarkSurfaceContainer,
-    surfaceContainerHigh = DarkSurfaceContainerHigh,
-    surfaceContainerHighest = DarkSurfaceContainerHighest,
-    surfaceDim = DarkSurfaceDim,
-    surfaceBright = DarkSurfaceBright,
-    inverseSurface = DarkInverseSurface,
-    inverseOnSurface = DarkInverseOnSurface,
-    inversePrimary = DarkInversePrimary,
-    scrim = DarkScrim,
-)
-
-// AMOLED: same blue accents as the dark scheme, but every surface is pure
-// black. Derived from DarkColorScheme so the accent colors stay in sync —
-// previously this was built from a bare darkColorScheme() and kept the M3
-// default purple accents.
-private val AmoledBlackColorScheme = DarkColorScheme.copy(
-    background = Color.Black,
-    surface = Color.Black,
-    surfaceContainer = Color.Black,
-    surfaceContainerLowest = Color.Black,
-    surfaceContainerLow = Color.Black,
-    surfaceContainerHigh = Color.Black,
-    surfaceContainerHighest = Color.Black,
-    surfaceDim = Color.Black,
-    surfaceBright = Color.Black,
-)
+// AMOLED: same accent colors as the derived dark scheme, but every surface
+// is pure black. Derived via .copy() so accent colors stay in sync with
+// the current spec version.
+private fun buildAmoledBlackScheme(specVersion: ColorSpecVersion): ColorScheme {
+    val base = buildSchemeColorScheme(isDark = true, specVersion.toLibrarySpec())
+    return base.copy(
+        background = Color.Black,
+        surface = Color.Black,
+        surfaceContainer = Color.Black,
+        surfaceContainerLowest = Color.Black,
+        surfaceContainerLow = Color.Black,
+        surfaceContainerHigh = Color.Black,
+        surfaceContainerHighest = Color.Black,
+        surfaceDim = Color.Black,
+        surfaceBright = Color.Black,
+    )
+}

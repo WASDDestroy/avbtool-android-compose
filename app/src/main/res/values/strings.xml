@@ -219,6 +219,10 @@
     <string name="settings_amoled_black_summary">Use pure black surfaces in dark theme</string>
     <string name="settings_predictive_back">Predictive back gesture</string>
     <string name="settings_predictive_back_summary">Enable system predictive back animations</string>
+    <string name="settings_color_spec">Color palette</string>
+    <string name="settings_color_spec_2021">SPEC_2021</string>
+    <string name="settings_color_spec_2025">SPEC_2025</string>
+    <string name="settings_color_spec_dialog_title">Color palette</string>
     <string name="settings_function_keyboard">Function keyboard</string>
     <string name="settings_function_keyboard_summary">Show Esc, Tab, arrow keys and other function keys in Console</string>
     <string name="settings_language">Language</string>

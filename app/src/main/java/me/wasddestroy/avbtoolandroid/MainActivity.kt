@@ -141,6 +141,7 @@ fun AVBToolAndroidApp() {
         darkTheme = darkTheme,
         dynamicColor = settings.dynamicThemeColor,
         amoledBlack = settings.amoledBlack,
+        colorSpecVersion = settings.colorSpecVersion,
     ) {
         Box(Modifier.fillMaxSize()) {
             RootScreen(

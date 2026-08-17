@@ -10,6 +10,7 @@ kotlin = "2.4.10"
 composeBom = "2026.08.00"
 
 [libraries]
+material-color-utilities = { group = "com.materialkolor", name = "material-color-utilities-jvm", version = "3.0.0-beta01" }
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
 junit = { group = "junit", name = "junit", version.ref = "junit" }
 androidx-junit = { group = "androidx.test.ext", name = "junit", version.ref = "junitVersion" }
