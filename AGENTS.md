@@ -26,6 +26,8 @@ Before building:
   - `AvbTool.run` closes `argparse.FileType` objects.
 - `app/src/main/python/android_bridge.py` — native FEC binding, SAF fd hook, avbtool runner, FEC self-test.
 - `app/src/main/java/me/wasddestroy/avbtoolandroid/` — Compose UI and runtime.
+  - `CommandViewModel.kt` / `ConsoleViewModel.kt` / `SettingsViewModel.kt` — business
+    state, exposed as `StateFlow`. See "State management" below.
 - `app/src/main/cpp/` — native FEC encoder and AOSP `libfec_rs` sources.
   - `libfec_rs.so` is built from `fec_rs/` and is **LGPL-2.1**; keep it a separate shared library.
   - `libavbfec.so` links dynamically to `libfec_rs.so`.
@@ -63,6 +65,41 @@ Before building:
 
 - Use the existing file formats.
 - Avoid writing `\n` escape sequences through shell heredocs; prefer `chr(92) + "n"` when generating Kotlin/Python source with Python scripts.
+
+### State management
+
+The app is MVVM. Business state lives in ViewModels and is exposed as
+`StateFlow<UiState>`, collected with `collectAsStateWithLifecycle()`.
+
+- There is **no DI framework**. Each ViewModel that needs dependencies exposes a
+  `companion object` factory built with `viewModelFactory { initializer { ... } }`.
+  Do not add Hilt or Koin.
+- ViewModels must **never** hold an Activity `Context` or a `View`. Pass
+  `context.applicationContext` into the factory.
+- `CommandViewModel` is obtained with `viewModel(key = command.id)` so each
+  command gets its own instance. Dropping the key would leak one command's
+  result into another.
+- Settings are **in-memory only** — not persisted. Adding DataStore is a
+  deliberate non-goal; do not add it without discussion.
+- Keep in composables: navigation state (`commandId`, `commandBackProgress`),
+  dialog/editing flags, `CommandScreen`'s `values` form map, `terminalView`, the
+  `rememberLauncherForActivityResult` launchers, and `applyAppLanguage()`
+  (it calls `Activity.recreate()` below API 33).
+
+Full rationale: `docs/ui/architecture.md` §6 and `docs/mvvm-架构说明.md`.
+
+### Theme
+
+- The preset palette lives in `ui/theme/Color.kt`, seeded from `#0061A4` (blue).
+  Generate replacements with Material Theme Builder — do not hand-pick roles.
+- `AmoledBlackColorScheme` must stay `DarkColorScheme.copy(...)`. Rebuilding it
+  from a bare `darkColorScheme()` silently restores M3's default purple accents.
+- `splash_screen_background` in `values/colors.xml` and `values-night/colors.xml`
+  must match `LightBackground` / `DarkBackground` in `Color.kt`, or the launch
+  flashes a different color before Compose draws.
+- **Dynamic color defaults to on**, so on Android 12+ palette edits are invisible
+  until "dynamic theme color" is turned off in Settings. Test both states.
+- Never hardcode colors in composables; use `MaterialTheme.colorScheme.*`.
 
 ### UI
 

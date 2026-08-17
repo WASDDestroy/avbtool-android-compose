@@ -32,12 +32,10 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -46,10 +44,12 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.core.content.ContextCompat
 import androidx.core.net.toUri
 
-private fun hasStoragePermission(context: Context): Boolean {
+internal fun hasStoragePermission(context: Context): Boolean {
     return if (Build.VERSION.SDK_INT >= 30) {
         Environment.isExternalStorageManager()
     } else {
@@ -75,10 +75,9 @@ fun ConsoleScreen(
     onSelectionModeChanged: (Boolean) -> Unit = {}
 ) {
     val context = LocalContext.current
-    val scope = rememberCoroutineScope()
-    val runner = remember { AvbTaskRunner(context) }
-    val bridge = remember { SafFileBridge(context) }
-    val session = remember { AvbtoolTermSession(runner, scope, context) }
+    val viewModel: ConsoleViewModel = viewModel(factory = ConsoleViewModel.factory(context))
+    val session = viewModel.session
+    val bridge = viewModel.bridge
     var terminalView by remember { mutableStateOf<CopyableEmulatorView?>(null) }
 
     fun showIme(view: CopyableEmulatorView) {
@@ -101,12 +100,12 @@ fun ConsoleScreen(
         }
     }
 
-    var storageGranted by remember { mutableStateOf(hasStoragePermission(context)) }
+    val storageGranted by viewModel.storageGranted.collectAsStateWithLifecycle()
     val permissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) {
-        storageGranted = hasStoragePermission(context)
+        viewModel.refreshStoragePermission(context)
     }
     val manageLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) {
-        storageGranted = hasStoragePermission(context)
+        viewModel.refreshStoragePermission(context)
     }
 
     val openDocument = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri: Uri? ->
@@ -114,10 +113,6 @@ fun ConsoleScreen(
         bridge.openRead(uri)?.let { fd ->
             session.insertText(bridge.pseudoPath(fd))
         }
-    }
-
-    DisposableEffect(session) {
-        onDispose { session.finish() }
     }
 
     val density = LocalDensity.current

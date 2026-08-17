@@ -34,6 +34,7 @@ import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.core.content.pm.PackageInfoCompat
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import me.wasddestroy.avbtoolandroid.ui.components.PreferenceRow
 import me.wasddestroy.avbtoolandroid.ui.components.PreferenceSwitchRow
 import me.wasddestroy.avbtoolandroid.ui.components.SettingsList
@@ -43,17 +44,9 @@ import me.wasddestroy.avbtoolandroid.ui.theme.ThemeMode
 @Composable
 fun SettingsScreen(
     modifier: Modifier = Modifier,
-    dynamicThemeColor: Boolean,
-    themeMode: ThemeMode,
-    amoledBlack: Boolean,
-    predictiveBackGesture: Boolean,
-    languageMode: LanguageMode,
-    onDynamicThemeColorChange: (Boolean) -> Unit,
-    onThemeModeChange: (ThemeMode) -> Unit,
-    onAmoledBlackChange: (Boolean) -> Unit,
-    onPredictiveBackGestureChange: (Boolean) -> Unit,
-    onLanguageModeChange: (LanguageMode) -> Unit,
+    viewModel: SettingsViewModel,
 ) {
+    val settings by viewModel.uiState.collectAsStateWithLifecycle()
     var showThemeModeDialog by rememberSaveable { mutableStateOf(false) }
     var showLanguageDialog by rememberSaveable { mutableStateOf(false) }
     var showAboutDialog by rememberSaveable { mutableStateOf(false) }
@@ -73,8 +66,8 @@ fun SettingsScreen(
         preferenceGroup {
             row("dynamic_theme_color") {
                 PreferenceSwitchRow(
-                    checked = dynamicThemeColor,
-                    onCheckedChange = onDynamicThemeColorChange,
+                    checked = settings.dynamicThemeColor,
+                    onCheckedChange = viewModel::setDynamicThemeColor,
                     title = stringResource(R.string.settings_dynamic_theme_color),
                     summary = stringResource(R.string.settings_dynamic_theme_color_summary),
                     iconContent = { SettingsIcon(Icons.Filled.Palette) },
@@ -83,15 +76,15 @@ fun SettingsScreen(
             row("theme_mode") {
                 PreferenceRow(
                     title = stringResource(R.string.settings_theme_mode),
-                    summary = stringResource(themeMode.labelRes),
+                    summary = stringResource(settings.themeMode.labelRes),
                     iconContent = { SettingsIcon(Icons.Filled.Brightness6) },
                     onClick = { showThemeModeDialog = true },
                 )
             }
             row("amoled_black") {
                 PreferenceSwitchRow(
-                    checked = amoledBlack,
-                    onCheckedChange = onAmoledBlackChange,
+                    checked = settings.amoledBlack,
+                    onCheckedChange = viewModel::setAmoledBlack,
                     title = stringResource(R.string.settings_amoled_black),
                     summary = stringResource(R.string.settings_amoled_black_summary),
                     iconContent = { SettingsIcon(Icons.Filled.DarkMode) },
@@ -99,8 +92,8 @@ fun SettingsScreen(
             }
             row("predictive_back_gesture") {
                 PreferenceSwitchRow(
-                    checked = predictiveBackGesture,
-                    onCheckedChange = onPredictiveBackGestureChange,
+                    checked = settings.predictiveBackGesture,
+                    onCheckedChange = viewModel::setPredictiveBackGesture,
                     title = stringResource(R.string.settings_predictive_back),
                     summary = stringResource(R.string.settings_predictive_back_summary),
                     iconContent = { SettingsIcon(Icons.AutoMirrored.Filled.ArrowBack) },
@@ -109,7 +102,7 @@ fun SettingsScreen(
             row("language") {
                 PreferenceRow(
                     title = stringResource(R.string.settings_language),
-                    summary = stringResource(languageMode.labelRes),
+                    summary = stringResource(settings.languageMode.labelRes),
                     iconContent = { SettingsIcon(Icons.Filled.Language) },
                     onClick = { showLanguageDialog = true },
                 )
@@ -126,9 +119,9 @@ fun SettingsScreen(
 
     if (showThemeModeDialog) {
         ThemeModeDialog(
-            currentMode = themeMode,
+            currentMode = settings.themeMode,
             onSelect = {
-                onThemeModeChange(it)
+                viewModel.setThemeMode(it)
                 showThemeModeDialog = false
             },
             onDismiss = { showThemeModeDialog = false },
@@ -137,9 +130,9 @@ fun SettingsScreen(
 
     if (showLanguageDialog) {
         LanguageDialog(
-            currentMode = languageMode,
+            currentMode = settings.languageMode,
             onSelect = {
-                onLanguageModeChange(it)
+                viewModel.setLanguageMode(it)
                 showLanguageDialog = false
             },
             onDismiss = { showLanguageDialog = false },

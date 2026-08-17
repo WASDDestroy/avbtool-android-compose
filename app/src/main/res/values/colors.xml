@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="colorPrimary">#4CAF50</color>
-    <color name="splash_screen_background">#FEF7FF</color>
+    <!-- Matches LightBackground in ui/theme/Color.kt so the splash screen does
+         not flash a different tint before Compose takes over. -->
+    <color name="splash_screen_background">#FDFCFF</color>
 </resources>

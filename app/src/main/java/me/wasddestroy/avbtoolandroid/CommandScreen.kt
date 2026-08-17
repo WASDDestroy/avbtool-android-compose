@@ -1,6 +1,5 @@
 package me.wasddestroy.avbtoolandroid
 
-import android.content.Context
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -60,7 +59,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -75,8 +73,8 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.launch
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
 import me.wasddestroy.avbtoolandroid.ui.components.DialogConfirmButton
 import me.wasddestroy.avbtoolandroid.ui.components.DialogDismissButton
 import me.wasddestroy.avbtoolandroid.ui.components.PreferenceGroup
@@ -85,7 +83,6 @@ import me.wasddestroy.avbtoolandroid.ui.components.PreferenceSwitchRow
 import me.wasddestroy.avbtoolandroid.ui.components.PreferenceValueRow
 import me.wasddestroy.avbtoolandroid.ui.components.SettingsList
 import me.wasddestroy.avbtoolandroid.ui.components.preferenceGroup
-import java.io.File
 import androidx.core.net.toUri
 
 private const val IMAGE_STORAGE_KEY = "__image__"
@@ -110,9 +107,11 @@ fun CommandScreen(
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
-    val scope = rememberCoroutineScope()
-    val bridge = remember { SafFileBridge(context) }
-    val runner = remember { AvbTaskRunner(context) }
+    val viewModel: CommandViewModel = viewModel(
+        key = command.id,
+        factory = CommandViewModel.factory(context),
+    )
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
     var values by remember(command.id) {
         mutableStateOf(
@@ -120,13 +119,9 @@ fun CommandScreen(
             command.args.associate { storageKey(it) to (it.defaultValue ?: "") }
         )
     }
-    var running by remember { mutableStateOf(false) }
-    var result by remember { mutableStateOf<AvbCommandResult?>(null) }
     var copyWarning by remember { mutableStateOf(false) }
-    var pendingCommand by remember { mutableStateOf<AvbCommand?>(null) }
     var pendingArgKey by remember { mutableStateOf<String?>(null) }
     var pendingArgIndex by remember { mutableStateOf<Int?>(null) }
-    var pendingOutputFile by remember { mutableStateOf<File?>(null) }
     var editingArg by remember { mutableStateOf<AvbArg?>(null) }
     var choosingAlgorithm by remember { mutableStateOf(false) }
     var managingFileArg by remember { mutableStateOf<AvbArg?>(null) }
@@ -157,7 +152,7 @@ fun CommandScreen(
     val createDocument = rememberLauncherForActivityResult(
         ActivityResultContracts.CreateDocument("application/octet-stream"),
     ) { uri: Uri? ->
-        val src = pendingOutputFile ?: return@rememberLauncherForActivityResult
+        val src = uiState.outputFile ?: return@rememberLauncherForActivityResult
         if (uri != null) {
             runCatching {
                 context.contentResolver.openOutputStream(uri)?.use { out ->
@@ -165,38 +160,18 @@ fun CommandScreen(
                 }
             }
         }
-        pendingOutputFile = null
+        viewModel.dismissOutputFile()
     }
-
-    val chooseImageError = stringResource(R.string.command_choose_image_error)
 
     fun onRun() {
         val imageInput = command.inputs.firstOrNull { it.key == "--image" }
         val imageUri = if (imageInput != null) values[imageInput.key].orEmpty() else null
         if (imageInput != null && imageUri.isNullOrBlank()) {
-            result = AvbCommandResult(
-                status = AvbResultStatus.FAILED,
-                errors = listOf(chooseImageError),
-            )
+            viewModel.failWithMissingImage()
             return
         }
-        pendingCommand = command
         if (command.readOnly) {
-            runCommand(
-                cmd = command,
-                values = values,
-                uri = imageUri?.toUri(),
-                bridge = bridge,
-                runner = runner,
-                scope = scope,
-                context = context,
-                onStart = { running = true },
-                onDone = { stdout, stderr, output ->
-                    running = false
-                    result = parseAvbResult(command.id, stdout, stderr)
-                    pendingOutputFile = output
-                },
-            )
+            viewModel.run(command, values, imageUri?.toUri())
         } else {
             copyWarning = true
         }
@@ -221,13 +196,13 @@ fun CommandScreen(
             Surface(tonalElevation = 3.dp) {
                 Button(
                     onClick = ::onRun,
-                    enabled = !running,
+                    enabled = !uiState.running,
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp, vertical = 12.dp)
                         .navigationBarsPadding(),
                 ) {
-                    Text(stringResource(if (running) R.string.command_running else R.string.command_run))
+                    Text(stringResource(if (uiState.running) R.string.command_running else R.string.command_run))
                 }
             }
         },
@@ -383,16 +358,16 @@ fun CommandScreen(
                     }
                 }
             }
-            if (!running && result != null) {
+            val currentResult = uiState.result
+            if (!uiState.running && currentResult != null) {
                 item("result") {
-                    ResultView(result = result!!)
+                    ResultView(result = currentResult)
                 }
             }
         }
     }
 
-    if (copyWarning && pendingCommand != null) {
-        val cmdToRun = pendingCommand!!
+    if (copyWarning) {
         AlertDialog(
             onDismissRequest = { copyWarning = false },
             title = { Text(stringResource(R.string.command_modify_title)) },
@@ -400,20 +375,10 @@ fun CommandScreen(
             confirmButton = {
                 DialogConfirmButton(onClick = {
                     copyWarning = false
-                    runCommand(
-                        cmd = cmdToRun,
-                        values = values,
-                        uri = if (cmdToRun.hasImage) values[IMAGE_STORAGE_KEY].orEmpty().toUri() else null,
-                        bridge = bridge,
-                        runner = runner,
-                        scope = scope,
-                        context = context,
-                        onStart = { running = true },
-                        onDone = { stdout, stderr, output ->
-                            running = false
-                            result = parseAvbResult(cmdToRun.id, stdout, stderr)
-                            pendingOutputFile = output
-                        },
+                    viewModel.run(
+                        command,
+                        values,
+                        if (command.hasImage) values[IMAGE_STORAGE_KEY].orEmpty().toUri() else null,
                     )
                 }) {
                     Text(stringResource(R.string.command_continue))
@@ -427,12 +392,13 @@ fun CommandScreen(
         )
     }
 
-    if (pendingOutputFile != null) {
+    val outputFile = uiState.outputFile
+    if (outputFile != null) {
         AlertDialog(
-            onDismissRequest = { pendingOutputFile = null },
+            onDismissRequest = { viewModel.dismissOutputFile() },
             title = { Text(stringResource(R.string.command_output_file_title)) },
             text = {
-                Text(stringResource(R.string.command_output_file_message, pendingOutputFile?.absolutePath ?: ""))
+                Text(stringResource(R.string.command_output_file_message, outputFile.absolutePath))
             },
             confirmButton = {
                 DialogConfirmButton(onClick = { createDocument.launch("output.img") }) {
@@ -440,7 +406,7 @@ fun CommandScreen(
                 }
             },
             dismissButton = {
-                DialogDismissButton(onClick = { pendingOutputFile = null }) {
+                DialogDismissButton(onClick = { viewModel.dismissOutputFile() }) {
                     Text(stringResource(R.string.command_dismiss))
                 }
             },
@@ -1099,148 +1065,4 @@ private fun ChainPartitionEditDialog(
             }
         },
     )
-}
-
-private fun runCommand(
-    cmd: AvbCommand,
-    values: Map<String, String>,
-    uri: Uri?,
-    bridge: SafFileBridge,
-    runner: AvbTaskRunner,
-    scope: CoroutineScope,
-    context: Context,
-    onStart: () -> Unit,
-    onDone: (String, String, File?) -> Unit,
-) {
-    scope.launch {
-        onStart()
-        val argv = mutableListOf("avbtool", cmd.id)
-        val extraFds = mutableListOf<Int>()
-        var closeInputFd = false
-        var inputFd: Int? = null
-        var imagePath: String? = null
-
-        if (cmd.hasImage) {
-            val uri = uri
-            if (uri == null) {
-                onDone("", context.getString(R.string.command_choose_image_error), null)
-                return@launch
-            }
-            // Some avbtool commands derive sibling image paths from the
-            // selected image path (chain partitions use os.path.join(image_dir,
-            // partition_name + image_ext)). SAF fd pseudo-paths cannot support
-            // those derived sibling paths, so those commands run against a
-            // private copy of the selected file instead.
-            val needsRealDirectory = cmd.id in setOf(
-                "verify_image",
-                "print_partition_digests",
-                "calculate_vbmeta_digest",
-                "calculate_kernel_cmdline"
-            )
-            inputFd = when {
-                needsRealDirectory -> null
-                cmd.readOnly -> bridge.openRead(uri)
-                else -> bridge.openReadWrite(uri)
-            }
-            if (inputFd != null) {
-                imagePath = bridge.pseudoPath(inputFd)
-                closeInputFd = true
-            } else {
-                val copy = bridge.copyToPrivate(uri)
-                if (copy == null) {
-                    onDone("", context.getString(R.string.command_error_open_file), null)
-                    return@launch
-                }
-                imagePath = copy.absolutePath
-            }
-            argv += "--image"
-            argv += imagePath!!
-        }
-
-        cmd.args.forEach { arg ->
-            when (arg.type) {
-                ArgType.IMAGE -> {
-                    // kept for compatibility with legacy model entries
-                }
-                ArgType.BOOL -> if ((values[arg.key] ?: "").toBooleanStrictOrNull() == true) argv += arg.key
-                ArgType.TEXT, ArgType.INT, ArgType.ALGORITHM -> {
-                    val raw = values[arg.key].orEmpty()
-                    val vals = if (arg.repeatable) raw.lines().filter { it.isNotBlank() } else listOf(raw)
-                    vals.forEach { v ->
-                        if (v.isNotBlank()) {
-                            argv += arg.key
-                            argv += v
-                        }
-                    }
-                }
-                ArgType.FILE -> {
-                    val raw = values[arg.key].orEmpty()
-                    val vals = if (arg.repeatable) raw.lines().filter { it.isNotBlank() } else listOf(raw)
-                    vals.forEach { v ->
-                        if (v.isNotBlank()) {
-                            if (v.startsWith("content://")) {
-                                val fd = bridge.openRead(v.toUri())
-                                if (fd != null) {
-                                    extraFds += fd
-                                    argv += arg.key
-                                    argv += bridge.pseudoPath(fd)
-                                }
-                            } else {
-                                argv += arg.key
-                                argv += v
-                            }
-                        }
-                    }
-                }
-                ArgType.CHAIN_PARTITION -> {
-                    val raw = values[arg.key].orEmpty()
-                    raw.lines().filter { it.isNotBlank() }.forEach { entry ->
-                        val first = entry.indexOf(':')
-                        val second = entry.indexOf(':', first + 1)
-                        if (first < 0 || second < 0) {
-                            argv += arg.key
-                            argv += entry
-                        } else {
-                            val partition = entry.substring(0, first)
-                            val rollbackIndex = entry.substring(first + 1, second)
-                            val keyPath = entry.substring(second + 1)
-                            if (keyPath.startsWith("content://")) {
-                                val fd = bridge.openRead(keyPath.toUri())
-                                if (fd != null) {
-                                    extraFds += fd
-                                    argv += arg.key
-                                    argv += "$partition:$rollbackIndex:${bridge.pseudoPath(fd)}"
-                                }
-                            } else {
-                                argv += arg.key
-                                argv += entry
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        var outputFile: File? = null
-        if (cmd.hasImage && inputFd == null && !cmd.readOnly && imagePath != null) {
-            // Copy fallback: the private file was modified in place.
-            outputFile = File(imagePath)
-        }
-        if (cmd.outputs.isNotEmpty()) {
-            val firstOutput = cmd.outputs.first()
-            outputFile = bridge.newPrivateOutput(firstOutput.suffix)
-            argv += firstOutput.key
-            argv += outputFile.absolutePath
-        }
-
-        try {
-            val result = runner.run(argv)
-            onDone(result.stdout, result.stderr, outputFile)
-        } catch (e: Exception) {
-            onDone("", context.getString(R.string.command_error_running, e.message ?: e.javaClass.simpleName), outputFile)
-        } finally {
-            if (closeInputFd && inputFd != null) bridge.closeFd(inputFd)
-            extraFds.forEach { bridge.closeFd(it) }
-        }
-    }
 }

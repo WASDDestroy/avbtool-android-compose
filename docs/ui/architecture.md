@@ -15,17 +15,43 @@ Key sources:
 - `app/src/main/java/me/wasddestroy/avbtoolandroid/ui/components/PreferenceComponents.kt`
 - `app/src/main/java/me/wasddestroy/avbtoolandroid/ui/theme/Theme.kt`
 - `app/src/main/java/me/wasddestroy/avbtoolandroid/AvbModels.kt`
+- `app/src/main/java/me/wasddestroy/avbtoolandroid/CommandViewModel.kt`
+- `app/src/main/java/me/wasddestroy/avbtoolandroid/ConsoleViewModel.kt`
+- `app/src/main/java/me/wasddestroy/avbtoolandroid/SettingsViewModel.kt`
 
 ## 2. Theme and styling
 
-`AVBToolAndroidTheme` (`ui/theme/Theme.kt`):
+`AVBToolAndroidTheme` (`ui/theme/Theme.kt`) picks a color scheme in this
+priority order:
 
-- Uses **dynamic color** on Android 12+ (`dynamicLightColorScheme` /
-  `dynamicDarkColorScheme`).
-- Falls back to Material 3 `lightColorScheme()` / `darkColorScheme()`.
-- Platform window/splash colors are defined in:
-  - `app/src/main/res/values/colors.xml` and `values/themes.xml`
-  - `app/src/main/res/values-night/colors.xml` and `values-night/themes.xml`
+1. `amoledBlack` **and** dark → `AmoledBlackColorScheme`
+2. `dynamicColor` **and** Android 12+ → `dynamicLightColorScheme` /
+   `dynamicDarkColorScheme` (extracted from the wallpaper; overrides the preset
+   palette entirely)
+3. otherwise → the app's preset `LightColorScheme` / `DarkColorScheme`
+
+**Dynamic color defaults to on**, so on Android 12+ the preset palette is only
+visible after turning "dynamic theme color" off in Settings. Keep this in mind
+when testing palette changes — a wallpaper-tinted build looks nothing like the
+preset.
+
+### Preset palette
+
+`ui/theme/Color.kt` holds the full Material 3 palette, seeded from **`#0061A4`
+(blue)**. Both light and dark sets are complete — primary, secondary, tertiary,
+error, surface containers, inverse, and outline roles.
+
+`AmoledBlackColorScheme` is derived with `DarkColorScheme.copy(...)`, overriding
+only the surface roles to pure black. It must stay a `copy()` of
+`DarkColorScheme`: building it from a bare `darkColorScheme()` would silently
+keep the Material 3 default purple accents while the rest of the app is blue.
+
+### Platform colors
+
+`splash_screen_background` in `values/colors.xml` (`#FDFCFF`) and
+`values-night/colors.xml` (`#1A1C1E`) must match `LightBackground` /
+`DarkBackground` in `Color.kt`. These paint the window before Compose takes
+over; a mismatch shows as a color flash on launch.
 
 Do **not** hardcode product colors in composables. Use
 `MaterialTheme.colorScheme.*` tokens.
@@ -36,10 +62,11 @@ All navigation is kept in `MainActivity.kt`.
 
 ### Root destinations
 
-`AppDestinations` contains the two tab destinations:
+`AppDestinations` contains the three tab destinations:
 
 - `HOME` (`Icons.Filled.Home`)
 - `CONSOLE` (`Icons.Filled.Terminal`)
+- `SETTINGS` (`Icons.Filled.Settings`)
 
 `RootScreen` renders:
 
@@ -132,7 +159,49 @@ The most important components are:
 | `PreferenceSwitchRow` | The standard switch row. |
 | `DialogConfirmButton` / `DialogNeutralButton` / `DialogDismissButton` | Material 3 dialog button hierarchy. |
 
-## 6. Data layer for UI
+## 6. State management
+
+The app uses ViewModels for business state and plain Compose `remember` for
+transient UI state. There is no DI framework; each ViewModel exposes a
+`companion object` factory built with `viewModelFactory { initializer { ... } }`.
+
+| ViewModel | Scope | Holds |
+|---|---|---|
+| `CommandViewModel` | `viewModel(key = command.id)` — one per command | `CommandUiState`: `running`, `result`, `outputFile`. Owns argv construction, SAF fd lifetime, and result parsing. |
+| `ConsoleViewModel` | Activity | `AvbtoolTermSession` (bound to `viewModelScope`) and the storage-permission flag. |
+| `SettingsViewModel` | Activity | `SettingsUiState`: theme, AMOLED, dynamic color, predictive back, language. In-memory only — not persisted. |
+
+State is exposed as `StateFlow<UiState>` and collected with
+`collectAsStateWithLifecycle()`.
+
+### What deliberately stays in composables
+
+- **Navigation state** — `commandId`, `commandBackProgress`, and the
+  `PredictiveBackHandler` logic stay in `AVBToolAndroidApp` / `RootScreen`.
+  Navigation is intentionally small (see section 3).
+- **`CommandScreen` form values** — `values` remains a `remember(command.id)`
+  map. It drives argument editing (file-picker line appends, chain editor),
+  and moving it would pull that UI logic into the ViewModel.
+- **Dialog and editing flags** — `copyWarning`, `editingArg`,
+  `choosingAlgorithm`, `managingFileArg`, `managingChainArg`, `chainEditor`,
+  `advancedExpanded`, `rawExpanded`, and the three `SettingsScreen` dialog
+  flags.
+- **`ConsoleScreen` platform-bound objects** — `terminalView` (a ViewModel must
+  never hold a `View`), the `rememberLauncherForActivityResult` launchers
+  (Activity Result API is bound to the Activity), and the IME show/hide
+  helpers.
+- **Language side effect** — `applyAppLanguage()` calls
+  `Activity.recreate()` below API 33, so it runs from a
+  `LaunchedEffect(settings.languageMode)` in `AVBToolAndroidApp`, not from the
+  ViewModel. The ViewModel stores only the selected `LanguageMode`.
+
+### Consequences of ViewModel lifetimes
+
+- A command's result survives leaving and re-entering that command's screen.
+- The console session survives configuration changes and tab switches;
+  `session.finish()` runs from `ConsoleViewModel.onCleared()`.
+
+## 7. Data layer for UI
 
 `AvbModels.kt` contains `AvbCommand` and `AvbArg`. All user-visible labels,
 titles, and descriptions are stored as `@StringRes` resource IDs and resolved

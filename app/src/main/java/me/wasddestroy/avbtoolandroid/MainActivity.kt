@@ -37,6 +37,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
 import android.app.Activity
 import android.content.Context
 import android.content.res.Configuration
@@ -81,19 +83,18 @@ enum class LanguageMode(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AVBToolAndroidApp() {
-    var dynamicThemeColor by rememberSaveable { mutableStateOf(true) }
-    var themeModeName by rememberSaveable { mutableStateOf(ThemeMode.FOLLOW_SYSTEM.name) }
-    var amoledBlack by rememberSaveable { mutableStateOf(false) }
-    var predictiveBackGesture by rememberSaveable { mutableStateOf(true) }
-    var languageModeName by rememberSaveable { mutableStateOf(LanguageMode.FOLLOW_SYSTEM.name) }
+    val settingsViewModel: SettingsViewModel = viewModel()
+    val settings by settingsViewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
 
-    val themeMode = runCatching { ThemeMode.valueOf(themeModeName) }.getOrDefault(ThemeMode.FOLLOW_SYSTEM)
-    val languageMode = runCatching { LanguageMode.valueOf(languageModeName) }.getOrDefault(LanguageMode.FOLLOW_SYSTEM)
-    val darkTheme = when (themeMode) {
+    val darkTheme = when (settings.themeMode) {
         ThemeMode.LIGHT -> false
         ThemeMode.DARK -> true
         ThemeMode.FOLLOW_SYSTEM -> isSystemInDarkTheme()
+    }
+
+    LaunchedEffect(settings.languageMode) {
+        applyAppLanguage(context, settings.languageMode.tag)
     }
 
     var commandId by rememberSaveable { mutableStateOf<String?>(null) }
@@ -113,7 +114,7 @@ fun AVBToolAndroidApp() {
         closeCommand()
     }
 
-    PredictiveBackHandler(enabled = commandId != null && predictiveBackGesture) { progress ->
+    PredictiveBackHandler(enabled = commandId != null && settings.predictiveBackGesture) { progress ->
         try {
             progress.collect { event ->
                 commandBackProgress.snapTo(event.progress)
@@ -138,26 +139,15 @@ fun AVBToolAndroidApp() {
 
     AVBToolAndroidTheme(
         darkTheme = darkTheme,
-        dynamicColor = dynamicThemeColor,
-        amoledBlack = amoledBlack,
+        dynamicColor = settings.dynamicThemeColor,
+        amoledBlack = settings.amoledBlack,
     ) {
         Box(Modifier.fillMaxSize()) {
             RootScreen(
                 isTopDestination = commandId == null,
                 onOpenCommand = { id -> commandId = id },
-                dynamicThemeColor = dynamicThemeColor,
-                themeMode = themeMode,
-                amoledBlack = amoledBlack,
-                predictiveBackGesture = predictiveBackGesture,
-                languageMode = languageMode,
-                onDynamicThemeColorChange = { dynamicThemeColor = it },
-                onThemeModeChange = { themeModeName = it.name },
-                onAmoledBlackChange = { amoledBlack = it },
-                onPredictiveBackGestureChange = { predictiveBackGesture = it },
-                onLanguageModeChange = { mode ->
-                    languageModeName = mode.name
-                    applyAppLanguage(context, mode.tag)
-                },
+                predictiveBackGesture = settings.predictiveBackGesture,
+                settingsViewModel = settingsViewModel,
             )
 
             val command = commandId?.let { AvbCommands.byId(it) }
@@ -183,16 +173,8 @@ fun AVBToolAndroidApp() {
 private fun RootScreen(
     isTopDestination: Boolean,
     onOpenCommand: (String) -> Unit,
-    dynamicThemeColor: Boolean,
-    themeMode: ThemeMode,
-    amoledBlack: Boolean,
     predictiveBackGesture: Boolean,
-    languageMode: LanguageMode,
-    onDynamicThemeColorChange: (Boolean) -> Unit,
-    onThemeModeChange: (ThemeMode) -> Unit,
-    onAmoledBlackChange: (Boolean) -> Unit,
-    onPredictiveBackGestureChange: (Boolean) -> Unit,
-    onLanguageModeChange: (LanguageMode) -> Unit,
+    settingsViewModel: SettingsViewModel,
 ) {
     var currentDestination by rememberSaveable { mutableStateOf(AppDestinations.HOME) }
     val pagerState = rememberPagerState(pageCount = { AppDestinations.entries.size })
@@ -294,16 +276,7 @@ private fun RootScreen(
                     )
                     AppDestinations.SETTINGS -> SettingsScreen(
                         modifier = Modifier.fillMaxSize(),
-                        dynamicThemeColor = dynamicThemeColor,
-                        themeMode = themeMode,
-                        amoledBlack = amoledBlack,
-                        predictiveBackGesture = predictiveBackGesture,
-                        languageMode = languageMode,
-                        onDynamicThemeColorChange = onDynamicThemeColorChange,
-                        onThemeModeChange = onThemeModeChange,
-                        onAmoledBlackChange = onAmoledBlackChange,
-                        onPredictiveBackGestureChange = onPredictiveBackGestureChange,
-                        onLanguageModeChange = onLanguageModeChange,
+                        viewModel = settingsViewModel,
                     )
                 }
             }
