@@ -21,14 +21,37 @@ Key sources:
 
 ## 2. Theme and styling
 
-`AVBToolAndroidTheme` (`ui/theme/Theme.kt`):
+`AVBToolAndroidTheme` (`ui/theme/Theme.kt`) picks a color scheme in this
+priority order:
 
-- Uses **dynamic color** on Android 12+ (`dynamicLightColorScheme` /
-  `dynamicDarkColorScheme`).
-- Falls back to Material 3 `lightColorScheme()` / `darkColorScheme()`.
-- Platform window/splash colors are defined in:
-  - `app/src/main/res/values/colors.xml` and `values/themes.xml`
-  - `app/src/main/res/values-night/colors.xml` and `values-night/themes.xml`
+1. `amoledBlack` **and** dark → `AmoledBlackColorScheme`
+2. `dynamicColor` **and** Android 12+ → `dynamicLightColorScheme` /
+   `dynamicDarkColorScheme` (extracted from the wallpaper; overrides the preset
+   palette entirely)
+3. otherwise → the app's preset `LightColorScheme` / `DarkColorScheme`
+
+**Dynamic color defaults to on**, so on Android 12+ the preset palette is only
+visible after turning "dynamic theme color" off in Settings. Keep this in mind
+when testing palette changes — a wallpaper-tinted build looks nothing like the
+preset.
+
+### Preset palette
+
+`ui/theme/Color.kt` holds the full Material 3 palette, seeded from **`#0061A4`
+(blue)**. Both light and dark sets are complete — primary, secondary, tertiary,
+error, surface containers, inverse, and outline roles.
+
+`AmoledBlackColorScheme` is derived with `DarkColorScheme.copy(...)`, overriding
+only the surface roles to pure black. It must stay a `copy()` of
+`DarkColorScheme`: building it from a bare `darkColorScheme()` would silently
+keep the Material 3 default purple accents while the rest of the app is blue.
+
+### Platform colors
+
+`splash_screen_background` in `values/colors.xml` (`#FDFCFF`) and
+`values-night/colors.xml` (`#1A1C1E`) must match `LightBackground` /
+`DarkBackground` in `Color.kt`. These paint the window before Compose takes
+over; a mismatch shows as a color flash on launch.
 
 Do **not** hardcode product colors in composables. Use
 `MaterialTheme.colorScheme.*` tokens.

@@ -184,11 +184,42 @@ View 引用**，否则会造成内存泄漏（ViewModel 的生命周期比 Activ
 ## 6. 主题与配色
 
 `ui/theme/` 下的调色板是静态 Compose `Color` 定义，**不是状态**，不经过 ViewModel。
-更换主色（例如把紫色换成蓝色）只需要改 `Color.kt` / `Theme.kt`，与本文描述的状态
-管理层完全无关。
-
 ViewModel 里存的只是"用户选了哪个主题模式"（`ThemeMode.LIGHT` / `DARK` /
 `FOLLOW_SYSTEM`）和"是否启用动态取色"这类选项值，不存颜色本身。
+
+### 配色方案的选取顺序
+
+`AVBToolAndroidTheme`（`Theme.kt`）按以下优先级挑选配色方案：
+
+1. `amoledBlack` 且深色模式 → `AmoledBlackColorScheme`
+2. `dynamicColor` 且 Android 12+ → 动态取色（从壁纸提取，**完全覆盖**预设调色板）
+3. 其余情况 → 预设的 `LightColorScheme` / `DarkColorScheme`
+
+**动态取色默认开启。** 所以在 Android 12 以上的设备上，改了预设调色板却看不到变化
+是正常的——必须先到设置页关掉「动态主题颜色」开关。调试配色时务必注意这一点。
+
+### 预设调色板在哪
+
+`ui/theme/Color.kt` 保存完整的 Material 3 调色板，种子色为 **`#0061A4`（蓝色）**，
+浅色深色各一整套（primary、secondary、tertiary、error、各级 surface container、
+inverse、outline 等约 30 个 color role）。
+
+`AmoledBlackColorScheme` 用 `DarkColorScheme.copy(...)` 派生，只覆盖各个 surface
+角色为纯黑。**它必须保持是 `DarkColorScheme` 的 `copy()`**：如果改回从裸的
+`darkColorScheme()` 构造，强调色会悄悄退回 Material 3 默认紫，而 app 其余部分是蓝色，
+形成割裂——这正是本次换色前的实际状态。
+
+### 换主色要改几个地方
+
+1. `ui/theme/Color.kt` —— 改 `LightPrimary` 等一整套色值（建议用
+   [Material Theme Builder](https://m3.material.io/theme-builder) 从种子色生成，
+   不要手工凑，否则对比度容易不达标）。
+2. `app/src/main/res/values/colors.xml` 与 `values-night/colors.xml` 的
+   `splash_screen_background` —— 必须与 `Color.kt` 里的 `LightBackground` /
+   `DarkBackground` 一致。这两个值绘制的是 Compose 接管之前的原生窗口背景，不一致
+   会导致启动瞬间闪一下别的颜色。
+3. 无需改动任何 Composable —— 所有界面都用 `MaterialTheme.colorScheme.*` 语义
+   token，不硬编码颜色。
 
 ## 7. 相关文档
 

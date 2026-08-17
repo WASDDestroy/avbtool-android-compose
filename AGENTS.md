@@ -88,6 +88,19 @@ The app is MVVM. Business state lives in ViewModels and is exposed as
 
 Full rationale: `docs/ui/architecture.md` §6 and `docs/mvvm-架构说明.md`.
 
+### Theme
+
+- The preset palette lives in `ui/theme/Color.kt`, seeded from `#0061A4` (blue).
+  Generate replacements with Material Theme Builder — do not hand-pick roles.
+- `AmoledBlackColorScheme` must stay `DarkColorScheme.copy(...)`. Rebuilding it
+  from a bare `darkColorScheme()` silently restores M3's default purple accents.
+- `splash_screen_background` in `values/colors.xml` and `values-night/colors.xml`
+  must match `LightBackground` / `DarkBackground` in `Color.kt`, or the launch
+  flashes a different color before Compose draws.
+- **Dynamic color defaults to on**, so on Android 12+ palette edits are invisible
+  until "dynamic theme color" is turned off in Settings. Test both states.
+- Never hardcode colors in composables; use `MaterialTheme.colorScheme.*`.
+
 ### UI
 
 - GUI command list is ordered by practical use frequency in `AvbModels.kt`.
