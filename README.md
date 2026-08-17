@@ -1,5 +1,7 @@
 # AVBTool Android (Compose)
 
+**English** | [简体中文](README.zh-CN.md)
+
 An Android Compose app that embeds **Python 3.13** via [Chaquopy](https://chaquo.com/chaquopy/) and runs the AOSP `avbtool.py` directly on-device.
 
 ## Features
@@ -13,6 +15,8 @@ An Android Compose app that embeds **Python 3.13** via [Chaquopy](https://chaquo
 - **SAF fd bridge** — selected `content://` files are passed into Python as `/saf/fd/<fd>` paths, avoiding copies for large images. Commands that derive sibling paths (`verify_image`, `print_partition_digests`, `calculate_vbmeta_digest`, `calculate_kernel_cmdline`) use a private copy instead so chain partitions resolve correctly.
 - **Native FEC** — `libavbfec.so` implements AOSP RS(255, N) FEC encoding natively, verified byte-exact against AOSP host `fec`.
 - **Predictive back** — predictive back gesture support for command screen and console-to-home navigation.
+- **Localized UI** — English and Simplified Chinese, switchable under
+  Settings → Language (follow system / English / 简体中文).
 - **Signed builds** — debug and release APKs are signed with a local test key.
 - **MVVM** — business state lives in `CommandViewModel` / `ConsoleViewModel` /
   `SettingsViewModel`, exposed as `StateFlow<UiState>`; composables render and
@@ -41,6 +45,11 @@ Outputs:
 app/build/outputs/apk/debug/app-debug.apk
 app/build/outputs/apk/release/app-release.apk
 ```
+
+> **Note**: Chaquopy's `buildPython(...)` in `app/build.gradle.kts` is a
+> **hardcoded absolute path** to the build machine's Python 3.13 executable.
+> Point it at your own path before the first build on a new machine, or the
+> build fails.
 
 ## Signing
 
@@ -112,3 +121,13 @@ Open source notices shipped in the APK:
 - Console command parsing does not support quoted paths.
 - GUI file-output options are text fields; use SAF export for binary outputs.
 - Python runs in-process; long native operations cannot be force-killed.
+
+## Documentation
+
+| Document | Description |
+|---|---|
+| [UI Architecture](docs/ui/architecture.md) | UI structure, navigation, theming, and the state-management layer. |
+| [Adding UI Items to Screens](docs/ui/how-to-add-ui-items.md) | How to add command rows, argument rows, and screen content. |
+| [Adding Shared UI Components](docs/ui/shared-components.md) | How to extend the shared preference-row component library. |
+| [MVVM 架构说明](docs/mvvm-架构说明.md) | State-management guide (Chinese) — ViewModel responsibilities and how to change the palette. |
+| [AGENTS.md](AGENTS.md) | Conventions for contributors and AI assistants. |
