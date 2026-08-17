@@ -33,6 +33,7 @@ data class ResultSection(
     val title: String,
     val rows: List<ResultRow> = emptyList(),
     val groups: List<ResultGroup> = emptyList(),
+    @param:StringRes val localizedNameRes: Int? = null,
 )
 
 data class AvbCommandResult(
@@ -159,6 +160,11 @@ private val INFO_IMAGE_KEY_RES = mapOf(
     "Flags" to R.string.info_key_flags,
     "Rollback Index Location" to R.string.info_key_rollback_index_location,
     "Release String" to R.string.info_key_release_string,
+    "Footer version" to R.string.info_key_footer_version,
+    "Image size" to R.string.info_key_footer_image_size,
+    "Original image size" to R.string.info_key_original_image_size,
+    "VBMeta offset" to R.string.info_key_vbmeta_offset,
+    "VBMeta size" to R.string.info_key_vbmeta_size,
     // Prop prefix
     "Prop:" to R.string.info_key_prop,
     // Descriptor field keys
@@ -299,10 +305,10 @@ private fun parseInfoImage(stdout: String): List<ResultSection> {
 
     val sections = mutableListOf<ResultSection>()
     if (topRows.isNotEmpty()) {
-        sections += ResultSection(title = "Image info", rows = topRows)
+        sections += ResultSection(title = "Image info", rows = topRows, localizedNameRes = R.string.info_section_image_info)
     }
     if (groups.isNotEmpty()) {
-        sections += ResultSection(title = "Descriptors", groups = groups)
+        sections += ResultSection(title = "Descriptors", groups = groups, localizedNameRes = R.string.info_section_descriptors)
     }
     return sections
 }

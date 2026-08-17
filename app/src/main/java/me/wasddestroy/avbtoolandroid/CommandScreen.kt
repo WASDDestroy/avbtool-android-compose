@@ -575,7 +575,8 @@ private fun ResultView(result: AvbCommandResult) {
         }
 
         result.sections.forEach { section ->
-            PreferenceGroup(title = section.title) {
+            val sectionTitle = section.localizedNameRes?.let { stringResource(it) } ?: section.title
+            PreferenceGroup(title = sectionTitle) {
                 section.rows.forEach { rowData ->
                     row(rowData.title) {
                         val displayTitle = rowData.localizedNameRes?.let { stringResource(it) } ?: rowData.title

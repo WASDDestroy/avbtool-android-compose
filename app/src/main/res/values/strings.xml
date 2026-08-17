@@ -265,4 +265,11 @@
     <string name="info_desc_hashtree">Hashtree descriptor</string>
     <string name="info_desc_hashtree_fmt">Hashtree descriptor: %1$s</string>
     <string name="info_key_prop">Prop:</string>
+    <string name="info_key_footer_version">Footer version</string>
+    <string name="info_key_footer_image_size">Image size</string>
+    <string name="info_key_original_image_size">Original image size</string>
+    <string name="info_key_vbmeta_offset">VBMeta offset</string>
+    <string name="info_key_vbmeta_size">VBMeta size</string>
+    <string name="info_section_image_info">Image info</string>
+    <string name="info_section_descriptors">Descriptors</string>
 </resources>
