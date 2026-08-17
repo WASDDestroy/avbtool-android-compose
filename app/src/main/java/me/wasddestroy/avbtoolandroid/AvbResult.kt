@@ -8,11 +8,18 @@ private const val TAG = "AvbResultParser"
 
 enum class AvbResultStatus { RUNNING, SUCCESS, FAILED, CANCELLED }
 
+data class LocalizedLine(
+    val rawKey: String,
+    val value: String,
+    @param:StringRes val keyRes: Int? = null,
+)
+
 data class ResultRow(
     val title: String,
     val value: String,
     val monospace: Boolean = false,
     @param:StringRes val localizedNameRes: Int? = null,
+    val localizedLines: List<LocalizedLine>? = null,
 )
 
 data class ResultGroup(
@@ -210,12 +217,13 @@ private fun parseInfoImage(stdout: String): List<ResultSection> {
         }
         val partitionName = blockLines.firstOrNull { it.first == "Partition Name" }?.second
         val title = if (partitionName != null) "$type: $partitionName" else type
-        val summaryLines = blockLines.filter { it.first != "Partition Name" }
-            .map { "${it.first}: ${it.second}" }
+        val filteredLines = blockLines.filter { it.first != "Partition Name" }
+        val summaryLines = filteredLines.map { "${it.first}: ${it.second}" }
+        val locLines = filteredLines.map { (k, v) -> LocalizedLine(k, v, INFO_IMAGE_KEY_RES[k]) }
         Log.d(TAG, "flushBlock: group='$title', fields=${blockLines.size}")
         groups += ResultGroup(
             title = title,
-            rows = listOf(ResultRow(title, summaryLines.joinToString("\n"), monospace = true)),
+            rows = listOf(ResultRow(title, summaryLines.joinToString("\n"), monospace = true, localizedLines = locLines)),
             localizedNameRes = DESCRIPTOR_FMT_RES[type] ?: DESCRIPTOR_TYPE_RES[type],
             nameFormatArg = partitionName,
         )

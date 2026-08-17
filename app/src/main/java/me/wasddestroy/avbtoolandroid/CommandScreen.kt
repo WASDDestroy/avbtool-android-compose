@@ -598,9 +598,18 @@ private fun ResultView(result: AvbCommandResult) {
                                 if (group.nameFormatArg != null) stringResource(res, group.nameFormatArg)
                                 else stringResource(res)
                             } ?: group.title
+                            val displayValue = if (rowData.localizedLines != null) {
+                                buildString {
+                                    rowData.localizedLines.forEachIndexed { i, line ->
+                                        if (i > 0) append('\n')
+                                        val locKey = line.keyRes?.let { stringResource(it) } ?: line.rawKey
+                                        append(locKey); append(": "); append(line.value)
+                                    }
+                                }
+                            } else rowData.value
                             PreferenceValueRow(
                                 title = groupDisplayTitle,
-                                value = rowData.value,
+                                value = displayValue,
                                 monospace = rowData.monospace,
                             )
                         }
