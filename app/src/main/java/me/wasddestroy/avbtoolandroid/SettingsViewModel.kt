@@ -13,6 +13,7 @@ data class SettingsUiState(
     val amoledBlack: Boolean = false,
     val predictiveBackGesture: Boolean = true,
     val languageMode: LanguageMode = LanguageMode.FOLLOW_SYSTEM,
+    val showFunctionKeyboard: Boolean = true,
 )
 
 /**
@@ -33,4 +34,6 @@ class SettingsViewModel : ViewModel() {
     fun setPredictiveBackGesture(value: Boolean) = _uiState.update { it.copy(predictiveBackGesture = value) }
 
     fun setLanguageMode(value: LanguageMode) = _uiState.update { it.copy(languageMode = value) }
+
+    fun setShowFunctionKeyboard(value: Boolean) = _uiState.update { it.copy(showFunctionKeyboard = value) }
 }

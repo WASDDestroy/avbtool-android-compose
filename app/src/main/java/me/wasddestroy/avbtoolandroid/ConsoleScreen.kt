@@ -76,6 +76,8 @@ fun ConsoleScreen(
 ) {
     val context = LocalContext.current
     val viewModel: ConsoleViewModel = viewModel(factory = ConsoleViewModel.factory(context))
+    val settingsViewModel: SettingsViewModel = viewModel()
+    val settings by settingsViewModel.uiState.collectAsStateWithLifecycle()
     val session = viewModel.session
     val bridge = viewModel.bridge
     var terminalView by remember { mutableStateOf<CopyableEmulatorView?>(null) }
@@ -199,7 +201,9 @@ fun ConsoleScreen(
                 .weight(1f)
         )
 
-        SoftKeyBar(session = session)
+        if (settings.showFunctionKeyboard) {
+            SoftKeyBar(session = session)
+        }
     }
 }
 

@@ -11,6 +11,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Brightness6
 import androidx.compose.material.icons.filled.DarkMode
+import androidx.compose.material.icons.filled.Keyboard
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Palette
@@ -97,6 +98,15 @@ fun SettingsScreen(
                     title = stringResource(R.string.settings_predictive_back),
                     summary = stringResource(R.string.settings_predictive_back_summary),
                     iconContent = { SettingsIcon(Icons.AutoMirrored.Filled.ArrowBack) },
+                )
+            }
+            row("function_keyboard") {
+                PreferenceSwitchRow(
+                    checked = settings.showFunctionKeyboard,
+                    onCheckedChange = viewModel::setShowFunctionKeyboard,
+                    title = stringResource(R.string.settings_function_keyboard),
+                    summary = stringResource(R.string.settings_function_keyboard_summary),
+                    iconContent = { SettingsIcon(Icons.Filled.Keyboard) },
                 )
             }
             row("language") {
