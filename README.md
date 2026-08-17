@@ -14,6 +14,11 @@ An Android Compose app that embeds **Python 3.13** via [Chaquopy](https://chaquo
 - **Native FEC** — `libavbfec.so` implements AOSP RS(255, N) FEC encoding natively, verified byte-exact against AOSP host `fec`.
 - **Predictive back** — predictive back gesture support for command screen and console-to-home navigation.
 - **Signed builds** — debug and release APKs are signed with a local test key.
+- **MVVM** — business state lives in `CommandViewModel` / `ConsoleViewModel` /
+  `SettingsViewModel`, exposed as `StateFlow<UiState>`; composables render and
+  forward events. No DI framework — plain `viewModelFactory` DSL.
+  See [docs/ui/architecture.md](docs/ui/architecture.md) §6, or
+  [中文说明](docs/mvvm-架构说明.md).
 
 ## Requirements
 
