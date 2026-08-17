@@ -77,15 +77,13 @@ fun SettingsScreen(
                     iconContent = { SettingsIcon(Icons.Filled.Palette) },
                 )
             }
-            if (!settings.dynamicThemeColor) {
-                row("color_spec_version") {
-                    PreferenceRow(
-                        title = stringResource(R.string.settings_color_spec),
-                        summary = stringResource(settings.colorSpecVersion.labelRes),
-                        iconContent = { SettingsIcon(Icons.Filled.Tune) },
-                        onClick = { showColorSpecDialog = true },
-                    )
-                }
+            row("color_spec_version") {
+                PreferenceRow(
+                    title = stringResource(R.string.settings_color_spec),
+                    summary = stringResource(settings.colorSpecVersion.labelRes),
+                    iconContent = { SettingsIcon(Icons.Filled.Tune) },
+                    onClick = { showColorSpecDialog = true },
+                )
             }
             row("theme_mode") {
                 PreferenceRow(

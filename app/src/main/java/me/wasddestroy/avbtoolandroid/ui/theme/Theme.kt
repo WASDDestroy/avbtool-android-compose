@@ -5,8 +5,6 @@ import androidx.annotation.StringRes
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.dynamicDarkColorScheme
-import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
@@ -37,14 +35,15 @@ fun AVBToolAndroidTheme(
     colorSpecVersion: ColorSpecVersion = ColorSpecVersion.SPEC_2021,
     content: @Composable () -> Unit
 ) {
+    val spec = colorSpecVersion.toLibrarySpec()
     val colorScheme = when {
-        darkTheme && amoledBlack -> buildAmoledBlackScheme(colorSpecVersion)
+        darkTheme && amoledBlack -> buildAmoledBlackScheme(spec)
         dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
             val context = LocalContext.current
-            if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
+            buildDynamicSchemeColorScheme(context, darkTheme, spec)
         }
-        darkTheme -> buildSchemeColorScheme(isDark = true, colorSpecVersion.toLibrarySpec())
-        else -> buildSchemeColorScheme(isDark = false, colorSpecVersion.toLibrarySpec())
+        darkTheme -> buildSchemeColorScheme(isDark = true, specVersion = spec)
+        else -> buildSchemeColorScheme(isDark = false, specVersion = spec)
     }
 
     MaterialTheme(
@@ -57,8 +56,8 @@ fun AVBToolAndroidTheme(
 // AMOLED: same accent colors as the derived dark scheme, but every surface
 // is pure black. Derived via .copy() so accent colors stay in sync with
 // the current spec version.
-private fun buildAmoledBlackScheme(specVersion: ColorSpecVersion): ColorScheme {
-    val base = buildSchemeColorScheme(isDark = true, specVersion.toLibrarySpec())
+private fun buildAmoledBlackScheme(specVersion: ColorSpec.SpecVersion): ColorScheme {
+    val base = buildSchemeColorScheme(isDark = true, specVersion)
     return base.copy(
         background = Color.Black,
         surface = Color.Black,
