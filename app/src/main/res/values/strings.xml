@@ -6,7 +6,7 @@
     <string name="home_empty">No commands available.</string>
     <string name="home_segment_image_tools">Image</string>
     <string name="home_segment_vbmeta">VBMeta</string>
-    <string name="home_segment_certificate">Cert</string>
+    <string name="home_segment_others">Other</string>
     <string name="command_back">Back</string>
     <string name="command_run">Run</string>
     <string name="command_running">Running…</string>
