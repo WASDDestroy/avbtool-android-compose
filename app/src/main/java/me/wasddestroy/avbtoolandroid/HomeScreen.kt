@@ -7,16 +7,23 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.NoteAdd
 import androidx.compose.material.icons.filled.AccountTree
+import androidx.compose.material.icons.filled.AddCircle
 import androidx.compose.material.icons.filled.Calculate
 import androidx.compose.material.icons.filled.DeleteSweep
+import androidx.compose.material.icons.filled.DiscFull
 import androidx.compose.material.icons.filled.Fingerprint
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Key
 import androidx.compose.material.icons.filled.KeyboardCommandKey
 import androidx.compose.material.icons.filled.LayersClear
+import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.LockOpen
+import androidx.compose.material.icons.filled.Output
 import androidx.compose.material.icons.filled.PhotoSizeSelectLarge
+import androidx.compose.material.icons.filled.Storage
 import androidx.compose.material.icons.filled.Unarchive
 import androidx.compose.material.icons.filled.Verified
+import androidx.compose.material.icons.filled.VerifiedUser
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -99,5 +106,13 @@ private fun commandIcon(commandId: String): ImageVector = when (commandId) {
     "zero_hashtree" -> Icons.Filled.LayersClear
     "calculate_kernel_cmdline" -> Icons.Filled.KeyboardCommandKey
     "extract_public_key" -> Icons.Filled.Key
+    "extract_public_key_digest" -> Icons.Filled.Output
+    "append_vbmeta_image" -> Icons.Filled.AddCircle
+    "set_ab_metadata" -> Icons.Filled.Storage
+    "make_vbmeta_image" -> Icons.Filled.DiscFull
+    "make_certificate" -> Icons.Filled.VerifiedUser
+    "make_cert_permanent_attributes" -> Icons.Filled.Lock
+    "make_cert_metadata" -> Icons.Filled.VerifiedUser
+    "make_cert_unlock_credential" -> Icons.Filled.LockOpen
     else -> Icons.Filled.Info
 }
