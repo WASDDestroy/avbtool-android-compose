@@ -61,7 +61,8 @@
     <string name="arg_add_hash_footer_dynamic_partition_size_label">从映像计算分区大小</string>
     <string name="arg_add_hash_footer_partition_name_label">分区名称</string>
     <string name="arg_add_hash_footer_hash_algorithm_label">哈希算法</string>
-    <string name="arg_add_hash_footer_salt_label">盐 (十六进制)</string>
+    <string name="arg_add_hash_footer_salt_label">盐</string>
+    <string name="arg_add_hash_footer_salt_hint">十六进制，留空随机生成</string>
     <string name="arg_add_hash_footer_algorithm_label">签名算法</string>
     <string name="arg_add_hash_footer_key_label">RSA 私钥 (.pem)</string>
     <string name="arg_add_hash_footer_calc_max_image_size_label">仅计算最大映像大小</string>
@@ -96,7 +97,8 @@
     <string name="arg_add_hashtree_footer_partition_size_label">分区大小</string>
     <string name="arg_add_hashtree_footer_partition_name_label">分区名称</string>
     <string name="arg_add_hashtree_footer_hash_algorithm_label">哈希算法</string>
-    <string name="arg_add_hashtree_footer_salt_label">盐 (十六进制)</string>
+    <string name="arg_add_hashtree_footer_salt_label">盐</string>
+    <string name="arg_add_hashtree_footer_salt_hint">十六进制，留空随机生成</string>
     <string name="arg_add_hashtree_footer_algorithm_label">签名算法</string>
     <string name="arg_add_hashtree_footer_key_label">RSA 私钥 (.pem)</string>
     <string name="arg_add_hashtree_footer_block_size_label">块大小</string>

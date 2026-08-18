@@ -61,7 +61,8 @@
     <string name="arg_add_hash_footer_dynamic_partition_size_label">Calculate partition size from image</string>
     <string name="arg_add_hash_footer_partition_name_label">Partition name</string>
     <string name="arg_add_hash_footer_hash_algorithm_label">Hash algorithm</string>
-    <string name="arg_add_hash_footer_salt_label">Salt (hex)</string>
+    <string name="arg_add_hash_footer_salt_label">Salt</string>
+    <string name="arg_add_hash_footer_salt_hint">Hex, leave empty for random</string>
     <string name="arg_add_hash_footer_algorithm_label">Signing algorithm</string>
     <string name="arg_add_hash_footer_key_label">RSA private key (.pem)</string>
     <string name="arg_add_hash_footer_calc_max_image_size_label">Only calculate max image size</string>
@@ -96,7 +97,8 @@
     <string name="arg_add_hashtree_footer_partition_size_label">Partition size</string>
     <string name="arg_add_hashtree_footer_partition_name_label">Partition name</string>
     <string name="arg_add_hashtree_footer_hash_algorithm_label">Hash algorithm</string>
-    <string name="arg_add_hashtree_footer_salt_label">Salt (hex)</string>
+    <string name="arg_add_hashtree_footer_salt_label">Salt</string>
+    <string name="arg_add_hashtree_footer_salt_hint">Hex, leave empty for random</string>
     <string name="arg_add_hashtree_footer_algorithm_label">Signing algorithm</string>
     <string name="arg_add_hashtree_footer_key_label">RSA private key (.pem)</string>
     <string name="arg_add_hashtree_footer_block_size_label">Block size</string>
