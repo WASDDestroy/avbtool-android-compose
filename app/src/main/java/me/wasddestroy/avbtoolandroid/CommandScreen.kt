@@ -43,8 +43,6 @@ import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.filled.Verified
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -1242,7 +1240,7 @@ private fun SizeEditDialog(
 ) {
     var number by remember { mutableStateOf(initialValue) }
     var unit by remember { mutableStateOf(initialUnit) }
-    var unitExpanded by remember { mutableStateOf(false) }
+    var unitChooserVisible by remember { mutableStateOf(false) }
     var overflow by remember { mutableStateOf(false) }
 
     fun checkOverflow() {
@@ -1268,34 +1266,11 @@ private fun SizeEditDialog(
                         { Text(stringResource(R.string.size_overflow_warning)) }
                     } else null,
                 )
-                Box {
-                    OutlinedTextField(
-                        value = unit,
-                        onValueChange = {},
-                        readOnly = true,
-                        label = { Text("Unit") },
-                        singleLine = true,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable { unitExpanded = true },
-                        enabled = false,
-                    )
-                    DropdownMenu(
-                        expanded = unitExpanded,
-                        onDismissRequest = { unitExpanded = false },
-                    ) {
-                        SIZE_UNITS.forEach { u ->
-                            DropdownMenuItem(
-                                text = { Text(u) },
-                                onClick = {
-                                    unit = u
-                                    unitExpanded = false
-                                    checkOverflow()
-                                },
-                            )
-                        }
-                    }
-                }
+                PreferenceRow(
+                    title = "Unit",
+                    summary = unit,
+                    onClick = { unitChooserVisible = true },
+                )
             }
         },
         confirmButton = {
@@ -1307,6 +1282,59 @@ private fun SizeEditDialog(
             }
         },
         dismissButton = {
+            DialogDismissButton(onClick = onDismiss) {
+                Text(stringResource(android.R.string.cancel))
+            }
+        },
+    )
+
+    if (unitChooserVisible) {
+        UnitChoiceDialog(
+            selected = unit,
+            onDismiss = { unitChooserVisible = false },
+            onSelect = { u ->
+                unit = u
+                unitChooserVisible = false
+                checkOverflow()
+            },
+        )
+    }
+}
+
+@Composable
+private fun UnitChoiceDialog(
+    selected: String,
+    onDismiss: () -> Unit,
+    onSelect: (String) -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Unit") },
+        text = {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState()),
+            ) {
+                SIZE_UNITS.forEach { u ->
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { onSelect(u) }
+                            .padding(horizontal = 8.dp, vertical = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        RadioButton(
+                            selected = u == selected,
+                            onClick = null,
+                        )
+                        Text(text = u, style = MaterialTheme.typography.bodyLarge)
+                    }
+                }
+            }
+        },
+        confirmButton = {
             DialogDismissButton(onClick = onDismiss) {
                 Text(stringResource(android.R.string.cancel))
             }
