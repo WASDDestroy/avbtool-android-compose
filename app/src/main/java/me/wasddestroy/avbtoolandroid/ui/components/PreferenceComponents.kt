@@ -1,5 +1,7 @@
 package me.wasddestroy.avbtoolandroid.ui.components
 
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -127,6 +129,7 @@ class PreferenceGroupScope(private val items: MutableList<@Composable () -> Unit
 }
 
 @Composable
+@OptIn(ExperimentalFoundationApi::class)
 fun PreferenceRow(
     title: String,
     modifier: Modifier = Modifier,
@@ -138,6 +141,7 @@ fun PreferenceRow(
     enabled: Boolean = true,
     trailing: (@Composable () -> Unit)? = null,
     onClick: (() -> Unit)? = null,
+    onLongClick: (() -> Unit)? = null,
 ) {
     val shape = preferenceRowShape(LocalPreferenceRowPosition.current)
     val content: @Composable () -> Unit = {
@@ -195,13 +199,16 @@ fun PreferenceRow(
             }
         }
     }
-    if (onClick != null) {
+    if (onClick != null || onLongClick != null) {
         Surface(
-            onClick = onClick,
-            enabled = enabled,
             shape = shape,
             color = MaterialTheme.colorScheme.surfaceContainer,
-            modifier = modifier.fillMaxWidth(),
+            modifier = modifier
+                .fillMaxWidth()
+                .combinedClickable(
+                    onClick = onClick ?: {},
+                    onLongClick = onLongClick,
+                ),
             content = { content() },
         )
     } else {
@@ -249,6 +256,7 @@ fun PreferenceValueRow(
     modifier: Modifier = Modifier,
     monospace: Boolean = false,
     onClick: (() -> Unit)? = null,
+    onLongClick: (() -> Unit)? = null,
 ) {
     PreferenceRow(
         title = title,
@@ -267,6 +275,7 @@ fun PreferenceValueRow(
             null
         },
         onClick = onClick,
+        onLongClick = onLongClick,
     )
 }
 

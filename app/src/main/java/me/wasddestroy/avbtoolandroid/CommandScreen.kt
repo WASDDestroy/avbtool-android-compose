@@ -647,6 +647,8 @@ fun CommandScreen(
 @Composable
 private fun ResultView(result: AvbCommandResult) {
     var rawExpanded by remember { mutableStateOf(false) }
+    @Suppress("DEPRECATION")
+    val clipboard = LocalClipboardManager.current
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -725,6 +727,9 @@ private fun ResultView(result: AvbCommandResult) {
                             title = finalTitle,
                             value = rowData.value,
                             monospace = rowData.monospace,
+                            onLongClick = {
+                                clipboard.setText(AnnotatedString("$finalTitle: ${rowData.value}"))
+                            },
                         )
                     }
                 }
@@ -748,6 +753,9 @@ private fun ResultView(result: AvbCommandResult) {
                                 title = groupDisplayTitle,
                                 value = displayValue,
                                 monospace = rowData.monospace,
+                                onLongClick = {
+                                    clipboard.setText(AnnotatedString("$groupDisplayTitle: $displayValue"))
+                                },
                             )
                         }
                     }
@@ -756,8 +764,6 @@ private fun ResultView(result: AvbCommandResult) {
         }
 
         if (result.rawOutput.isNotBlank()) {
-            @Suppress("DEPRECATION")
-            val clipboard = LocalClipboardManager.current
             PreferenceGroup {
                 row("raw_output_toggle") {
                     PreferenceRow(
