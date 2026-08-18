@@ -1,5 +1,6 @@
 package me.wasddestroy.avbtoolandroid
 
+import androidx.annotation.StringRes
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -103,6 +104,13 @@ private val ALGORITHMS = listOf(
 
 private val HASH_ALGORITHMS = listOf("sha256", "sha512", "sha1", "blake2b-256")
 
+private data class FlagOption(val value: String, @param:StringRes val labelRes: Int)
+private val FLAGS_OPTIONS = listOf(
+    FlagOption("0", R.string.flags_0),
+    FlagOption("1", R.string.flags_1),
+    FlagOption("2", R.string.flags_2),
+)
+
 private fun storageKey(arg: AvbArg): String = if (arg.type == ArgType.IMAGE) IMAGE_STORAGE_KEY else arg.key
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -132,6 +140,7 @@ fun CommandScreen(
     var editingArg by remember { mutableStateOf<AvbArg?>(null) }
     var choosingAlgorithm by remember { mutableStateOf(false) }
     var choosingHashAlgorithm by remember { mutableStateOf(false) }
+    var choosingFlags by remember { mutableStateOf(false) }
     var managingFileArg by remember { mutableStateOf<AvbArg?>(null) }
     var managingChainArg by remember { mutableStateOf<AvbArg?>(null) }
     var chainEditor by remember { mutableStateOf<Pair<AvbArg, Int?>?>(null) }
@@ -286,6 +295,7 @@ fun CommandScreen(
                                 },
                                 onChooseAlgorithm = { choosingAlgorithm = true },
                                 onChooseHashAlgorithm = { choosingHashAlgorithm = true },
+                                onChooseFlags = { choosingFlags = true },
                                 onToggleBoolean = { checked ->
                                     values = values + (arg.key to checked.toString())
                                 },
@@ -312,6 +322,7 @@ fun CommandScreen(
                                 onEditText = { editingArg = arg },
                                 onChooseAlgorithm = { choosingAlgorithm = true },
                                 onChooseHashAlgorithm = { choosingHashAlgorithm = true },
+                                onChooseFlags = { choosingFlags = true },
                                 onToggleBoolean = { checked ->
                                     values = values + (arg.key to checked.toString())
                                 },
@@ -376,6 +387,7 @@ fun CommandScreen(
                                         onEditText = { editingArg = arg },
                                         onChooseAlgorithm = { choosingAlgorithm = true },
                                         onChooseHashAlgorithm = { choosingHashAlgorithm = true },
+                                onChooseFlags = { choosingFlags = true },
                                         onToggleBoolean = { checked ->
                                             values = values + (arg.key to checked.toString())
                                         },
@@ -615,6 +627,21 @@ fun CommandScreen(
             )
         }
     }
+
+    if (choosingFlags) {
+        val flagsArg = command.args.firstOrNull { it.type == ArgType.FLAGS }
+        if (flagsArg != null) {
+            val current = values[flagsArg.key].orEmpty().ifBlank { "0" }
+            FlagsChoiceDialog(
+                selected = current,
+                onDismiss = { choosingFlags = false },
+                onSelect = { v ->
+                    values = values + (flagsArg.key to v)
+                    choosingFlags = false
+                },
+            )
+        }
+    }
 }
 
 @Composable
@@ -811,6 +838,7 @@ private fun CommandArgRow(
     onEditText: () -> Unit,
     onChooseAlgorithm: () -> Unit,
     onChooseHashAlgorithm: () -> Unit,
+    onChooseFlags: () -> Unit,
     onToggleBoolean: (Boolean) -> Unit,
 ) {
     when (arg.type) {
@@ -872,6 +900,16 @@ private fun CommandArgRow(
                 iconContent = { ArgIcon(arg) },
                 summary = value.ifBlank { arg.defaultValue ?: "" },
                 onClick = onChooseHashAlgorithm,
+            )
+        }
+        ArgType.FLAGS -> {
+            val display = FLAGS_OPTIONS.firstOrNull { it.value == value }?.let { stringResource(it.labelRes) }
+                ?: value.ifBlank { "0" }
+            PreferenceRow(
+                title = stringResource(arg.labelRes) + if (arg.required) stringResource(R.string.command_required) else "",
+                iconContent = { ArgIcon(arg) },
+                summary = display,
+                onClick = onChooseFlags,
             )
         }
         ArgType.CHAIN_PARTITION -> {
@@ -1123,6 +1161,50 @@ private fun HashAlgorithmChoiceDialog(
                             onClick = null,
                         )
                         Text(text = alg, style = MaterialTheme.typography.bodyLarge)
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            DialogDismissButton(onClick = onDismiss) {
+                Text(stringResource(android.R.string.cancel))
+            }
+        },
+    )
+}
+
+@Composable
+private fun FlagsChoiceDialog(
+    selected: String,
+    onDismiss: () -> Unit,
+    onSelect: (String) -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.flags_dialog_title)) },
+        text = {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState()),
+            ) {
+                FLAGS_OPTIONS.forEach { option ->
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { onSelect(option.value) }
+                            .padding(horizontal = 8.dp, vertical = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        RadioButton(
+                            selected = option.value == selected,
+                            onClick = null,
+                        )
+                        Text(
+                            text = stringResource(option.labelRes),
+                            style = MaterialTheme.typography.bodyLarge,
+                        )
                     }
                 }
             }

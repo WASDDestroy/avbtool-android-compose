@@ -3,7 +3,7 @@ package me.wasddestroy.avbtoolandroid
 import androidx.annotation.StringRes
 
 
-enum class ArgType { IMAGE, TEXT, INT, BOOL, FILE, ALGORITHM, CHAIN_PARTITION, SIZE, HASH_ALGORITHM }
+enum class ArgType { IMAGE, TEXT, INT, BOOL, FILE, ALGORITHM, CHAIN_PARTITION, SIZE, HASH_ALGORITHM, FLAGS }
 
 data class AvbArg(
     val key: String,
@@ -74,7 +74,7 @@ object AvbCommands {
                 AvbArg("--rollback_index", R.string.arg_add_hash_footer_rollback_index_label, ArgType.INT),
                 AvbArg("--prop", R.string.arg_add_hash_footer_prop_label, ArgType.TEXT, repeatable = true, hintRes = R.string.arg_add_hash_footer_prop_hint),
                 AvbArg("--include_descriptors_from_image", R.string.arg_add_hash_footer_include_descriptors_from_image_label, ArgType.FILE, repeatable = true),
-                AvbArg("--flags", R.string.arg_add_hash_footer_flags_label, ArgType.INT),
+                AvbArg("--flags", R.string.arg_add_hash_footer_flags_label, ArgType.FLAGS),
 
                 AvbArg("--output_vbmeta_image", R.string.arg_add_hash_footer_output_vbmeta_image_label, ArgType.TEXT, advanced = true),
                 AvbArg("--signing_helper", R.string.arg_add_hash_footer_signing_helper_label, ArgType.TEXT, advanced = true),
@@ -116,7 +116,7 @@ object AvbCommands {
                 AvbArg("--rollback_index", R.string.arg_add_hashtree_footer_rollback_index_label, ArgType.INT),
                 AvbArg("--prop", R.string.arg_add_hashtree_footer_prop_label, ArgType.TEXT, repeatable = true, hintRes = R.string.arg_add_hashtree_footer_prop_hint),
                 AvbArg("--chain_partition", R.string.arg_add_hashtree_footer_chain_partition_label, ArgType.CHAIN_PARTITION, repeatable = true),
-                AvbArg("--flags", R.string.arg_add_hashtree_footer_flags_label, ArgType.INT),
+                AvbArg("--flags", R.string.arg_add_hashtree_footer_flags_label, ArgType.FLAGS),
                 AvbArg("--include_descriptors_from_image", R.string.arg_add_hashtree_footer_include_descriptors_from_image_label, ArgType.FILE, repeatable = true),
 
                 AvbArg("--output_vbmeta_image", R.string.arg_add_hashtree_footer_output_vbmeta_image_label, ArgType.TEXT, advanced = true),
@@ -155,7 +155,7 @@ object AvbCommands {
                 AvbArg("--prop", R.string.arg_make_vbmeta_image_prop_label, ArgType.TEXT, repeatable = true, hintRes = R.string.arg_make_vbmeta_image_prop_hint),
                 AvbArg("--include_descriptors_from_image", R.string.arg_make_vbmeta_image_include_descriptors_from_image_label, ArgType.FILE, repeatable = true),
                 AvbArg("--chain_partition", R.string.arg_make_vbmeta_image_chain_partition_label, ArgType.CHAIN_PARTITION, repeatable = true),
-                AvbArg("--flags", R.string.arg_make_vbmeta_image_flags_label, ArgType.INT),
+                AvbArg("--flags", R.string.arg_make_vbmeta_image_flags_label, ArgType.FLAGS),
                 AvbArg("--set_hashtree_disabled_flag", R.string.arg_make_vbmeta_image_set_hashtree_disabled_flag_label, ArgType.BOOL),
                 AvbArg("--set_verification_disabled_flag", R.string.arg_make_vbmeta_image_set_verification_disabled_flag_label, ArgType.BOOL),
                 AvbArg("--padding_size", R.string.arg_make_vbmeta_image_padding_size_label, ArgType.INT, advanced = true),

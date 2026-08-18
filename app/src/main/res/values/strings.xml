@@ -357,4 +357,8 @@
     <string name="size_overflow_warning">Value exceeds maximum representable size</string>
     <string name="size_decimal_warning">Value must be a whole number</string>
     <string name="size_bytes_preview">%s bytes</string>
+    <string name="flags_dialog_title">VBMeta flags</string>
+    <string name="flags_0">0 — All verification enabled</string>
+    <string name="flags_1">1 — HASHTREE_DISABLED</string>
+    <string name="flags_2">2 — VERIFICATION_DISABLED</string>
 </resources>

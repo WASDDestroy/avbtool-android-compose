@@ -128,7 +128,7 @@ class CommandViewModel(
                 }
                 ArgType.BOOL ->
                     if ((values[arg.key] ?: "").toBooleanStrictOrNull() == true) argv += arg.key
-                ArgType.TEXT, ArgType.INT, ArgType.ALGORITHM, ArgType.HASH_ALGORITHM -> {
+                ArgType.TEXT, ArgType.INT, ArgType.ALGORITHM, ArgType.HASH_ALGORITHM, ArgType.FLAGS -> {
                     val raw = values[arg.key].orEmpty()
                     val vals = if (arg.repeatable) raw.lines().filter { it.isNotBlank() } else listOf(raw)
                     vals.forEach { v ->
@@ -263,7 +263,7 @@ fun buildArgv(cmd: AvbCommand, values: Map<String, String>): List<String> {
             ArgType.IMAGE -> Unit
             ArgType.BOOL ->
                 if ((values[arg.key] ?: "").toBooleanStrictOrNull() == true) argv += arg.key
-            ArgType.TEXT, ArgType.INT, ArgType.ALGORITHM, ArgType.HASH_ALGORITHM -> {
+            ArgType.TEXT, ArgType.INT, ArgType.ALGORITHM, ArgType.HASH_ALGORITHM, ArgType.FLAGS -> {
                 val raw = values[arg.key].orEmpty()
                 val vals = if (arg.repeatable) raw.lines().filter { it.isNotBlank() } else listOf(raw)
                 vals.forEach { v ->
