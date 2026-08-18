@@ -139,6 +139,7 @@ fun CommandScreen(
     var editingSlotData by remember { mutableStateOf(false) }
     var editingSizeArg by remember { mutableStateOf<AvbArg?>(null) }
     var advancedExpanded by remember { mutableStateOf(false) }
+    var previewExpanded by remember { mutableStateOf(false) }
 
     val openDocument = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri: Uri? ->
         chainKeyPickRequest?.let { callback ->
@@ -217,6 +218,9 @@ fun CommandScreen(
             }
         },
     ) { contentPadding ->
+        @Suppress("DEPRECATION")
+        val clipboard = LocalClipboardManager.current
+        val previewText = remember(values) { formatArgv(buildArgv(command, values)) }
         SettingsList(
             modifier = Modifier.padding(contentPadding),
             contentPadding = PaddingValues(vertical = 8.dp),
@@ -379,6 +383,46 @@ fun CommandScreen(
                                 }
                             }
                         }
+                    }
+                }
+            }
+            preferenceGroup(key = "command_preview") {
+                row("preview_toggle") {
+                    PreferenceRow(
+                        title = stringResource(R.string.command_preview),
+                        summary = stringResource(
+                            if (previewExpanded) R.string.command_preview_collapse
+                            else R.string.command_preview_expand
+                        ),
+                        trailing = {
+                            IconButton(onClick = { clipboard.setText(AnnotatedString(previewText)) }) {
+                                Icon(Icons.Filled.ContentCopy, contentDescription = "Copy")
+                            }
+                        },
+                        onClick = { previewExpanded = !previewExpanded },
+                    )
+                }
+                if (previewExpanded) {
+                    row("preview_note") {
+                        PreferenceRow(
+                            title = "",
+                            summary = stringResource(R.string.command_preview_note),
+                        )
+                    }
+                    row("preview_content") {
+                        PreferenceRow(
+                            title = "",
+                            summaryContent = {
+                                SelectionContainer {
+                                    Text(
+                                        text = previewText,
+                                        fontFamily = FontFamily.Monospace,
+                                        fontSize = 12.sp,
+                                        modifier = Modifier.fillMaxWidth(),
+                                    )
+                                }
+                            },
+                        )
                     }
                 }
             }

@@ -248,3 +248,81 @@ class CommandViewModel(
         }
     }
 }
+
+fun buildArgv(cmd: AvbCommand, values: Map<String, String>): List<String> {
+    val argv = mutableListOf("avbtool", cmd.id)
+    cmd.inputs.firstOrNull()?.let { input ->
+        val v = values[input.key].orEmpty()
+        if (v.isNotBlank()) {
+            argv += input.key
+            argv += v
+        }
+    }
+    cmd.args.forEach { arg ->
+        when (arg.type) {
+            ArgType.IMAGE -> Unit
+            ArgType.BOOL ->
+                if ((values[arg.key] ?: "").toBooleanStrictOrNull() == true) argv += arg.key
+            ArgType.TEXT, ArgType.INT, ArgType.ALGORITHM, ArgType.HASH_ALGORITHM -> {
+                val raw = values[arg.key].orEmpty()
+                val vals = if (arg.repeatable) raw.lines().filter { it.isNotBlank() } else listOf(raw)
+                vals.forEach { v ->
+                    if (v.isNotBlank()) {
+                        argv += arg.key
+                        argv += v
+                    }
+                }
+            }
+            ArgType.SIZE -> {
+                val raw = values[arg.key].orEmpty()
+                if (raw.isNotBlank()) {
+                    val unit = values["${arg.key}__unit"] ?: "MiB"
+                    val multiplier = when (unit) {
+                        "KiB" -> 1024L
+                        "MiB" -> 1024L * 1024
+                        "GiB" -> 1024L * 1024 * 1024
+                        else -> 1L
+                    }
+                    val n = raw.toLongOrNull()
+                    if (n != null) {
+                        argv += arg.key
+                        argv += (n * multiplier).toString()
+                    }
+                }
+            }
+            ArgType.FILE -> {
+                val raw = values[arg.key].orEmpty()
+                val vals = if (arg.repeatable) raw.lines().filter { it.isNotBlank() } else listOf(raw)
+                vals.forEach { v ->
+                    if (v.isNotBlank()) {
+                        argv += arg.key
+                        if (v.startsWith("content://")) {
+                            val name = v.toUri().lastPathSegment ?: v
+                            argv += name
+                        } else {
+                            argv += v
+                        }
+                    }
+                }
+            }
+            ArgType.CHAIN_PARTITION -> {
+                val raw = values[arg.key].orEmpty()
+                raw.lines().filter { it.isNotBlank() }.forEach { entry ->
+                    argv += arg.key
+                    argv += entry
+                }
+            }
+        }
+    }
+    return argv
+}
+
+fun formatArgv(argv: List<String>): String {
+    if (argv.isEmpty()) return ""
+    val sb = StringBuilder()
+    argv.forEachIndexed { i, token ->
+        if (i > 0) sb.append(" \\\n")
+        sb.append(token)
+    }
+    return sb.toString()
+}

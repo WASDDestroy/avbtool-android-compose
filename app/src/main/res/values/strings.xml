@@ -25,6 +25,10 @@
     <string name="command_section_advanced">Advanced configs</string>
     <string name="command_advanced_show">Show advanced configs</string>
     <string name="command_advanced_hide">Hide advanced configs</string>
+    <string name="command_preview">Command preview</string>
+    <string name="command_preview_expand">Tap to expand</string>
+    <string name="command_preview_collapse">Tap to collapse</string>
+    <string name="command_preview_note">Preview only. Actual arguments may differ after file resolution.</string>
     <string name="command_choose_file">Choose file</string>
     <string name="command_change_file">Change file (%s)</string>
     <string name="command_add_file">Add file</string>
