@@ -235,7 +235,7 @@ fun CommandScreen(
                 !it.advanced && it.type != ArgType.ALGORITHM && it.type != ArgType.HASH_ALGORITHM && it.key != "--key" && it.type != ArgType.BOOL
             }
             val keyArgs = command.args.filter {
-                !it.advanced && (it.key == "--algorithm" || it.key == "--key")
+                !it.advanced && (it.type == ArgType.ALGORITHM || it.type == ArgType.HASH_ALGORITHM || it.key == "--key")
             }
             val switchArgs = command.args.filter { !it.advanced && it.type == ArgType.BOOL }
             val advancedArgs = command.args.filter { it.advanced }
