@@ -4,6 +4,9 @@
     <string name="nav_console">控制台</string>
     <string name="home_avbdroid_title">AVBDroid</string>
     <string name="home_empty">没有可用命令。</string>
+    <string name="home_segment_image_tools">映像</string>
+    <string name="home_segment_vbmeta">VBMeta</string>
+    <string name="home_segment_certificate">证书</string>
     <string name="command_back">返回</string>
     <string name="command_run">运行</string>
     <string name="command_running">正在运行…</string>

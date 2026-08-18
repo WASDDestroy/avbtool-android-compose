@@ -4,6 +4,8 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.NoteAdd
 import androidx.compose.material.icons.filled.AccountTree
@@ -26,12 +28,16 @@ import androidx.compose.material.icons.filled.Verified
 import androidx.compose.material.icons.filled.VerifiedUser
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Tab
+import androidx.compose.material3.PrimaryTabRow
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.launch
 import me.wasddestroy.avbtoolandroid.ui.components.PreferenceRow
 import me.wasddestroy.avbtoolandroid.ui.components.SettingsList
 import me.wasddestroy.avbtoolandroid.ui.components.preferenceGroup
@@ -41,41 +47,38 @@ fun HomeScreen(
     modifier: Modifier = Modifier,
     onOpenCommand: (String) -> Unit,
 ) {
-    SettingsList(
-        modifier = modifier,
-        contentPadding = PaddingValues(vertical = 8.dp),
-    ) {
-        item("header") {
-            Column(Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
-                Text(
-                    text = stringResource(R.string.home_avbdroid_title),
-                    style = MaterialTheme.typography.headlineSmall,
+    val segments = HomeSegment.entries
+    val pagerState = rememberPagerState { segments.size }
+    val coroutineScope = rememberCoroutineScope()
+
+    Column(modifier) {
+        PrimaryTabRow(selectedTabIndex = pagerState.currentPage) {
+            segments.forEachIndexed { index, segment ->
+                Tab(
+                    selected = pagerState.currentPage == index,
+                    onClick = { coroutineScope.launch { pagerState.animateScrollToPage(index) } },
+                    text = { Text(stringResource(segment.labelRes)) },
                 )
             }
         }
-        val imageTools = AvbCommands.all.filter { it.kind == AvbCommandKind.IMAGE_TOOL }
-        val otherTools = AvbCommands.all.filter { it.kind != AvbCommandKind.IMAGE_TOOL }
-
-        preferenceGroup {
-            imageTools.forEach { command ->
-                row(command.id) {
-                    CommandRow(command, onOpenCommand)
-                }
-            }
-        }
-
-        if (otherTools.isNotEmpty()) {
-            preferenceGroup {
-                otherTools.forEach { command ->
-                    row(command.id) {
-                        CommandRow(command, onOpenCommand)
+        HorizontalPager(
+            state = pagerState,
+            modifier = Modifier.weight(1f),
+        ) { page ->
+            val segment = segments[page]
+            val commands = AvbCommands.all.filter { it.group == segment }
+            SettingsList(contentPadding = PaddingValues(vertical = 8.dp)) {
+                preferenceGroup {
+                    commands.forEach { command ->
+                        row(command.id) {
+                            CommandRow(command, onOpenCommand)
+                        }
                     }
                 }
             }
         }
     }
 }
-
 
 @Composable
 private fun CommandRow(command: AvbCommand, onOpenCommand: (String) -> Unit) {

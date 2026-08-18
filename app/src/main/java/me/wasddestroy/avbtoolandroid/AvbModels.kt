@@ -19,6 +19,12 @@ data class AvbArg(
 
 enum class AvbCommandKind { IMAGE_TOOL, VBMETA_GENERATOR }
 
+enum class HomeSegment(@param:StringRes val labelRes: Int) {
+    IMAGE_TOOLS(R.string.home_segment_image_tools),
+    VBMETA(R.string.home_segment_vbmeta),
+    CERTIFICATE(R.string.home_segment_certificate),
+}
+
 data class AvbFileInput(
     val key: String,
     @param:StringRes val labelRes: Int,
@@ -39,6 +45,7 @@ data class AvbCommand(
     @param:StringRes val descriptionRes: Int,
     val args: List<AvbArg>,
     val kind: AvbCommandKind = AvbCommandKind.IMAGE_TOOL,
+    val group: HomeSegment = HomeSegment.IMAGE_TOOLS,
     val inputs: List<AvbFileInput> = emptyList(),
     val outputs: List<AvbFileOutput> = emptyList(),
     val readOnly: Boolean = true,
@@ -138,6 +145,7 @@ object AvbCommands {
             titleRes = R.string.command_make_vbmeta_image_title,
             descriptionRes = R.string.command_make_vbmeta_image_description,
             kind = AvbCommandKind.VBMETA_GENERATOR,
+            group = HomeSegment.VBMETA,
             outputs = listOf(AvbFileOutput("--output", R.string.arg_make_vbmeta_image_output_label, ".img")),
             args = listOf(
                 AvbArg("--algorithm", R.string.arg_make_vbmeta_image_algorithm_label, ArgType.ALGORITHM, defaultValue = "NONE"),
@@ -239,6 +247,7 @@ object AvbCommands {
         AvbCommand(
             id = "calculate_kernel_cmdline", titleRes = R.string.command_calculate_kernel_cmdline_title, descriptionRes = R.string.command_calculate_kernel_cmdline_description,
             kind = AvbCommandKind.IMAGE_TOOL,
+            group = HomeSegment.CERTIFICATE,
             inputs = listOf(AvbFileInput("--image", R.string.arg_calculate_kernel_cmdline_image_label, required = true)),
             args = listOf(
                 AvbArg("--hashtree_disabled", R.string.arg_calculate_kernel_cmdline_hashtree_disabled_label, ArgType.BOOL)
@@ -282,6 +291,7 @@ object AvbCommands {
             titleRes = R.string.command_set_ab_metadata_title,
             descriptionRes = R.string.command_set_ab_metadata_description,
             kind = AvbCommandKind.IMAGE_TOOL,
+            group = HomeSegment.CERTIFICATE,
             inputs = listOf(AvbFileInput("--misc_image", R.string.arg_set_ab_metadata_misc_image_label, required = true)),
             args = listOf(
                 AvbArg("--slot_data", R.string.arg_set_ab_metadata_slot_data_label, ArgType.TEXT, hintRes = R.string.arg_set_ab_metadata_slot_data_hint)
@@ -293,6 +303,7 @@ object AvbCommands {
             titleRes = R.string.command_make_certificate_title,
             descriptionRes = R.string.command_make_certificate_description,
             kind = AvbCommandKind.VBMETA_GENERATOR,
+            group = HomeSegment.CERTIFICATE,
             outputs = listOf(AvbFileOutput("--output", R.string.arg_make_certificate_output_label, ".bin")),
             args = listOf(
                 AvbArg("--subject", R.string.arg_make_certificate_subject_label, ArgType.FILE, required = true),
@@ -312,6 +323,7 @@ object AvbCommands {
             titleRes = R.string.command_make_cert_permanent_attributes_title,
             descriptionRes = R.string.command_make_cert_permanent_attributes_description,
             kind = AvbCommandKind.VBMETA_GENERATOR,
+            group = HomeSegment.CERTIFICATE,
             outputs = listOf(AvbFileOutput("--output", R.string.arg_make_cert_permanent_attributes_output_label, ".bin")),
             args = listOf(
                 AvbArg("--root_authority_key", R.string.arg_make_cert_permanent_attributes_root_authority_key_label, ArgType.FILE, required = true),
@@ -324,6 +336,7 @@ object AvbCommands {
             titleRes = R.string.command_make_cert_metadata_title,
             descriptionRes = R.string.command_make_cert_metadata_description,
             kind = AvbCommandKind.VBMETA_GENERATOR,
+            group = HomeSegment.CERTIFICATE,
             outputs = listOf(AvbFileOutput("--output", R.string.arg_make_cert_metadata_output_label, ".bin")),
             args = listOf(
                 AvbArg("--intermediate_key_certificate", R.string.arg_make_cert_metadata_intermediate_key_certificate_label, ArgType.FILE, required = true),
@@ -336,6 +349,7 @@ object AvbCommands {
             titleRes = R.string.command_make_cert_unlock_credential_title,
             descriptionRes = R.string.command_make_cert_unlock_credential_description,
             kind = AvbCommandKind.VBMETA_GENERATOR,
+            group = HomeSegment.CERTIFICATE,
             outputs = listOf(AvbFileOutput("--output", R.string.arg_make_cert_unlock_credential_output_label, ".bin")),
             args = listOf(
                 AvbArg("--intermediate_key_certificate", R.string.arg_make_cert_unlock_credential_intermediate_key_certificate_label, ArgType.FILE, required = true),
