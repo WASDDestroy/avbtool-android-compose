@@ -344,4 +344,9 @@
     <string name="slot_data_priority">Priority</string>
     <string name="slot_data_tries_remaining">Tries remaining</string>
     <string name="slot_data_successful_boot">Successful boot</string>
+    <string name="size_unit_B">B</string>
+    <string name="size_unit_KiB">KiB</string>
+    <string name="size_unit_MiB">MiB</string>
+    <string name="size_unit_GiB">GiB</string>
+    <string name="size_overflow_warning">Value exceeds maximum representable size</string>
 </resources>

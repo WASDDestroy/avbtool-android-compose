@@ -3,7 +3,7 @@ package me.wasddestroy.avbtoolandroid
 import androidx.annotation.StringRes
 
 
-enum class ArgType { IMAGE, TEXT, INT, BOOL, FILE, ALGORITHM, CHAIN_PARTITION }
+enum class ArgType { IMAGE, TEXT, INT, BOOL, FILE, ALGORITHM, CHAIN_PARTITION, SIZE }
 
 data class AvbArg(
     val key: String,
@@ -62,7 +62,7 @@ object AvbCommands {
             kind = AvbCommandKind.IMAGE_TOOL,
             inputs = listOf(AvbFileInput("--image", R.string.arg_add_hash_footer_image_label, required = true)),
             args = listOf(
-                AvbArg("--partition_size", R.string.arg_add_hash_footer_partition_size_label, ArgType.INT),
+                AvbArg("--partition_size", R.string.arg_add_hash_footer_partition_size_label, ArgType.SIZE),
                 AvbArg("--dynamic_partition_size", R.string.arg_add_hash_footer_dynamic_partition_size_label, ArgType.BOOL),
                 AvbArg("--partition_name", R.string.arg_add_hash_footer_partition_name_label, ArgType.TEXT),
                 AvbArg("--hash_algorithm", R.string.arg_add_hash_footer_hash_algorithm_label, ArgType.TEXT, defaultValue = "sha256"),
@@ -102,7 +102,7 @@ object AvbCommands {
             kind = AvbCommandKind.IMAGE_TOOL,
             inputs = listOf(AvbFileInput("--image", R.string.arg_add_hashtree_footer_image_label, required = true)),
             args = listOf(
-                AvbArg("--partition_size", R.string.arg_add_hashtree_footer_partition_size_label, ArgType.INT),
+                AvbArg("--partition_size", R.string.arg_add_hashtree_footer_partition_size_label, ArgType.SIZE),
                 AvbArg("--partition_name", R.string.arg_add_hashtree_footer_partition_name_label, ArgType.TEXT),
                 AvbArg("--hash_algorithm", R.string.arg_add_hashtree_footer_hash_algorithm_label, ArgType.TEXT, defaultValue = "sha256"),
                 AvbArg("--salt", R.string.arg_add_hashtree_footer_salt_label, ArgType.TEXT),
@@ -194,7 +194,7 @@ object AvbCommands {
             kind = AvbCommandKind.IMAGE_TOOL,
             inputs = listOf(AvbFileInput("--image", R.string.arg_resize_image_image_label, required = true)),
             args = listOf(
-                AvbArg("--partition_size", R.string.arg_resize_image_partition_size_label, ArgType.INT, required = true)
+                AvbArg("--partition_size", R.string.arg_resize_image_partition_size_label, ArgType.SIZE, required = true)
             ),
             readOnly = false, producesFile = true
         ),
@@ -284,7 +284,7 @@ object AvbCommands {
             group = HomeSegment.VBMETA,
             inputs = listOf(AvbFileInput("--image", R.string.arg_append_vbmeta_image_image_label)),
             args = listOf(
-                AvbArg("--partition_size", R.string.arg_append_vbmeta_image_partition_size_label, ArgType.INT, required = true),
+                AvbArg("--partition_size", R.string.arg_append_vbmeta_image_partition_size_label, ArgType.SIZE, required = true),
                 AvbArg("--vbmeta_image", R.string.arg_append_vbmeta_image_vbmeta_image_label, ArgType.FILE)
             ),
             readOnly = false, producesFile = false

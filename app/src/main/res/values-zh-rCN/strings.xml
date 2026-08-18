@@ -342,4 +342,5 @@
     <string name="slot_data_priority">优先级</string>
     <string name="slot_data_tries_remaining">剩余尝试次数</string>
     <string name="slot_data_successful_boot">成功启动</string>
+    <string name="size_overflow_warning">数值超出可表示的最大大小</string>
 </resources>

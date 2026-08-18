@@ -138,6 +138,23 @@ class CommandViewModel(
                         }
                     }
                 }
+                ArgType.SIZE -> {
+                    val raw = values[arg.key].orEmpty()
+                    if (raw.isNotBlank()) {
+                        val unit = values["${arg.key}__unit"] ?: "MiB"
+                        val multiplier = when (unit) {
+                            "KiB" -> 1024L
+                            "MiB" -> 1024L * 1024
+                            "GiB" -> 1024L * 1024 * 1024
+                            else -> 1L
+                        }
+                        val n = raw.toLongOrNull()
+                        if (n != null) {
+                            argv += arg.key
+                            argv += (n * multiplier).toString()
+                        }
+                    }
+                }
                 ArgType.FILE -> {
                     val raw = values[arg.key].orEmpty()
                     val vals = if (arg.repeatable) raw.lines().filter { it.isNotBlank() } else listOf(raw)

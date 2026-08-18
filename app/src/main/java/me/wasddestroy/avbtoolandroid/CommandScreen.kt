@@ -6,6 +6,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -42,6 +43,8 @@ import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.filled.Verified
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -116,7 +119,8 @@ fun CommandScreen(
     var values by remember(command.id) {
         mutableStateOf(
             command.inputs.associate { it.key to "" } +
-            command.args.associate { storageKey(it) to (it.defaultValue ?: "") }
+            command.args.associate { storageKey(it) to (it.defaultValue ?: "") } +
+            command.args.filter { it.type == ArgType.SIZE }.associate { "${it.key}__unit" to "MiB" }
         )
     }
     var copyWarning by remember { mutableStateOf(false) }
@@ -129,6 +133,7 @@ fun CommandScreen(
     var chainEditor by remember { mutableStateOf<Pair<AvbArg, Int?>?>(null) }
     var chainKeyPickRequest by remember { mutableStateOf<((Uri) -> Unit)?>(null) }
     var editingSlotData by remember { mutableStateOf(false) }
+    var editingSizeArg by remember { mutableStateOf<AvbArg?>(null) }
     var advancedExpanded by remember { mutableStateOf(false) }
 
     val openDocument = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri: Uri? ->
@@ -265,8 +270,11 @@ fun CommandScreen(
                                 onManageFile = { managingFileArg = arg },
                                 onManageChain = { managingChainArg = arg },
                                 onEditText = {
-                                    if (arg.key == "--slot_data") editingSlotData = true
-                                    else editingArg = arg
+                                    when {
+                                        arg.key == "--slot_data" -> editingSlotData = true
+                                        arg.type == ArgType.SIZE -> editingSizeArg = arg
+                                        else -> editingArg = arg
+                                    }
                                 },
                                 onChooseAlgorithm = { choosingAlgorithm = true },
                                 onToggleBoolean = { checked ->
@@ -442,6 +450,20 @@ fun CommandScreen(
             onConfirm = { newValue ->
                 values = values + ("--slot_data" to newValue)
                 editingSlotData = false
+            },
+        )
+    }
+
+    editingSizeArg?.let { arg ->
+        val key = storageKey(arg)
+        SizeEditDialog(
+            label = stringResource(arg.labelRes),
+            initialValue = values[key].orEmpty(),
+            initialUnit = values["${arg.key}__unit"] ?: "MiB",
+            onDismiss = { editingSizeArg = null },
+            onConfirm = { number, unit ->
+                values = values + (key to number) + ("${arg.key}__unit" to unit)
+                editingSizeArg = null
             },
         )
     }
@@ -756,6 +778,16 @@ private fun CommandArgRow(
                 title = stringResource(arg.labelRes) + if (arg.required) stringResource(R.string.command_required) else "",
                 iconContent = { ArgIcon(arg) },
                 summary = value.ifBlank { null },
+                onClick = onEditText,
+            )
+        }
+        ArgType.SIZE -> {
+            val unit = values["${arg.key}__unit"] ?: "MiB"
+            val display = if (value.isNotBlank()) "$value $unit" else null
+            PreferenceRow(
+                title = stringResource(arg.labelRes) + if (arg.required) stringResource(R.string.command_required) else "",
+                iconContent = { ArgIcon(arg) },
+                summary = display,
                 onClick = onEditText,
             )
         }
@@ -1194,4 +1226,90 @@ private fun SlotSection(
             modifier = Modifier.fillMaxWidth(),
         )
     }
+}
+
+private val SIZE_UNITS = listOf("B", "KiB", "MiB", "GiB")
+private val SIZE_UNIT_MULTIPLIERS = mapOf("B" to 1L, "KiB" to 1024L, "MiB" to 1024L * 1024, "GiB" to 1024L * 1024 * 1024)
+private const val MAX_BYTES = Long.MAX_VALUE
+
+@Composable
+private fun SizeEditDialog(
+    label: String,
+    initialValue: String,
+    initialUnit: String,
+    onDismiss: () -> Unit,
+    onConfirm: (number: String, unit: String) -> Unit,
+) {
+    var number by remember { mutableStateOf(initialValue) }
+    var unit by remember { mutableStateOf(initialUnit) }
+    var unitExpanded by remember { mutableStateOf(false) }
+    var overflow by remember { mutableStateOf(false) }
+
+    fun checkOverflow() {
+        val n = number.toLongOrNull()
+        val mult = SIZE_UNIT_MULTIPLIERS[unit] ?: 1L
+        overflow = n != null && n > MAX_BYTES / mult
+    }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(label) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedTextField(
+                    value = number,
+                    onValueChange = { number = it; checkOverflow() },
+                    label = { Text(label) },
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    modifier = Modifier.fillMaxWidth(),
+                    isError = overflow,
+                    supportingText = if (overflow) {
+                        { Text(stringResource(R.string.size_overflow_warning)) }
+                    } else null,
+                )
+                Box {
+                    OutlinedTextField(
+                        value = unit,
+                        onValueChange = {},
+                        readOnly = true,
+                        label = { Text("Unit") },
+                        singleLine = true,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { unitExpanded = true },
+                        enabled = false,
+                    )
+                    DropdownMenu(
+                        expanded = unitExpanded,
+                        onDismissRequest = { unitExpanded = false },
+                    ) {
+                        SIZE_UNITS.forEach { u ->
+                            DropdownMenuItem(
+                                text = { Text(u) },
+                                onClick = {
+                                    unit = u
+                                    unitExpanded = false
+                                    checkOverflow()
+                                },
+                            )
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            DialogConfirmButton(
+                onClick = { if (!overflow) onConfirm(number.trim(), unit) },
+                enabled = number.isNotBlank() && !overflow,
+            ) {
+                Text(stringResource(android.R.string.ok))
+            }
+        },
+        dismissButton = {
+            DialogDismissButton(onClick = onDismiss) {
+                Text(stringResource(android.R.string.cancel))
+            }
+        },
+    )
 }
