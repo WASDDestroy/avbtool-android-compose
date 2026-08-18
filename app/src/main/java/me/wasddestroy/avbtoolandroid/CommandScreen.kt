@@ -1244,12 +1244,30 @@ private fun SizeEditDialog(
     var number by remember { mutableStateOf(initialValue) }
     var unit by remember { mutableStateOf(initialUnit) }
     var unitExpanded by remember { mutableStateOf(false) }
+    var isDecimal by remember { mutableStateOf(false) }
     var overflow by remember { mutableStateOf(false) }
+    var computedBytes by remember { mutableStateOf<String?>(null) }
 
-    fun checkOverflow() {
-        val n = number.toLongOrNull()
+    fun validate() {
+        val trimmed = number.trim()
+        isDecimal = trimmed.contains('.')
+        val n = trimmed.toLongOrNull()
         val mult = SIZE_UNIT_MULTIPLIERS[unit] ?: 1L
         overflow = n != null && n > MAX_BYTES / mult
+        computedBytes = when {
+            trimmed.isBlank() -> null
+            isDecimal -> null
+            n == null -> null
+            else -> (n * mult).toString()
+        }
+    }
+
+    val hasError = isDecimal || overflow
+    val supportingText: @Composable (() -> Unit)? = when {
+        isDecimal -> {{ Text(stringResource(R.string.size_decimal_warning)) }}
+        overflow -> {{ Text(stringResource(R.string.size_overflow_warning)) }}
+        computedBytes != null -> {{ Text(stringResource(R.string.size_bytes_preview, computedBytes!!)) }}
+        else -> null
     }
 
     AlertDialog(
@@ -1259,15 +1277,13 @@ private fun SizeEditDialog(
             Box {
                 OutlinedTextField(
                     value = number,
-                    onValueChange = { number = it; checkOverflow() },
+                    onValueChange = { number = it; validate() },
                     label = { Text(label) },
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     modifier = Modifier.fillMaxWidth(),
-                    isError = overflow,
-                    supportingText = if (overflow) {
-                        { Text(stringResource(R.string.size_overflow_warning)) }
-                    } else null,
+                    isError = hasError,
+                    supportingText = supportingText,
                     trailingIcon = {
                         Box {
                             Row(
@@ -1295,7 +1311,7 @@ private fun SizeEditDialog(
                                         onClick = {
                                             unit = u
                                             unitExpanded = false
-                                            checkOverflow()
+                                            validate()
                                         },
                                     )
                                 }
@@ -1307,8 +1323,8 @@ private fun SizeEditDialog(
         },
         confirmButton = {
             DialogConfirmButton(
-                onClick = { if (!overflow) onConfirm(number.trim(), unit) },
-                enabled = number.isNotBlank() && !overflow,
+                onClick = { if (!hasError) onConfirm(number.trim(), unit) },
+                enabled = number.isNotBlank() && !hasError,
             ) {
                 Text(stringResource(android.R.string.ok))
             }

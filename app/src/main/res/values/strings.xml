@@ -349,4 +349,6 @@
     <string name="size_unit_MiB">MiB</string>
     <string name="size_unit_GiB">GiB</string>
     <string name="size_overflow_warning">Value exceeds maximum representable size</string>
+    <string name="size_decimal_warning">Value must be a whole number</string>
+    <string name="size_bytes_preview">%s bytes</string>
 </resources>
