@@ -128,7 +128,7 @@ class CommandViewModel(
                 }
                 ArgType.BOOL ->
                     if ((values[arg.key] ?: "").toBooleanStrictOrNull() == true) argv += arg.key
-                ArgType.TEXT, ArgType.INT, ArgType.ALGORITHM -> {
+                ArgType.TEXT, ArgType.INT, ArgType.ALGORITHM, ArgType.HASH_ALGORITHM -> {
                     val raw = values[arg.key].orEmpty()
                     val vals = if (arg.repeatable) raw.lines().filter { it.isNotBlank() } else listOf(raw)
                     vals.forEach { v ->

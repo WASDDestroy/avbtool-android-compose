@@ -3,7 +3,7 @@ package me.wasddestroy.avbtoolandroid
 import androidx.annotation.StringRes
 
 
-enum class ArgType { IMAGE, TEXT, INT, BOOL, FILE, ALGORITHM, CHAIN_PARTITION, SIZE }
+enum class ArgType { IMAGE, TEXT, INT, BOOL, FILE, ALGORITHM, CHAIN_PARTITION, SIZE, HASH_ALGORITHM }
 
 data class AvbArg(
     val key: String,
@@ -65,7 +65,7 @@ object AvbCommands {
                 AvbArg("--partition_size", R.string.arg_add_hash_footer_partition_size_label, ArgType.SIZE),
                 AvbArg("--dynamic_partition_size", R.string.arg_add_hash_footer_dynamic_partition_size_label, ArgType.BOOL),
                 AvbArg("--partition_name", R.string.arg_add_hash_footer_partition_name_label, ArgType.TEXT),
-                AvbArg("--hash_algorithm", R.string.arg_add_hash_footer_hash_algorithm_label, ArgType.TEXT, defaultValue = "sha256"),
+                AvbArg("--hash_algorithm", R.string.arg_add_hash_footer_hash_algorithm_label, ArgType.HASH_ALGORITHM, defaultValue = "sha256"),
                 AvbArg("--salt", R.string.arg_add_hash_footer_salt_label, ArgType.TEXT),
                 AvbArg("--algorithm", R.string.arg_add_hash_footer_algorithm_label, ArgType.ALGORITHM, defaultValue = "NONE"),
                 AvbArg("--key", R.string.arg_add_hash_footer_key_label, ArgType.FILE),
@@ -104,7 +104,7 @@ object AvbCommands {
             args = listOf(
                 AvbArg("--partition_size", R.string.arg_add_hashtree_footer_partition_size_label, ArgType.SIZE),
                 AvbArg("--partition_name", R.string.arg_add_hashtree_footer_partition_name_label, ArgType.TEXT),
-                AvbArg("--hash_algorithm", R.string.arg_add_hashtree_footer_hash_algorithm_label, ArgType.TEXT, defaultValue = "sha256"),
+                AvbArg("--hash_algorithm", R.string.arg_add_hashtree_footer_hash_algorithm_label, ArgType.HASH_ALGORITHM, defaultValue = "sha256"),
                 AvbArg("--salt", R.string.arg_add_hashtree_footer_salt_label, ArgType.TEXT),
                 AvbArg("--algorithm", R.string.arg_add_hashtree_footer_algorithm_label, ArgType.ALGORITHM, defaultValue = "NONE"),
                 AvbArg("--key", R.string.arg_add_hashtree_footer_key_label, ArgType.FILE),
@@ -224,7 +224,7 @@ object AvbCommands {
             group = HomeSegment.VBMETA,
             inputs = listOf(AvbFileInput("--image", R.string.arg_calculate_vbmeta_digest_image_label, required = true)),
             args = listOf(
-                AvbArg("--hash_algorithm", R.string.arg_calculate_vbmeta_digest_hash_algorithm_label, ArgType.TEXT, defaultValue = "sha256")
+                AvbArg("--hash_algorithm", R.string.arg_calculate_vbmeta_digest_hash_algorithm_label, ArgType.HASH_ALGORITHM, defaultValue = "sha256")
             ),
             readOnly = true, producesFile = false
         ),

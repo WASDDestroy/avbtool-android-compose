@@ -101,6 +101,8 @@ private val ALGORITHMS = listOf(
     "SHA512_RSA8192",
 )
 
+private val HASH_ALGORITHMS = listOf("sha256", "sha512", "sha1", "blake2b-256")
+
 private fun storageKey(arg: AvbArg): String = if (arg.type == ArgType.IMAGE) IMAGE_STORAGE_KEY else arg.key
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -129,6 +131,7 @@ fun CommandScreen(
     var pendingArgIndex by remember { mutableStateOf<Int?>(null) }
     var editingArg by remember { mutableStateOf<AvbArg?>(null) }
     var choosingAlgorithm by remember { mutableStateOf(false) }
+    var choosingHashAlgorithm by remember { mutableStateOf(false) }
     var managingFileArg by remember { mutableStateOf<AvbArg?>(null) }
     var managingChainArg by remember { mutableStateOf<AvbArg?>(null) }
     var chainEditor by remember { mutableStateOf<Pair<AvbArg, Int?>?>(null) }
@@ -229,7 +232,7 @@ fun CommandScreen(
                 }
             }
             val imageArgs = command.args.filter {
-                !it.advanced && it.type != ArgType.ALGORITHM && it.key != "--key" && it.type != ArgType.BOOL
+                !it.advanced && it.type != ArgType.ALGORITHM && it.type != ArgType.HASH_ALGORITHM && it.key != "--key" && it.type != ArgType.BOOL
             }
             val keyArgs = command.args.filter {
                 !it.advanced && (it.key == "--algorithm" || it.key == "--key")
@@ -278,6 +281,7 @@ fun CommandScreen(
                                     }
                                 },
                                 onChooseAlgorithm = { choosingAlgorithm = true },
+                                onChooseHashAlgorithm = { choosingHashAlgorithm = true },
                                 onToggleBoolean = { checked ->
                                     values = values + (arg.key to checked.toString())
                                 },
@@ -303,6 +307,7 @@ fun CommandScreen(
                                 onManageChain = { managingChainArg = arg },
                                 onEditText = { editingArg = arg },
                                 onChooseAlgorithm = { choosingAlgorithm = true },
+                                onChooseHashAlgorithm = { choosingHashAlgorithm = true },
                                 onToggleBoolean = { checked ->
                                     values = values + (arg.key to checked.toString())
                                 },
@@ -366,6 +371,7 @@ fun CommandScreen(
                                         onManageChain = { managingChainArg = arg },
                                         onEditText = { editingArg = arg },
                                         onChooseAlgorithm = { choosingAlgorithm = true },
+                                        onChooseHashAlgorithm = { choosingHashAlgorithm = true },
                                         onToggleBoolean = { checked ->
                                             values = values + (arg.key to checked.toString())
                                         },
@@ -546,6 +552,21 @@ fun CommandScreen(
                 onSelect = { algorithm ->
                     values = values + (algorithmArg.key to algorithm)
                     choosingAlgorithm = false
+                },
+            )
+        }
+    }
+
+    if (choosingHashAlgorithm) {
+        val hashAlgArg = command.args.firstOrNull { it.type == ArgType.HASH_ALGORITHM }
+        if (hashAlgArg != null) {
+            val current = values[hashAlgArg.key].orEmpty().ifBlank { hashAlgArg.defaultValue ?: "" }
+            HashAlgorithmChoiceDialog(
+                selected = current,
+                onDismiss = { choosingHashAlgorithm = false },
+                onSelect = { alg ->
+                    values = values + (hashAlgArg.key to alg)
+                    choosingHashAlgorithm = false
                 },
             )
         }
@@ -745,6 +766,7 @@ private fun CommandArgRow(
     onManageChain: () -> Unit,
     onEditText: () -> Unit,
     onChooseAlgorithm: () -> Unit,
+    onChooseHashAlgorithm: () -> Unit,
     onToggleBoolean: (Boolean) -> Unit,
 ) {
     when (arg.type) {
@@ -798,6 +820,14 @@ private fun CommandArgRow(
                 iconContent = { ArgIcon(arg) },
                 summary = value.ifBlank { "NONE" },
                 onClick = onChooseAlgorithm,
+            )
+        }
+        ArgType.HASH_ALGORITHM -> {
+            PreferenceRow(
+                title = stringResource(arg.labelRes) + if (arg.required) stringResource(R.string.command_required) else "",
+                iconContent = { ArgIcon(arg) },
+                summary = value.ifBlank { arg.defaultValue ?: "" },
+                onClick = onChooseHashAlgorithm,
             )
         }
         ArgType.CHAIN_PARTITION -> {
@@ -1008,6 +1038,47 @@ private fun AlgorithmChoiceDialog(
                             onClick = null,
                         )
                         Text(text = algorithm, style = MaterialTheme.typography.bodyLarge)
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            DialogDismissButton(onClick = onDismiss) {
+                Text(stringResource(android.R.string.cancel))
+            }
+        },
+    )
+}
+
+@Composable
+private fun HashAlgorithmChoiceDialog(
+    selected: String,
+    onDismiss: () -> Unit,
+    onSelect: (String) -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.arg_add_hash_footer_hash_algorithm_label)) },
+        text = {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState()),
+            ) {
+                HASH_ALGORITHMS.forEach { alg ->
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { onSelect(alg) }
+                            .padding(horizontal = 8.dp, vertical = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        RadioButton(
+                            selected = alg == selected,
+                            onClick = null,
+                        )
+                        Text(text = alg, style = MaterialTheme.typography.bodyLarge)
                     }
                 }
             }
