@@ -319,10 +319,16 @@ fun buildArgv(cmd: AvbCommand, values: Map<String, String>): List<String> {
 
 fun formatArgv(argv: List<String>): String {
     if (argv.isEmpty()) return ""
-    val sb = StringBuilder()
-    argv.forEachIndexed { i, token ->
-        if (i > 0) sb.append(" \\\n")
-        sb.append(token)
+    val lines = mutableListOf<String>()
+    var i = 0
+    while (i < argv.size) {
+        if (i + 1 < argv.size && argv[i].startsWith("-") && !argv[i + 1].startsWith("-")) {
+            lines += "${argv[i]} ${argv[i + 1]}"
+            i += 2
+        } else {
+            lines += argv[i]
+            i++
+        }
     }
-    return sb.toString()
+    return lines.joinToString(" \\\n")
 }
