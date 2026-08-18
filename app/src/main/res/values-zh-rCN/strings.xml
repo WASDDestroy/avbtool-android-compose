@@ -178,13 +178,13 @@
     <string name="arg_make_vbmeta_image_output_label">输出文件</string>
     <string name="arg_make_vbmeta_image_algorithm_label">签名算法</string>
     <string name="arg_make_vbmeta_image_key_label">RSA 私钥 (.pem)</string>
-    <string name="arg_make_vbmeta_image_rollback_index_label">Rollback index</string>
-    <string name="arg_make_vbmeta_image_rollback_index_location_label">Rollback index location</string>
+    <string name="arg_make_vbmeta_image_rollback_index_label">回滚索引</string>
+    <string name="arg_make_vbmeta_image_rollback_index_location_label">回滚索引位置</string>
     <string name="arg_make_vbmeta_image_prop_label">属性</string>
     <string name="arg_make_vbmeta_image_prop_hint">KEY:VALUE，每行一个</string>
     <string name="arg_make_vbmeta_image_include_descriptors_from_image_label">包含来自镜像的描述符</string>
     <string name="arg_make_vbmeta_image_chain_partition_label">链式分区</string>
-    <string name="arg_make_vbmeta_image_flags_label">VBMeta flags</string>
+    <string name="arg_make_vbmeta_image_flags_label">VBMeta 标志</string>
     <string name="arg_make_vbmeta_image_set_hashtree_disabled_flag_label">设置 HASHTREE_DISABLED 标志</string>
     <string name="arg_make_vbmeta_image_set_verification_disabled_flag_label">设置 VERIFICATION_DISABLED 标志</string>
     <string name="arg_make_vbmeta_image_padding_size_label">填充大小</string>
