@@ -246,7 +246,7 @@
     <string name="settings_language_placeholder">占位符</string>
     <string name="settings_about">关于</string>
     <string name="settings_about_dialog_title">AVBDroid</string>
-    <string name="settings_about_dialog_message">版本 %1$s (%2$s)\n作者：WASDDestroy（由 Deepseek 在 Deepseek Harness 下构建）</string>
+    <string name="settings_about_dialog_message">版本 %1$s (%2$s)\n作者：WASDDestroy（100% Vibe Coding）</string>
     <string name="settings_about_github">GitHub</string>
     <string name="settings_about_github_url">https://github.com/WASDDestroy/avbtool-android-compose</string>
     <string name="settings_ok">确定</string>
@@ -342,7 +342,11 @@
     <string name="slot_data_priority">优先级</string>
     <string name="slot_data_tries_remaining">剩余尝试次数</string>
     <string name="slot_data_successful_boot">成功启动</string>
+    <string name="size_unit_MiB">兆字节（MiB）</string>
+    <string name="size_unit_GiB">吉字节（GiB）</string>
     <string name="size_overflow_warning">数值超出可表示的最大大小</string>
     <string name="size_decimal_warning">数值必须为整数</string>
     <string name="size_bytes_preview">%s 字节</string>
+    <string name="size_unit_B">字节（B）</string>
+    <string name="size_unit_KiB">千字节（KiB）</string>
 </resources>
