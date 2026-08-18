@@ -1,11 +1,7 @@
 package me.wasddestroy.avbtoolandroid
 
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.pager.HorizontalPager
-import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.NoteAdd
 import androidx.compose.material.icons.filled.AccountTree
@@ -27,17 +23,12 @@ import androidx.compose.material.icons.filled.Unarchive
 import androidx.compose.material.icons.filled.Verified
 import androidx.compose.material.icons.filled.VerifiedUser
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Tab
-import androidx.compose.material3.PrimaryTabRow
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import kotlinx.coroutines.launch
 import me.wasddestroy.avbtoolandroid.ui.components.PreferenceRow
 import me.wasddestroy.avbtoolandroid.ui.components.SettingsList
 import me.wasddestroy.avbtoolandroid.ui.components.preferenceGroup
@@ -47,28 +38,14 @@ fun HomeScreen(
     modifier: Modifier = Modifier,
     onOpenCommand: (String) -> Unit,
 ) {
-    val segments = HomeSegment.entries
-    val pagerState = rememberPagerState { segments.size }
-    val coroutineScope = rememberCoroutineScope()
-
-    Column(modifier) {
-        PrimaryTabRow(selectedTabIndex = pagerState.currentPage) {
-            segments.forEachIndexed { index, segment ->
-                Tab(
-                    selected = pagerState.currentPage == index,
-                    onClick = { coroutineScope.launch { pagerState.animateScrollToPage(index) } },
-                    text = { Text(stringResource(segment.labelRes)) },
-                )
-            }
-        }
-        HorizontalPager(
-            state = pagerState,
-            modifier = Modifier.weight(1f),
-        ) { page ->
-            val segment = segments[page]
+    SettingsList(
+        modifier = modifier,
+        contentPadding = PaddingValues(vertical = 8.dp),
+    ) {
+        HomeSegment.entries.forEach { segment ->
             val commands = AvbCommands.all.filter { it.group == segment }
-            SettingsList(contentPadding = PaddingValues(vertical = 8.dp)) {
-                preferenceGroup {
+            if (commands.isNotEmpty()) {
+                preferenceGroup(titleRes = segment.labelRes) {
                     commands.forEach { command ->
                         row(command.id) {
                             CommandRow(command, onOpenCommand)
