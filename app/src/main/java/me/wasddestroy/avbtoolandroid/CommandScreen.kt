@@ -164,14 +164,14 @@ fun CommandScreen(
     }
 
     fun onRun() {
-        val imageInput = command.inputs.firstOrNull { it.key == "--image" }
-        val imageUri = if (imageInput != null) values[imageInput.key].orEmpty() else null
-        if (imageInput != null && imageUri.isNullOrBlank()) {
+        val firstInput = command.inputs.firstOrNull()
+        val inputUri = if (firstInput != null) values[firstInput.key].orEmpty() else null
+        if (firstInput != null && firstInput.required && inputUri.isNullOrBlank()) {
             viewModel.failWithMissingImage()
             return
         }
         if (command.readOnly) {
-            viewModel.run(command, values, imageUri?.toUri())
+            viewModel.run(command, values, inputUri?.toUri())
         } else {
             copyWarning = true
         }
@@ -211,6 +211,16 @@ fun CommandScreen(
             modifier = Modifier.padding(contentPadding),
             contentPadding = PaddingValues(vertical = 8.dp),
         ) {
+            if (command.id == "make_certificate") {
+                item {
+                    Text(
+                        text = stringResource(R.string.make_certificate_usage_warning),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error,
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                    )
+                }
+            }
             val imageArgs = command.args.filter {
                 !it.advanced && it.type != ArgType.ALGORITHM && it.key != "--key" && it.type != ArgType.BOOL
             }
@@ -378,7 +388,7 @@ fun CommandScreen(
                     viewModel.run(
                         command,
                         values,
-                        if (command.hasImage) values[IMAGE_STORAGE_KEY].orEmpty().toUri() else null,
+                        command.inputs.firstOrNull()?.let { values[it.key].orEmpty().toUri() },
                     )
                 }) {
                     Text(stringResource(R.string.command_continue))

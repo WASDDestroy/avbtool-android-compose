@@ -44,7 +44,6 @@ data class AvbCommand(
     val readOnly: Boolean = true,
     val producesFile: Boolean = false
 ) {
-    val hasImage: Boolean get() = inputs.any { it.key == "--image" }
 }
 
 object AvbCommands {
@@ -254,6 +253,99 @@ object AvbCommands {
                 AvbArg("--key", R.string.arg_extract_public_key_key_label, ArgType.FILE, required = true)
             ),
             readOnly = true, producesFile = true
+        ),
+        AvbCommand(
+            id = "extract_public_key_digest",
+            titleRes = R.string.command_extract_public_key_digest_title,
+            descriptionRes = R.string.command_extract_public_key_digest_description,
+            kind = AvbCommandKind.IMAGE_TOOL,
+            outputs = listOf(AvbFileOutput("--output", R.string.arg_extract_public_key_digest_output_label, ".bin")),
+            args = listOf(
+                AvbArg("--key", R.string.arg_extract_public_key_digest_key_label, ArgType.FILE, required = true)
+            ),
+            readOnly = true, producesFile = true
+        ),
+        AvbCommand(
+            id = "append_vbmeta_image",
+            titleRes = R.string.command_append_vbmeta_image_title,
+            descriptionRes = R.string.command_append_vbmeta_image_description,
+            kind = AvbCommandKind.IMAGE_TOOL,
+            inputs = listOf(AvbFileInput("--image", R.string.arg_append_vbmeta_image_image_label)),
+            args = listOf(
+                AvbArg("--partition_size", R.string.arg_append_vbmeta_image_partition_size_label, ArgType.INT, required = true),
+                AvbArg("--vbmeta_image", R.string.arg_append_vbmeta_image_vbmeta_image_label, ArgType.FILE)
+            ),
+            readOnly = false, producesFile = false
+        ),
+        AvbCommand(
+            id = "set_ab_metadata",
+            titleRes = R.string.command_set_ab_metadata_title,
+            descriptionRes = R.string.command_set_ab_metadata_description,
+            kind = AvbCommandKind.IMAGE_TOOL,
+            inputs = listOf(AvbFileInput("--misc_image", R.string.arg_set_ab_metadata_misc_image_label, required = true)),
+            args = listOf(
+                AvbArg("--slot_data", R.string.arg_set_ab_metadata_slot_data_label, ArgType.TEXT, hintRes = R.string.arg_set_ab_metadata_slot_data_hint)
+            ),
+            readOnly = false, producesFile = false
+        ),
+        AvbCommand(
+            id = "make_certificate",
+            titleRes = R.string.command_make_certificate_title,
+            descriptionRes = R.string.command_make_certificate_description,
+            kind = AvbCommandKind.VBMETA_GENERATOR,
+            outputs = listOf(AvbFileOutput("--output", R.string.arg_make_certificate_output_label, ".bin")),
+            args = listOf(
+                AvbArg("--subject", R.string.arg_make_certificate_subject_label, ArgType.FILE, required = true),
+                AvbArg("--subject_key", R.string.arg_make_certificate_subject_key_label, ArgType.FILE, required = true),
+                AvbArg("--subject_key_version", R.string.arg_make_certificate_subject_key_version_label, ArgType.INT),
+                AvbArg("--authority_key", R.string.arg_make_certificate_authority_key_label, ArgType.FILE),
+                AvbArg("--subject_is_intermediate_authority", R.string.arg_make_certificate_subject_is_intermediate_authority_label, ArgType.BOOL),
+                AvbArg("--usage", R.string.arg_make_certificate_usage_label, ArgType.TEXT),
+                AvbArg("--usage_for_unlock", R.string.arg_make_certificate_usage_for_unlock_label, ArgType.BOOL),
+                AvbArg("--signing_helper", R.string.arg_make_certificate_signing_helper_label, ArgType.TEXT, advanced = true),
+                AvbArg("--signing_helper_with_files", R.string.arg_make_certificate_signing_helper_with_files_label, ArgType.TEXT, advanced = true)
+            ),
+            readOnly = false, producesFile = true
+        ),
+        AvbCommand(
+            id = "make_cert_permanent_attributes",
+            titleRes = R.string.command_make_cert_permanent_attributes_title,
+            descriptionRes = R.string.command_make_cert_permanent_attributes_description,
+            kind = AvbCommandKind.VBMETA_GENERATOR,
+            outputs = listOf(AvbFileOutput("--output", R.string.arg_make_cert_permanent_attributes_output_label, ".bin")),
+            args = listOf(
+                AvbArg("--root_authority_key", R.string.arg_make_cert_permanent_attributes_root_authority_key_label, ArgType.FILE, required = true),
+                AvbArg("--product_id", R.string.arg_make_cert_permanent_attributes_product_id_label, ArgType.FILE, required = true)
+            ),
+            readOnly = false, producesFile = true
+        ),
+        AvbCommand(
+            id = "make_cert_metadata",
+            titleRes = R.string.command_make_cert_metadata_title,
+            descriptionRes = R.string.command_make_cert_metadata_description,
+            kind = AvbCommandKind.VBMETA_GENERATOR,
+            outputs = listOf(AvbFileOutput("--output", R.string.arg_make_cert_metadata_output_label, ".bin")),
+            args = listOf(
+                AvbArg("--intermediate_key_certificate", R.string.arg_make_cert_metadata_intermediate_key_certificate_label, ArgType.FILE, required = true),
+                AvbArg("--product_key_certificate", R.string.arg_make_cert_metadata_product_key_certificate_label, ArgType.FILE, required = true)
+            ),
+            readOnly = false, producesFile = true
+        ),
+        AvbCommand(
+            id = "make_cert_unlock_credential",
+            titleRes = R.string.command_make_cert_unlock_credential_title,
+            descriptionRes = R.string.command_make_cert_unlock_credential_description,
+            kind = AvbCommandKind.VBMETA_GENERATOR,
+            outputs = listOf(AvbFileOutput("--output", R.string.arg_make_cert_unlock_credential_output_label, ".bin")),
+            args = listOf(
+                AvbArg("--intermediate_key_certificate", R.string.arg_make_cert_unlock_credential_intermediate_key_certificate_label, ArgType.FILE, required = true),
+                AvbArg("--unlock_key_certificate", R.string.arg_make_cert_unlock_credential_unlock_key_certificate_label, ArgType.FILE, required = true),
+                AvbArg("--challenge", R.string.arg_make_cert_unlock_credential_challenge_label, ArgType.FILE),
+                AvbArg("--unlock_key", R.string.arg_make_cert_unlock_credential_unlock_key_label, ArgType.FILE),
+                AvbArg("--signing_helper", R.string.arg_make_cert_unlock_credential_signing_helper_label, ArgType.TEXT, advanced = true),
+                AvbArg("--signing_helper_with_files", R.string.arg_make_cert_unlock_credential_signing_helper_with_files_label, ArgType.TEXT, advanced = true)
+            ),
+            readOnly = false, producesFile = true
         ),
     )
 

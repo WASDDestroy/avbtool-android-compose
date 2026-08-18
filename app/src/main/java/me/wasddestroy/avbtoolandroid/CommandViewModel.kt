@@ -79,7 +79,9 @@ class CommandViewModel(
         var inputFd: Int? = null
         var imagePath: String? = null
 
-        if (cmd.hasImage) {
+        val firstInput = cmd.inputs.firstOrNull()
+
+        if (firstInput != null) {
             if (uri == null) {
                 return@withContext RunOutcome(
                     "",
@@ -115,7 +117,7 @@ class CommandViewModel(
                     )
                 imagePath = copy.absolutePath
             }
-            argv += "--image"
+            argv += firstInput.key
             argv += imagePath
         }
 
@@ -185,7 +187,7 @@ class CommandViewModel(
         }
 
         var outputFile: File? = null
-        if (cmd.hasImage && inputFd == null && !cmd.readOnly && imagePath != null) {
+        if (firstInput != null && inputFd == null && !cmd.readOnly && imagePath != null) {
             // Copy fallback: the private file was modified in place.
             outputFile = File(imagePath)
         }
