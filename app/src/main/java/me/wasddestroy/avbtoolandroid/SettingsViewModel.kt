@@ -1,6 +1,11 @@
 package me.wasddestroy.avbtoolandroid
 
+import android.content.Context
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.ViewModelProvider.AndroidViewModelFactory.Companion.APPLICATION_KEY
+import androidx.lifecycle.viewmodel.initializer
+import androidx.lifecycle.viewmodel.viewModelFactory
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -20,28 +25,33 @@ data class SettingsUiState(
     val colorVariant: ColorVariant = ColorVariant.TONAL_SPOT,
 )
 
-/**
- * 设置项仅存在于内存中，与重构前的 rememberSaveable 行为一致：
- * 进程被杀死后回到默认值。本次重构有意不引入 DataStore 持久化。
- */
-class SettingsViewModel : ViewModel() {
+class SettingsViewModel(private val store: SettingsStore) : ViewModel() {
 
-    private val _uiState = MutableStateFlow(SettingsUiState())
+    private val _uiState = MutableStateFlow(store.read())
     val uiState: StateFlow<SettingsUiState> = _uiState.asStateFlow()
 
-    fun setDynamicThemeColor(value: Boolean) = _uiState.update { it.copy(dynamicThemeColor = value) }
+    fun setDynamicThemeColor(value: Boolean) = update { it.copy(dynamicThemeColor = value) }
+    fun setThemeMode(value: ThemeMode) = update { it.copy(themeMode = value) }
+    fun setAmoledBlack(value: Boolean) = update { it.copy(amoledBlack = value) }
+    fun setPredictiveBackGesture(value: Boolean) = update { it.copy(predictiveBackGesture = value) }
+    fun setLanguageMode(value: LanguageMode) = update { it.copy(languageMode = value) }
+    fun setShowFunctionKeyboard(value: Boolean) = update { it.copy(showFunctionKeyboard = value) }
+    fun setColorSpecVersion(value: ColorSpecVersion) = update { it.copy(colorSpecVersion = value) }
+    fun setColorVariant(value: ColorVariant) = update { it.copy(colorVariant = value) }
 
-    fun setThemeMode(value: ThemeMode) = _uiState.update { it.copy(themeMode = value) }
+    private fun update(transform: (SettingsUiState) -> SettingsUiState) {
+        _uiState.update { current ->
+            transform(current).also { store.write(it) }
+        }
+    }
 
-    fun setAmoledBlack(value: Boolean) = _uiState.update { it.copy(amoledBlack = value) }
-
-    fun setPredictiveBackGesture(value: Boolean) = _uiState.update { it.copy(predictiveBackGesture = value) }
-
-    fun setLanguageMode(value: LanguageMode) = _uiState.update { it.copy(languageMode = value) }
-
-    fun setShowFunctionKeyboard(value: Boolean) = _uiState.update { it.copy(showFunctionKeyboard = value) }
-
-    fun setColorSpecVersion(value: ColorSpecVersion) = _uiState.update { it.copy(colorSpecVersion = value) }
-
-    fun setColorVariant(value: ColorVariant) = _uiState.update { it.copy(colorVariant = value) }
+    companion object {
+        val factory: ViewModelProvider.Factory = viewModelFactory {
+            initializer {
+                val app = this[APPLICATION_KEY]!!
+                val sp = app.getSharedPreferences("application_configs", Context.MODE_PRIVATE)
+                SettingsViewModel(SettingsStore(sp))
+            }
+        }
+    }
 }

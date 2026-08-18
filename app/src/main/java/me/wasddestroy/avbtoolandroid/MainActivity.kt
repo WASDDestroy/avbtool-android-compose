@@ -83,7 +83,7 @@ enum class LanguageMode(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AVBToolAndroidApp() {
-    val settingsViewModel: SettingsViewModel = viewModel()
+    val settingsViewModel: SettingsViewModel = viewModel(factory = SettingsViewModel.factory)
     val settings by settingsViewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
 
