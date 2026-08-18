@@ -321,6 +321,16 @@ fun CommandScreen(
     
             if (advancedArgs.isNotEmpty()) {
                 preferenceGroup(key = "advanced_options", titleRes = R.string.command_section_advanced) {
+                    row("toggle_advanced") {
+                        PreferenceRow(
+                            title = stringResource(
+                                if (advancedExpanded) R.string.command_advanced_hide
+                                else R.string.command_advanced_show
+                            ),
+                            iconContent = { RowIcon(Icons.Filled.Tune) },
+                            onClick = { advancedExpanded = !advancedExpanded },
+                        )
+                    }
                     if (advancedExpanded) {
                         advancedArgs.forEach { arg ->
                             row(arg.key) {
@@ -353,21 +363,6 @@ fun CommandScreen(
                                     )
                                 }
                             }
-                        }
-                        row("collapse_advanced") {
-                            PreferenceRow(
-                                title = stringResource(R.string.command_advanced_hide),
-                                iconContent = { RowIcon(Icons.Filled.Tune) },
-                                onClick = { advancedExpanded = false },
-                            )
-                        }
-                    } else {
-                        row("expand_advanced") {
-                            PreferenceRow(
-                                title = stringResource(R.string.command_advanced_show),
-                                iconContent = { RowIcon(Icons.Filled.Tune) },
-                                onClick = { advancedExpanded = true },
-                            )
                         }
                     }
                 }
