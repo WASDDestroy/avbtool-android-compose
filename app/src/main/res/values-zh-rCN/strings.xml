@@ -29,6 +29,7 @@
     <string name="command_preview_expand">点按展开</string>
     <string name="command_preview_collapse">点按收起</string>
     <string name="command_preview_note">仅预览。实际参数在文件解析后可能有所不同。</string>
+    <string name="copied_to_clipboard">已复制到剪贴板</string>
     <string name="command_choose_file">选择文件</string>
     <string name="command_change_file">更改文件 (%s)</string>
     <string name="command_add_file">添加文件</string>

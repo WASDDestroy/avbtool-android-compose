@@ -2,6 +2,7 @@ package me.wasddestroy.avbtoolandroid
 
 import androidx.annotation.StringRes
 import android.net.Uri
+import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Canvas
@@ -649,6 +650,8 @@ private fun ResultView(result: AvbCommandResult) {
     var rawExpanded by remember { mutableStateOf(false) }
     @Suppress("DEPRECATION")
     val clipboard = LocalClipboardManager.current
+    val context = LocalContext.current
+    val copiedMessage = stringResource(R.string.copied_to_clipboard)
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -729,6 +732,7 @@ private fun ResultView(result: AvbCommandResult) {
                             monospace = rowData.monospace,
                             onLongClick = {
                                 clipboard.setText(AnnotatedString("$finalTitle: ${rowData.value}"))
+                                Toast.makeText(context, copiedMessage, Toast.LENGTH_SHORT).show()
                             },
                         )
                     }
@@ -755,6 +759,7 @@ private fun ResultView(result: AvbCommandResult) {
                                 monospace = rowData.monospace,
                                 onLongClick = {
                                     clipboard.setText(AnnotatedString("$groupDisplayTitle: $displayValue"))
+                                    Toast.makeText(context, copiedMessage, Toast.LENGTH_SHORT).show()
                                 },
                             )
                         }
