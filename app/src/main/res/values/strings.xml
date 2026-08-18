@@ -338,4 +338,10 @@
     <string name="arg_set_ab_metadata_misc_image_label">Misc image file</string>
     <string name="arg_set_ab_metadata_slot_data_label">Slot data</string>
     <string name="arg_set_ab_metadata_slot_data_hint">priority:tries_remaining:successful_boot per slot, colon-separated</string>
+    <string name="slot_data_dialog_title">A/B Slot Data</string>
+    <string name="slot_data_slot_a">Slot A</string>
+    <string name="slot_data_slot_b">Slot B</string>
+    <string name="slot_data_priority">Priority</string>
+    <string name="slot_data_tries_remaining">Tries remaining</string>
+    <string name="slot_data_successful_boot">Successful boot</string>
 </resources>

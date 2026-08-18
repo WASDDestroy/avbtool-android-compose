@@ -336,4 +336,10 @@
     <string name="arg_set_ab_metadata_misc_image_label">Misc 映像文件</string>
     <string name="arg_set_ab_metadata_slot_data_label">槽位数据</string>
     <string name="arg_set_ab_metadata_slot_data_hint">每个槽位 priority:tries_remaining:successful_boot，冒号分隔</string>
+    <string name="slot_data_dialog_title">A/B 槽位数据</string>
+    <string name="slot_data_slot_a">槽位 A</string>
+    <string name="slot_data_slot_b">槽位 B</string>
+    <string name="slot_data_priority">优先级</string>
+    <string name="slot_data_tries_remaining">剩余尝试次数</string>
+    <string name="slot_data_successful_boot">成功启动</string>
 </resources>

@@ -128,6 +128,7 @@ fun CommandScreen(
     var managingChainArg by remember { mutableStateOf<AvbArg?>(null) }
     var chainEditor by remember { mutableStateOf<Pair<AvbArg, Int?>?>(null) }
     var chainKeyPickRequest by remember { mutableStateOf<((Uri) -> Unit)?>(null) }
+    var editingSlotData by remember { mutableStateOf(false) }
     var advancedExpanded by remember { mutableStateOf(false) }
 
     val openDocument = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri: Uri? ->
@@ -263,7 +264,10 @@ fun CommandScreen(
                                 },
                                 onManageFile = { managingFileArg = arg },
                                 onManageChain = { managingChainArg = arg },
-                                onEditText = { editingArg = arg },
+                                onEditText = {
+                                    if (arg.key == "--slot_data") editingSlotData = true
+                                    else editingArg = arg
+                                },
                                 onChooseAlgorithm = { choosingAlgorithm = true },
                                 onToggleBoolean = { checked ->
                                     values = values + (arg.key to checked.toString())
@@ -431,6 +435,18 @@ fun CommandScreen(
             onConfirm = { newValue ->
                 values = values + (storageKey(arg) to newValue)
                 editingArg = null
+            },
+        )
+    }
+
+    if (editingSlotData) {
+        val current = values["--slot_data"].orEmpty()
+        SlotDataEditDialog(
+            initialValue = current.ifBlank { "15:7:0:14:7:0" },
+            onDismiss = { editingSlotData = false },
+            onConfirm = { newValue ->
+                values = values + ("--slot_data" to newValue)
+                editingSlotData = false
             },
         )
     }
@@ -1095,4 +1111,92 @@ private fun ChainPartitionEditDialog(
             }
         },
     )
+}
+
+@Composable
+private fun SlotDataEditDialog(
+    initialValue: String,
+    onDismiss: () -> Unit,
+    onConfirm: (String) -> Unit,
+) {
+    val tokens = initialValue.split(":")
+    var aPriority by remember { mutableStateOf(tokens.getOrElse(0) { "15" }) }
+    var aTries by remember { mutableStateOf(tokens.getOrElse(1) { "7" }) }
+    var aSuccess by remember { mutableStateOf(tokens.getOrElse(2) { "0" }) }
+    var bPriority by remember { mutableStateOf(tokens.getOrElse(3) { "14" }) }
+    var bTries by remember { mutableStateOf(tokens.getOrElse(4) { "7" }) }
+    var bSuccess by remember { mutableStateOf(tokens.getOrElse(5) { "0" }) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.slot_data_dialog_title)) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                SlotSection(
+                    label = stringResource(R.string.slot_data_slot_a),
+                    priority = aPriority, onPriorityChange = { aPriority = it },
+                    tries = aTries, onTriesChange = { aTries = it },
+                    success = aSuccess, onSuccessChange = { aSuccess = it },
+                )
+                SlotSection(
+                    label = stringResource(R.string.slot_data_slot_b),
+                    priority = bPriority, onPriorityChange = { bPriority = it },
+                    tries = bTries, onTriesChange = { bTries = it },
+                    success = bSuccess, onSuccessChange = { bSuccess = it },
+                )
+            }
+        },
+        confirmButton = {
+            DialogConfirmButton(
+                onClick = {
+                    val result = "${aPriority.trim()}:${aTries.trim()}:${aSuccess.trim()}:" +
+                            "${bPriority.trim()}:${bTries.trim()}:${bSuccess.trim()}"
+                    onConfirm(result)
+                },
+            ) {
+                Text(stringResource(android.R.string.ok))
+            }
+        },
+        dismissButton = {
+            DialogDismissButton(onClick = onDismiss) {
+                Text(stringResource(android.R.string.cancel))
+            }
+        },
+    )
+}
+
+@Composable
+private fun SlotSection(
+    label: String,
+    priority: String, onPriorityChange: (String) -> Unit,
+    tries: String, onTriesChange: (String) -> Unit,
+    success: String, onSuccessChange: (String) -> Unit,
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Text(text = label, style = MaterialTheme.typography.titleSmall)
+        OutlinedTextField(
+            value = priority,
+            onValueChange = onPriorityChange,
+            label = { Text(stringResource(R.string.slot_data_priority)) },
+            singleLine = true,
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+            modifier = Modifier.fillMaxWidth(),
+        )
+        OutlinedTextField(
+            value = tries,
+            onValueChange = onTriesChange,
+            label = { Text(stringResource(R.string.slot_data_tries_remaining)) },
+            singleLine = true,
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+            modifier = Modifier.fillMaxWidth(),
+        )
+        OutlinedTextField(
+            value = success,
+            onValueChange = onSuccessChange,
+            label = { Text(stringResource(R.string.slot_data_successful_boot)) },
+            singleLine = true,
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+            modifier = Modifier.fillMaxWidth(),
+        )
+    }
 }
