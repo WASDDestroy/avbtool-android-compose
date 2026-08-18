@@ -252,7 +252,7 @@
     <string name="settings_language_placeholder">占位符</string>
     <string name="settings_about">关于</string>
     <string name="settings_about_dialog_title">AVBDroid</string>
-    <string name="settings_about_dialog_message">版本 %1$s (%2$s)\n作者：WASDDestroy（100% Vibe Coding）</string>
+    <string name="settings_about_dialog_message">版本 %1$s (%2$s)\n作者：WASDDestroy（100%% Vibe Coding）</string>
     <string name="settings_about_github">GitHub</string>
     <string name="settings_about_github_url">https://github.com/WASDDestroy/avbtool-android-compose</string>
     <string name="settings_ok">确定</string>
