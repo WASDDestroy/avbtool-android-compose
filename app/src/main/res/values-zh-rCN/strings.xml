@@ -128,7 +128,7 @@
     <string name="arg_add_hashtree_footer_use_persistent_digest_label">使用持久摘要</string>
     <string name="arg_add_hashtree_footer_do_not_use_ab_label">不使用 A/B</string>
     <string name="command_info_image_title">映像信息</string>
-    <string name="command_info_image_description">显示 vbmeta/页脚信息</string>
+    <string name="command_info_image_description">显示 VBMeta/页脚信息</string>
     <string name="arg_info_image_image_label">映像文件</string>
     <string name="arg_info_image_cert_label">显示 avb_cert 证书</string>
     <string name="command_erase_footer_title">擦除页脚</string>
@@ -139,8 +139,8 @@
     <string name="command_resize_image_description">调整带页脚的映像大小</string>
     <string name="arg_resize_image_image_label">映像文件</string>
     <string name="arg_resize_image_partition_size_label">新分区大小</string>
-    <string name="command_extract_vbmeta_image_title">提取 vbmeta</string>
-    <string name="command_extract_vbmeta_image_description">从页脚提取 vbmeta 映像</string>
+    <string name="command_extract_vbmeta_image_title">提取 VBMeta</string>
+    <string name="command_extract_vbmeta_image_description">从页脚提取 VBMeta 映像</string>
     <string name="arg_extract_vbmeta_image_image_label">映像文件</string>
     <string name="arg_extract_vbmeta_image_padding_size_label">填充大小</string>
     <string name="command_print_partition_digests_title">分区摘要</string>
@@ -148,11 +148,11 @@
     <string name="arg_print_partition_digests_image_label">映像文件</string>
     <string name="arg_print_partition_digests_json_label">JSON 输出</string>
     <string name="command_calculate_vbmeta_digest_title">VBMeta 摘要</string>
-    <string name="command_calculate_vbmeta_digest_description">计算 vbmeta 摘要</string>
+    <string name="command_calculate_vbmeta_digest_description">计算 VBMeta 摘要</string>
     <string name="arg_calculate_vbmeta_digest_image_label">映像文件</string>
     <string name="arg_calculate_vbmeta_digest_hash_algorithm_label">哈希算法</string>
     <string name="command_verify_image_title">验证映像</string>
-    <string name="command_verify_image_description">验证 vbmeta/hash/hashtree 签名</string>
+    <string name="command_verify_image_description">验证 VBMeta/hash/hashtree 签名</string>
     <string name="arg_verify_image_image_label">映像文件</string>
     <string name="arg_verify_image_key_label">公钥（可选）</string>
     <string name="arg_verify_image_accept_zeroed_hashtree_label">接受置零的哈希树</string>
@@ -167,8 +167,8 @@
     <string name="command_extract_public_key_description">从 RSA 私钥提取公钥</string>
     <string name="arg_extract_public_key_key_label">RSA 私钥 (.pem)</string>
     <string name="arg_extract_public_key_output_label">输出文件</string>
-    <string name="command_make_vbmeta_image_title">生成 vbmeta 镜像</string>
-    <string name="command_make_vbmeta_image_description">生成 vbmeta 镜像</string>
+    <string name="command_make_vbmeta_image_title">生成 VBMeta 镜像</string>
+    <string name="command_make_vbmeta_image_description">生成 VBMeta 镜像</string>
     <string name="arg_make_vbmeta_image_output_label">输出文件</string>
     <string name="arg_make_vbmeta_image_algorithm_label">签名算法</string>
     <string name="arg_make_vbmeta_image_key_label">RSA 私钥 (.pem)</string>
@@ -294,8 +294,8 @@
     <string name="command_extract_public_key_digest_description">从 RSA 私钥提取公钥摘要</string>
     <string name="arg_extract_public_key_digest_key_label">RSA 私钥 (.pem)</string>
     <string name="arg_extract_public_key_digest_output_label">输出文件</string>
-    <string name="command_append_vbmeta_image_title">追加 vbmeta 映像</string>
-    <string name="command_append_vbmeta_image_description">向映像追加 vbmeta 数据</string>
+    <string name="command_append_vbmeta_image_title">追加 VBMeta 映像</string>
+    <string name="command_append_vbmeta_image_description">向映像追加 VBMeta 数据</string>
     <string name="arg_append_vbmeta_image_image_label">映像文件</string>
     <string name="arg_append_vbmeta_image_partition_size_label">分区大小</string>
     <string name="arg_append_vbmeta_image_vbmeta_image_label">VBMeta 映像文件</string>

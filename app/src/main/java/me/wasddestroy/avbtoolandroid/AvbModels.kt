@@ -202,6 +202,7 @@ object AvbCommands {
             id = "extract_vbmeta_image", titleRes = R.string.command_extract_vbmeta_image_title, descriptionRes = R.string.command_extract_vbmeta_image_description,
             outputs = listOf(AvbFileOutput("--output", R.string.command_output, ".img")),
             kind = AvbCommandKind.IMAGE_TOOL,
+            group = HomeSegment.VBMETA,
             inputs = listOf(AvbFileInput("--image", R.string.arg_extract_vbmeta_image_image_label, required = true)),
             args = listOf(
                 AvbArg("--padding_size", R.string.arg_extract_vbmeta_image_padding_size_label, ArgType.INT, defaultValue = "0")
@@ -220,6 +221,7 @@ object AvbCommands {
         AvbCommand(
             id = "calculate_vbmeta_digest", titleRes = R.string.command_calculate_vbmeta_digest_title, descriptionRes = R.string.command_calculate_vbmeta_digest_description,
             kind = AvbCommandKind.IMAGE_TOOL,
+            group = HomeSegment.VBMETA,
             inputs = listOf(AvbFileInput("--image", R.string.arg_calculate_vbmeta_digest_image_label, required = true)),
             args = listOf(
                 AvbArg("--hash_algorithm", R.string.arg_calculate_vbmeta_digest_hash_algorithm_label, ArgType.TEXT, defaultValue = "sha256")
@@ -279,6 +281,7 @@ object AvbCommands {
             titleRes = R.string.command_append_vbmeta_image_title,
             descriptionRes = R.string.command_append_vbmeta_image_description,
             kind = AvbCommandKind.IMAGE_TOOL,
+            group = HomeSegment.VBMETA,
             inputs = listOf(AvbFileInput("--image", R.string.arg_append_vbmeta_image_image_label)),
             args = listOf(
                 AvbArg("--partition_size", R.string.arg_append_vbmeta_image_partition_size_label, ArgType.INT, required = true),

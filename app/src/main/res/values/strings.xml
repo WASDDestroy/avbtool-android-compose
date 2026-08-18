@@ -128,7 +128,7 @@
     <string name="arg_add_hashtree_footer_use_persistent_digest_label">Use persistent digest</string>
     <string name="arg_add_hashtree_footer_do_not_use_ab_label">Do not use A/B</string>
     <string name="command_info_image_title">Info image</string>
-    <string name="command_info_image_description">Show vbmeta/footer information</string>
+    <string name="command_info_image_description">Show VBMeta/footer information</string>
     <string name="arg_info_image_image_label">Image file</string>
     <string name="arg_info_image_cert_label">Show avb_cert certificate</string>
     <string name="command_erase_footer_title">Erase footer</string>
@@ -139,8 +139,8 @@
     <string name="command_resize_image_description">Resize image with footer</string>
     <string name="arg_resize_image_image_label">Image file</string>
     <string name="arg_resize_image_partition_size_label">New partition size</string>
-    <string name="command_extract_vbmeta_image_title">Extract vbmeta</string>
-    <string name="command_extract_vbmeta_image_description">Extract vbmeta image from footer</string>
+    <string name="command_extract_vbmeta_image_title">Extract VBMeta</string>
+    <string name="command_extract_vbmeta_image_description">Extract VBMeta image from footer</string>
     <string name="arg_extract_vbmeta_image_image_label">Image file</string>
     <string name="arg_extract_vbmeta_image_padding_size_label">Padding size</string>
     <string name="command_print_partition_digests_title">Partition digests</string>
@@ -148,11 +148,11 @@
     <string name="arg_print_partition_digests_image_label">Image file</string>
     <string name="arg_print_partition_digests_json_label">JSON output</string>
     <string name="command_calculate_vbmeta_digest_title">VBMeta digest</string>
-    <string name="command_calculate_vbmeta_digest_description">Calculate vbmeta digest</string>
+    <string name="command_calculate_vbmeta_digest_description">Calculate VBMeta digest</string>
     <string name="arg_calculate_vbmeta_digest_image_label">Image file</string>
     <string name="arg_calculate_vbmeta_digest_hash_algorithm_label">Hash algorithm</string>
     <string name="command_verify_image_title">Verify image</string>
-    <string name="command_verify_image_description">Verify vbmeta/hash/hashtree signatures</string>
+    <string name="command_verify_image_description">Verify VBMeta/hash/hashtree signatures</string>
     <string name="arg_verify_image_image_label">Image file</string>
     <string name="arg_verify_image_key_label">Public key (optional)</string>
     <string name="arg_verify_image_accept_zeroed_hashtree_label">Accept zeroed hashtree</string>
@@ -167,8 +167,8 @@
     <string name="command_extract_public_key_description">Extract public key from RSA private key</string>
     <string name="arg_extract_public_key_key_label">RSA private key (.pem)</string>
     <string name="arg_extract_public_key_output_label">Output file</string>
-    <string name="command_make_vbmeta_image_title">Make vbmeta image</string>
-    <string name="command_make_vbmeta_image_description">Generate a vbmeta image</string>
+    <string name="command_make_vbmeta_image_title">Make VBMeta image</string>
+    <string name="command_make_vbmeta_image_description">Generate a VBMeta image</string>
     <string name="arg_make_vbmeta_image_output_label">Output file</string>
     <string name="arg_make_vbmeta_image_algorithm_label">Signing algorithm</string>
     <string name="arg_make_vbmeta_image_key_label">RSA private key (.pem)</string>
@@ -296,8 +296,8 @@
     <string name="command_extract_public_key_digest_description">Extract public key digest from RSA private key</string>
     <string name="arg_extract_public_key_digest_key_label">RSA private key (.pem)</string>
     <string name="arg_extract_public_key_digest_output_label">Output file</string>
-    <string name="command_append_vbmeta_image_title">Append vbmeta image</string>
-    <string name="command_append_vbmeta_image_description">Append vbmeta blob to an image</string>
+    <string name="command_append_vbmeta_image_title">Append VBMeta image</string>
+    <string name="command_append_vbmeta_image_description">Append VBMeta blob to an image</string>
     <string name="arg_append_vbmeta_image_image_label">Image file</string>
     <string name="arg_append_vbmeta_image_partition_size_label">Partition size</string>
     <string name="arg_append_vbmeta_image_vbmeta_image_label">VBMeta image file</string>
