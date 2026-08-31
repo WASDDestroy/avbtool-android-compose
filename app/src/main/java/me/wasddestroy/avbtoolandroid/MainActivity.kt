@@ -240,8 +240,7 @@ private fun RootScreen(
     LaunchedEffect(pagerState.settledPage) {
         // Single source of truth: the pager feeds currentDestination. Nav-bar
         // taps go through the pager directly, never through this state, so no
-        // write-back loop can reroute the scroll (e.g. tapping Profiles on a
-        // cold start landing on Settings).
+        // write-back loop can reroute the scroll.
         if (!rootBackGestureInProgress) {
             currentDestination = AppDestinations.entries[pagerState.settledPage]
         }
@@ -272,7 +271,6 @@ private fun RootScreen(
         Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
             HorizontalPager(
                 state = pagerState,
-                beyondViewportPageCount = 1,
                 userScrollEnabled = currentDestination != AppDestinations.CONSOLE && !terminalSelecting,
                 modifier = Modifier
                     .fillMaxSize()
