@@ -196,6 +196,7 @@ private fun RootScreen(
         enabled = !predictiveBackGesture && isTopDestination && currentDestination != AppDestinations.HOME,
     ) {
         currentDestination = AppDestinations.HOME
+        rootScope.launch { pagerState.animateScrollToPage(AppDestinations.HOME.ordinal) }
     }
 
     PredictiveBackHandler(
@@ -218,6 +219,7 @@ private fun RootScreen(
             }
             // Gesture committed: settle on Home.
             currentDestination = AppDestinations.HOME
+            rootScope.launch { pagerState.animateScrollToPage(AppDestinations.HOME.ordinal) }
             rootBackGestureInProgress = false
         } catch (e: CancellationException) {
             // Gesture canceled: snap back to the page the gesture started
@@ -225,18 +227,21 @@ private fun RootScreen(
             // finishes so an intermediate pager currentPage cannot disable the
             // predictive back handler or start a conflicting animation.
             rootScope.launch {
-                pagerState.animateScrollToPage(destination.ordinal)
-                rootBackGestureInProgress = false
+                try {
+                    pagerState.animateScrollToPage(destination.ordinal)
+                } finally {
+                    rootBackGestureInProgress = false
+                }
             }
             throw e
         }
     }
 
-    LaunchedEffect(currentDestination) {
-        pagerState.animateScrollToPage(currentDestination.ordinal)
-    }
-
     LaunchedEffect(pagerState.settledPage) {
+        // Single source of truth: the pager feeds currentDestination. Nav-bar
+        // taps go through the pager directly, never through this state, so no
+        // write-back loop can reroute the scroll (e.g. tapping Profiles on a
+        // cold start landing on Settings).
         if (!rootBackGestureInProgress) {
             currentDestination = AppDestinations.entries[pagerState.settledPage]
         }
@@ -255,7 +260,11 @@ private fun RootScreen(
                     },
                     label = { Text(stringResource(destination.labelRes)) },
                     selected = destination == currentDestination,
-                    onClick = { currentDestination = destination },
+                    onClick = {
+                        rootScope.launch {
+                            pagerState.animateScrollToPage(destination.ordinal)
+                        }
+                    },
                 )
             }
         },
