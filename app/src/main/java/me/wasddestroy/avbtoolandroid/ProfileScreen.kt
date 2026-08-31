@@ -314,14 +314,14 @@ private fun ImportExportRow(
 ) {
     // First row of the card, split into two halves. Each half is its own
     // Surface so the 2dp gap between them shows the screen background —
-    // the same segmentation look as between preference rows. Outer corners
-    // match the group's large top radius; the bottom uses the small
-    // segmented radius because more rows follow.
+    // the same segmentation look as between preference rows. Only the outer
+    // top corners use the large radius; everything else stays small because
+    // more rows follow below.
     val leftShape = RoundedCornerShape(
-        topStart = 16.dp, topEnd = 4.dp, bottomStart = 16.dp, bottomEnd = 4.dp,
+        topStart = 16.dp, topEnd = 4.dp, bottomStart = 4.dp, bottomEnd = 4.dp,
     )
     val rightShape = RoundedCornerShape(
-        topStart = 4.dp, topEnd = 16.dp, bottomStart = 4.dp, bottomEnd = 16.dp,
+        topStart = 4.dp, topEnd = 16.dp, bottomStart = 4.dp, bottomEnd = 4.dp,
     )
     Row(
         modifier = Modifier.fillMaxWidth(),
