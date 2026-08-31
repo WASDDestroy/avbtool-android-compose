@@ -51,6 +51,8 @@ data class ProfileUiState(
     val pendingProfileZip: Pair<String, ByteArray>? = null,
     /** Whether generated vbmeta images also get the profile's configured props. */
     val addPropsToVbmeta: Boolean = false,
+    /** Per-partition display names of the picked input images (active profile only). */
+    val imageSummaries: Map<String, String> = emptyMap(),
     /** Toast event, one-shot. */
     val message: Int? = null,
 )
@@ -89,6 +91,7 @@ class ProfileViewModel(
                 activeSpecs = specs,
             )
         }
+        publishImageSummaries()
     }
 
     fun importProfile(bytes: ByteArray) {
@@ -128,6 +131,7 @@ class ProfileViewModel(
     fun selectProfile(id: String) {
         activeStore.write(id)
         _uiState.update { it.copy(activeId = id) }
+        refresh()
     }
 
     fun setImage(partition: String, uri: Uri?) {
@@ -137,6 +141,18 @@ class ProfileViewModel(
         } else {
             imageSelections.remove("$profileId:$partition")
         }
+        publishImageSummaries()
+    }
+
+    private fun publishImageSummaries() {
+        val profileId = _uiState.value.activeId ?: return
+        val summaries = imageSelections.entries
+            .filter { it.key.startsWith("$profileId:") }
+            .associate {
+                val partition = it.key.removePrefix("$profileId:")
+                partition to (it.value.toUri().lastPathSegment ?: it.value)
+            }
+        _uiState.update { it.copy(imageSummaries = summaries) }
     }
 
     fun getImage(partition: String): String? {
