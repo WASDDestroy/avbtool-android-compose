@@ -367,6 +367,10 @@
     <string name="profile_title">Signing profiles</string>
     <string name="profile_import">Import profile</string>
     <string name="profile_import_summary">Import a signed profile archive (.zip)</string>
+    <string name="profile_export">Export profile</string>
+    <string name="profile_export_title">Export profile</string>
+    <string name="profile_export_message">Profile packed as %s. Save it via SAF?</string>
+    <string name="profile_export_failed">Could not export the profile.</string>
     <string name="profile_import_success">Profile imported</string>
     <string name="profile_import_failed">Invalid profile archive</string>
     <string name="profile_group_images">Input images</string>

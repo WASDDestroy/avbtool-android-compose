@@ -2,6 +2,7 @@ package me.wasddestroy.avbtoolandroid
 
 import android.content.Context
 import android.util.Log
+import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
 import java.security.MessageDigest
@@ -144,6 +145,69 @@ class ProfileStore(private val context: Context) {
         val id = profile.getString("id")
         val name = profile.optString("name", id)
         return id to name
+    }
+
+    /**
+     * Packs the profile folder into a zip whose layout matches the import
+     * format: manifest.json with schema_version and per-entry SHA-256
+     * checksums, followed by the profile's files. Entries listed under
+     * [excludePaths] are omitted from both the archive and the manifest.
+     * Returns the zip bytes, or null if the profile is not importable.
+     */
+    fun exportProfileZip(id: String, excludePaths: Set<String> = emptySet()): ByteArray? {
+        if (!isValidProfileId(id)) return null
+        val dir = File(profileDir, id)
+        if (!dir.isDirectory) return null
+
+        val files = mutableListOf<Pair<String, File>>()
+        dir.walkTopDown()
+            .filter { it.isFile }
+            .forEach { f ->
+                val rel = f.relativeTo(dir).invariantSeparatorsPath
+                if (rel != "manifest.json" && rel !in excludePaths) {
+                    files += rel to f
+                }
+            }
+        // The profile must still contain its own definition to be usable.
+        if (files.none { it.first == "profile.json" }) return null
+        if (excludePaths.isNotEmpty() && files.none { it.first == "keys/manifest.json" }) {
+            // Keys were excluded: nothing left to re-export as a complete profile.
+            return null
+        }
+        files.sortBy { it.first }
+
+        val manifest = JSONObject().apply {
+            put("format_version", 1)
+            put("profile_id", id)
+            put("schema_version", SUPPORTED_SCHEMA_VERSION)
+            put(
+                "files",
+                JSONArray().apply {
+                    files.forEach { (rel, f) ->
+                        put(
+                            JSONObject().apply {
+                                put("path", rel)
+                                put("sha256", sha256(f))
+                            },
+                        )
+                    }
+                },
+            )
+        }
+
+        return java.io.ByteArrayOutputStream().use { out ->
+            java.util.zip.ZipOutputStream(out.buffered()).use { zip ->
+                zip.putNextEntry(java.util.zip.ZipEntry("manifest.json"))
+                zip.write(manifest.toString().toByteArray())
+                zip.closeEntry()
+                files.forEach { (rel, f) ->
+                    zip.putNextEntry(java.util.zip.ZipEntry(rel))
+                    f.inputStream().use { it.copyTo(zip) }
+                    zip.closeEntry()
+                }
+            }
+            out.toByteArray()
+        }
     }
 
     companion object {

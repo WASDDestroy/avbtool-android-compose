@@ -4,11 +4,14 @@ import android.net.Uri
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -19,12 +22,14 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Description
+import androidx.compose.material.icons.filled.FileDownload
+import androidx.compose.material.icons.filled.FileUpload
 import androidx.compose.material.icons.filled.FolderOpen
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Surface
@@ -37,6 +42,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
@@ -106,6 +112,20 @@ fun ProfileScreen(
         viewModel.consumeExport()
     }
 
+    val exportProfileDocument = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument("application/zip"),
+    ) { uri: Uri? ->
+        val zip = uiState.pendingProfileZip
+        if (uri != null && zip != null) {
+            runCatching {
+                context.contentResolver.openOutputStream(uri)?.use { out ->
+                    out.write(zip.second)
+                }
+            }
+        }
+        viewModel.consumeProfileZip()
+    }
+
     val message = uiState.message
     LaunchedEffect(message) {
         if (message != null) {
@@ -148,6 +168,27 @@ fun ProfileScreen(
         )
     }
 
+    val pendingZip = uiState.pendingProfileZip
+    if (pendingZip != null) {
+        AlertDialog(
+            onDismissRequest = { viewModel.dismissProfileZip() },
+            title = { Text(stringResource(R.string.profile_export_title)) },
+            text = { Text(stringResource(R.string.profile_export_message, pendingZip.first)) },
+            confirmButton = {
+                DialogConfirmButton(onClick = {
+                    exportProfileDocument.launch(pendingZip.first)
+                }) {
+                    Text(stringResource(R.string.command_save))
+                }
+            },
+            dismissButton = {
+                DialogDismissButton(onClick = { viewModel.dismissProfileZip() }) {
+                    Text(stringResource(R.string.command_dismiss))
+                }
+            },
+        )
+    }
+
     Column(modifier = modifier.fillMaxSize()) {
         SettingsList(
             modifier = Modifier.weight(1f),
@@ -162,19 +203,12 @@ fun ProfileScreen(
                 }
             }
             preferenceGroup(key = "profiles") {
-                row("import") {
-                    PreferenceRow(
-                        title = stringResource(R.string.profile_import),
-                        summary = stringResource(R.string.profile_import_summary),
-                        iconContent = {
-                            Icon(
-                                imageVector = Icons.Filled.Add,
-                                contentDescription = null,
-                                modifier = Modifier.size(24.dp),
-                            )
-                        },
-                        enabled = !uiState.importing,
-                        onClick = { importLauncher.launch("*/*") },
+                row("import_export") {
+                    ImportExportRow(
+                        onImport = { importLauncher.launch("*/*") },
+                        onExport = viewModel::exportActiveProfile,
+                        importEnabled = !uiState.importing,
+                        exportEnabled = !uiState.exporting && uiState.activeId != null,
                     )
                 }
                 val profiles = uiState.profiles
@@ -264,6 +298,79 @@ fun ProfileScreen(
                 DialogDismissButton(onClick = { pendingDeleteId = null }) {
                     Text(stringResource(R.string.command_cancel))
                 }
+            },
+        )
+    }
+}
+
+@Composable
+private fun ImportExportRow(
+    onImport: () -> Unit,
+    onExport: () -> Unit,
+    importEnabled: Boolean,
+    exportEnabled: Boolean,
+) {
+    Surface(
+        shape = RoundedCornerShape(16.dp),
+        color = MaterialTheme.colorScheme.surfaceContainer,
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            ActionHalf(
+                label = stringResource(R.string.profile_import),
+                icon = Icons.Filled.FileDownload,
+                enabled = importEnabled,
+                onClick = onImport,
+                modifier = Modifier.weight(1f),
+            )
+            // Divider between the two halves, matching the row height.
+            androidx.compose.material3.VerticalDivider(
+                modifier = Modifier.heightIn(min = 56.dp),
+            )
+            ActionHalf(
+                label = stringResource(R.string.profile_export),
+                icon = Icons.Filled.FileUpload,
+                enabled = exportEnabled,
+                onClick = onExport,
+                modifier = Modifier.weight(1f),
+            )
+        }
+    }
+}
+
+@Composable
+private fun ActionHalf(
+    label: String,
+    icon: ImageVector,
+    enabled: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Row(
+        modifier = modifier
+            .heightIn(min = 56.dp)
+            .clickable(enabled = enabled, onClick = onClick)
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            modifier = Modifier.size(24.dp),
+            tint = if (enabled) {
+                LocalContentColor.current
+            } else {
+                MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+            },
+        )
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodyLarge,
+            color = if (enabled) {
+                LocalContentColor.current
+            } else {
+                MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
             },
         )
     }

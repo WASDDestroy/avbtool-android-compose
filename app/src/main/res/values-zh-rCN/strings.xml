@@ -365,6 +365,10 @@
     <string name="profile_title">签名配置</string>
     <string name="profile_import">导入配置</string>
     <string name="profile_import_summary">导入签名配置压缩包（.zip）</string>
+    <string name="profile_export">导出配置</string>
+    <string name="profile_export_title">导出配置</string>
+    <string name="profile_export_message">配置已打包为 %s。是否通过 SAF 保存？</string>
+    <string name="profile_export_failed">无法导出配置。</string>
     <string name="profile_import_success">配置已导入</string>
     <string name="profile_import_failed">无效的配置压缩包</string>
     <string name="profile_group_images">输入映像</string>

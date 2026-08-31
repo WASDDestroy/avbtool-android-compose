@@ -43,9 +43,12 @@ data class ProfileUiState(
     val activeSpecs: List<ProfilePartitionSpec> = emptyList(),
     val importing: Boolean = false,
     val signing: Boolean = false,
+    val exporting: Boolean = false,
     val result: ProfileSignResult? = null,
     /** Output files awaiting "save via SAF"; consumed by the CreateDocument launcher. */
     val pendingExports: List<File> = emptyList(),
+    /** Zip bytes awaiting "save via SAF" after an export-profile action, one-shot. */
+    val pendingProfileZip: Pair<String, ByteArray>? = null,
     /** Toast event, one-shot. */
     val message: Int? = null,
 )
@@ -145,6 +148,57 @@ class ProfileViewModel(
 
     fun dismissExports() {
         _uiState.update { it.copy(pendingExports = emptyList()) }
+    }
+
+    fun dismissProfileZip() {
+        _uiState.update { it.copy(pendingProfileZip = null) }
+    }
+
+    fun consumeProfileZip() {
+        _uiState.update { it.copy(pendingProfileZip = null) }
+    }
+
+    /**
+     * Packs the active profile into an import-format zip. Partition images
+     * the user picked are copied to a separate scratch dir during signing and
+     * never live inside the profile folder, so nothing else needs excluding.
+     */
+    fun exportActiveProfile() {
+        val state = _uiState.value
+        val profile = state.profiles.find { it.id == state.activeId }
+        if (profile == null) {
+            _uiState.update { it.copy(message = R.string.profile_sign_no_active) }
+            return
+        }
+        if (state.exporting) return
+        viewModelScope.launch {
+            _uiState.update { it.copy(exporting = true, message = null) }
+            val zip = withContext(Dispatchers.IO) {
+                store.exportProfileZip(profile.id, excludePaths = imageEntryPaths(profile.id))
+            }
+            _uiState.update {
+                if (zip != null) {
+                    it.copy(
+                        exporting = false,
+                        pendingProfileZip = "${profile.id}.zip" to zip,
+                    )
+                } else {
+                    it.copy(exporting = false, message = R.string.profile_export_failed)
+                }
+            }
+        }
+    }
+
+    /** Files the sign pipeline copied into the profile folder, as zip-relative paths. */
+    private fun imageEntryPaths(profileId: String): Set<String> {
+        return imageSelections.keys
+            .filter { it.startsWith("$profileId:") }
+            .mapNotNull { key ->
+                val partition = key.removePrefix("$profileId:")
+                val fileName = imageSelections[key]?.toUri()?.lastPathSegment ?: return@mapNotNull null
+                "$partition/$fileName"
+            }
+            .toSet()
     }
 
     fun consumeExport() {
