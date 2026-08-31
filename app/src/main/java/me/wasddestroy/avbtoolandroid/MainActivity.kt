@@ -21,6 +21,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.FolderOpen
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Terminal
@@ -67,6 +68,7 @@ enum class AppDestinations(
     val icon: ImageVector,
 ) {
     HOME(R.string.nav_home, Icons.Filled.Home),
+    PROFILE(R.string.nav_profile, Icons.Filled.FolderOpen),
     CONSOLE(R.string.nav_console, Icons.Filled.Terminal),
     SETTINGS(R.string.nav_settings, Icons.Filled.Settings),
 }
@@ -183,6 +185,7 @@ private fun RootScreen(
     var terminalSelecting by remember { mutableStateOf(false) }
     val rootScope = rememberCoroutineScope()
     var rootBackGestureInProgress by remember { mutableStateOf(false) }
+    val profileViewModel: ProfileViewModel = viewModel(factory = ProfileViewModel.factory)
 
     // Predictive back from Console or Settings returns to Home instead of exiting the app.
     // Drive the pager directly from the gesture so Home is revealed during the
@@ -270,6 +273,10 @@ private fun RootScreen(
                     AppDestinations.HOME -> HomeScreen(
                         modifier = Modifier.fillMaxSize(),
                         onOpenCommand = onOpenCommand,
+                    )
+                    AppDestinations.PROFILE -> ProfileScreen(
+                        modifier = Modifier.fillMaxSize(),
+                        viewModel = profileViewModel,
                     )
                     AppDestinations.CONSOLE -> ConsoleScreen(
                         modifier = Modifier.fillMaxSize(),

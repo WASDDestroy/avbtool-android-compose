@@ -360,4 +360,26 @@
     <string name="flags_2">2 — 禁用验证</string>
     <string name="size_unit_B">字节（B）</string>
     <string name="size_unit_KiB">千字节（KiB）</string>
+    <!-- signing profiles -->
+    <string name="nav_profile">签名配置</string>
+    <string name="profile_title">签名配置</string>
+    <string name="profile_group_import">导入</string>
+    <string name="profile_import">导入配置</string>
+    <string name="profile_import_summary">导入签名配置压缩包（.zip）</string>
+    <string name="profile_import_success">配置已导入</string>
+    <string name="profile_import_failed">无效的配置压缩包</string>
+    <string name="profile_group_profiles">配置</string>
+    <string name="profile_group_images">输入映像</string>
+    <string name="profile_image_not_selected">点按选择映像</string>
+    <string name="profile_empty">尚未导入任何配置。</string>
+    <string name="profile_delete">删除配置</string>
+    <string name="profile_delete_title">删除配置</string>
+    <string name="profile_delete_message">删除配置 %s？此操作无法撤销。</string>
+    <string name="profile_sign">签名</string>
+    <string name="profile_sign_no_active">请先选择一个配置。</string>
+    <string name="profile_error_invalid_profile">配置文件无效。</string>
+    <string name="profile_error_missing_images">签名前请为所有分区选择输入映像。</string>
+    <string name="profile_sign_export_title">签名输出</string>
+    <string name="profile_sign_export_message">已生成 %1$d 个输出文件：\n%2$s\n是否通过 SAF 保存？</string>
+    <string name="profile_sign_result_title">%1$s — 签名结果</string>
 </resources>
