@@ -389,4 +389,5 @@
     <string name="profile_sign_result_title">%1$s — sign result</string>
     <string name="profile_add_props_to_vbmeta">Add profile props to vbmeta</string>
     <string name="profile_add_props_to_vbmeta_summary">Insert the profile&#8217;s configured properties into generated vbmeta images. avbtool does not deduplicate prop keys, so duplicates enlarge the image; descriptors from included images are unaffected.</string>
+    <string name="profile_result_copy_hint">Tap the copy icon to copy the full log</string>
 </resources>

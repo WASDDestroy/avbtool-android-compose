@@ -21,8 +21,9 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Album
+import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.FileDownload
 import androidx.compose.material.icons.filled.FileUpload
 import androidx.compose.material.icons.filled.FolderOpen
@@ -45,8 +46,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -56,6 +59,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import me.wasddestroy.avbtoolandroid.ui.components.DialogConfirmButton
 import me.wasddestroy.avbtoolandroid.ui.components.DialogDismissButton
+import me.wasddestroy.avbtoolandroid.ui.components.PreferenceGroup
 import me.wasddestroy.avbtoolandroid.ui.components.PreferenceRow
 import me.wasddestroy.avbtoolandroid.ui.components.PreferenceSwitchRow
 import me.wasddestroy.avbtoolandroid.ui.components.SettingsList
@@ -240,12 +244,11 @@ fun ProfileScreen(
                         row("image_${spec.partition}") {
                             PreferenceRow(
                                 title = spec.partition,
-                                summary = viewModel.getImage(spec.partition)
-                                    ?.let { runCatching { it.toUri().lastPathSegment }.getOrNull() }
+                                summary = uiState.imageSummaries[spec.partition]
                                     ?: stringResource(R.string.profile_image_not_selected),
                                 iconContent = {
                                     Icon(
-                                        imageVector = Icons.Filled.Description,
+                                        imageVector = Icons.Filled.Album,
                                         contentDescription = null,
                                         modifier = Modifier.size(24.dp),
                                     )
@@ -413,13 +416,6 @@ private fun ProfileRow(
     PreferenceRow(
         title = profile.name,
         summary = profile.id,
-        iconContent = {
-            Icon(
-                imageVector = Icons.Filled.Description,
-                contentDescription = null,
-                modifier = Modifier.size(24.dp),
-            )
-        },
         trailing = {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 IconButton(onClick = onDelete) {
@@ -439,6 +435,10 @@ private fun ProfileRow(
 @Composable
 private fun ProfileResultView(result: ProfileSignResult) {
     var rawExpanded by remember { mutableStateOf(false) }
+    @Suppress("DEPRECATION")
+    val clipboard = LocalClipboardManager.current
+    val context = LocalContext.current
+    val copiedMessage = stringResource(R.string.copied_to_clipboard)
     val statusTextRes = when (result.result.status) {
         AvbResultStatus.SUCCESS -> R.string.command_result_success
         AvbResultStatus.FAILED -> R.string.command_result_failed
@@ -457,7 +457,7 @@ private fun ProfileResultView(result: ProfileSignResult) {
             .padding(horizontal = 16.dp, vertical = 4.dp),
     ) {
         Text(
-            text = stringResource(R.string.profile_sign_result_title, result.profileName) + "\n" +
+            text = stringResource(R.string.profile_sign_result_title, result.profileName) + " · " +
                 stringResource(statusTextRes),
             style = MaterialTheme.typography.titleMedium,
             color = when (result.result.status) {
@@ -510,6 +510,24 @@ private fun ProfileResultView(result: ProfileSignResult) {
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp, vertical = 4.dp),
                 )
+            }
+            PreferenceGroup {
+                row("profile_raw_output_copy") {
+                    PreferenceRow(
+                        title = stringResource(R.string.command_raw_output),
+                        summary = stringResource(R.string.profile_result_copy_hint),
+                        trailing = {
+                            IconButton(
+                                onClick = {
+                                    clipboard.setText(AnnotatedString(result.result.rawOutput))
+                                    Toast.makeText(context, copiedMessage, Toast.LENGTH_SHORT).show()
+                                },
+                            ) {
+                                Icon(Icons.Filled.ContentCopy, contentDescription = "Copy")
+                            }
+                        },
+                    )
+                }
             }
         }
     }

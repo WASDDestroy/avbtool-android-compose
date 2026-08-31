@@ -387,4 +387,5 @@
     <string name="profile_sign_result_title">%1$s — 签名结果</string>
     <string name="profile_add_props_to_vbmeta">将配置属性写入 vbmeta</string>
     <string name="profile_add_props_to_vbmeta_summary">生成 vbmeta 镜像时插入配置中记录的属性。avbtool 不会过滤重复的属性键，重复项会增大镜像体积；从其他镜像包含的描述符不受影响。</string>
+    <string name="profile_result_copy_hint">点按复制图标以复制完整日志</string>
 </resources>

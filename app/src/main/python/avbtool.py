@@ -4772,7 +4772,21 @@ class AvbTool(object):
       # file objects. Close them here to avoid ResourceWarning spam on
       # Android (and to release file descriptors promptly).
       for _value in vars(args).values():
-        if _value is not sys.stdout and _value is not sys.stderr and hasattr(_value, 'close'):
+        if _value is sys.stdout or _value is sys.stderr:
+          continue
+        # Options such as --include_descriptors_from_image use action='append'
+        # and yield a list of FileType objects; the list itself has no close.
+        if isinstance(_value, (list, tuple)):
+          for _item in _value:
+            if _item is sys.stdout or _item is sys.stderr:
+              continue
+            if hasattr(_item, 'close'):
+              try:
+                _item.close()
+              except Exception:
+                pass
+          continue
+        if hasattr(_value, 'close'):
           try:
             _value.close()
           except Exception:
