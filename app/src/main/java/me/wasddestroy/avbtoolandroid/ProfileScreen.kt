@@ -57,6 +57,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import me.wasddestroy.avbtoolandroid.ui.components.DialogConfirmButton
 import me.wasddestroy.avbtoolandroid.ui.components.DialogDismissButton
 import me.wasddestroy.avbtoolandroid.ui.components.PreferenceRow
+import me.wasddestroy.avbtoolandroid.ui.components.PreferenceSwitchRow
 import me.wasddestroy.avbtoolandroid.ui.components.SettingsList
 import me.wasddestroy.avbtoolandroid.ui.components.preferenceGroup
 
@@ -255,6 +256,18 @@ fun ProfileScreen(
                                 },
                             )
                         }
+                    }
+                }
+            }
+            if (uiState.activeId != null) {
+                preferenceGroup(key = "sign_options", titleRes = R.string.profile_group_sign_options) {
+                    row("add_props_to_vbmeta") {
+                        PreferenceSwitchRow(
+                            title = stringResource(R.string.profile_add_props_to_vbmeta),
+                            summary = stringResource(R.string.profile_add_props_to_vbmeta_summary),
+                            checked = uiState.addPropsToVbmeta,
+                            onCheckedChange = viewModel::setAddPropsToVbmeta,
+                        )
                     }
                 }
             }

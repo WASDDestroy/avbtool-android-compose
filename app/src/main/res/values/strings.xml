@@ -374,6 +374,7 @@
     <string name="profile_import_success">Profile imported</string>
     <string name="profile_import_failed">Invalid profile archive</string>
     <string name="profile_group_images">Input images</string>
+    <string name="profile_group_sign_options">Sign options</string>
     <string name="profile_image_not_selected">Tap to select image</string>
     <string name="profile_empty">No profiles imported yet.</string>
     <string name="profile_delete">Delete profile</string>
@@ -386,4 +387,6 @@
     <string name="profile_sign_export_title">Sign output</string>
     <string name="profile_sign_export_message">%1$d output file(s) were written:\n%2$s\nSave them via SAF?</string>
     <string name="profile_sign_result_title">%1$s — sign result</string>
+    <string name="profile_add_props_to_vbmeta">Add profile props to vbmeta</string>
+    <string name="profile_add_props_to_vbmeta_summary">Insert the profile&#8217;s configured properties into generated vbmeta images. avbtool does not deduplicate prop keys, so duplicates enlarge the image; descriptors from included images are unaffected.</string>
 </resources>

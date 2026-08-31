@@ -372,6 +372,7 @@
     <string name="profile_import_success">配置已导入</string>
     <string name="profile_import_failed">无效的配置压缩包</string>
     <string name="profile_group_images">输入映像</string>
+    <string name="profile_group_sign_options">签名选项</string>
     <string name="profile_image_not_selected">点按选择映像</string>
     <string name="profile_empty">尚未导入任何配置。</string>
     <string name="profile_delete">删除配置</string>
@@ -384,4 +385,6 @@
     <string name="profile_sign_export_title">签名输出</string>
     <string name="profile_sign_export_message">已生成 %1$d 个输出文件：\n%2$s\n是否通过 SAF 保存？</string>
     <string name="profile_sign_result_title">%1$s — 签名结果</string>
+    <string name="profile_add_props_to_vbmeta">将配置属性写入 vbmeta</string>
+    <string name="profile_add_props_to_vbmeta_summary">生成 vbmeta 镜像时插入配置中记录的属性。avbtool 不会过滤重复的属性键，重复项会增大镜像体积；从其他镜像包含的描述符不受影响。</string>
 </resources>

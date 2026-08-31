@@ -49,6 +49,8 @@ data class ProfileUiState(
     val pendingExports: List<File> = emptyList(),
     /** Zip bytes awaiting "save via SAF" after an export-profile action, one-shot. */
     val pendingProfileZip: Pair<String, ByteArray>? = null,
+    /** Whether generated vbmeta images also get the profile's configured props. */
+    val addPropsToVbmeta: Boolean = false,
     /** Toast event, one-shot. */
     val message: Int? = null,
 )
@@ -144,6 +146,10 @@ class ProfileViewModel(
 
     fun clearMessage() {
         _uiState.update { it.copy(message = null) }
+    }
+
+    fun setAddPropsToVbmeta(enabled: Boolean) {
+        _uiState.update { it.copy(addPropsToVbmeta = enabled) }
     }
 
     fun dismissExports() {
@@ -269,6 +275,7 @@ class ProfileViewModel(
         val outputs = mutableListOf<File>()
 
         try {
+            // spec.partitions is already in dependency order (see parseProfile).
             for (p in spec.partitions) {
                 val srcUri = getImage(p.partition)!!
                 val imageDir = File(scratch, p.partition)
@@ -285,7 +292,7 @@ class ProfileViewModel(
                     }
                 }
 
-                val args = buildAvbArgs(p, profile, imageDir, scratch, spec)
+                val args = buildAvbArgs(p, profile, imageDir, scratch, spec, uiState.value.addPropsToVbmeta)
                 val res = runner.run(args)
                 log.appendLine("[${p.partition}] " + (if (res.exitCode != 0) "FAILED" else "OK"))
                 if (res.stdout.isNotBlank()) log.appendLine(res.stdout.trim())
@@ -369,6 +376,7 @@ class ProfileViewModel(
         imageDir: File,
         scratchRoot: File,
         fullSpec: ProfileSpec?,
+        addPropsToVbmeta: Boolean,
     ): List<String> {
         val argv = mutableListOf("avbtool")
         if (p.descriptor == "vbmeta") {
@@ -415,18 +423,63 @@ class ProfileViewModel(
         if (keyPath != null) {
             argv += listOf("--key", keyPath)
         }
-        p.props.forEach { (k, v) ->
-            argv += "--prop"
-            argv += "$k:$v"
+        // avbtool appends every --prop verbatim without deduplicating keys.
+        // For footer commands the props land in the partition's reserved size
+        // so they cannot grow the image; for make_vbmeta_image each prop
+        // extends the generated blob, so adding them is opt-in.
+        if (p.descriptor != "vbmeta" || addPropsToVbmeta) {
+            p.props.forEach { (k, v) ->
+                argv += "--prop"
+                argv += "$k:$v"
+            }
         }
         return argv
+    }
+
+    /**
+     * Orders partitions so every dependency is signed before its dependents:
+     * a vbmeta partition must wait for the partitions it chains to and the
+     * ones it pulls descriptors from (their signed outputs must exist first),
+     * footer partitions keep their JSON order. Cycle-free by construction for
+     * well-formed profiles; a cycle would just leave partitions unsorted at
+     * the end, which the per-sign failure log makes obvious.
+     */
+    private fun orderPartitions(specs: List<ProfilePartitionSpec>): List<ProfilePartitionSpec> {
+        val byName = specs.associateBy { it.partition }
+        val deps = specs.associate { spec ->
+            spec.partition to buildSet {
+                if (spec.descriptor == "vbmeta") {
+                    spec.chainPartitions.forEach { entry ->
+                        // entry = "partition:rollback:keyfile.bin"
+                        val name = entry.substringBefore(':')
+                        if (name in byName) add(name)
+                    }
+                    spec.includedPartitions.forEach { name ->
+                        if (name in byName) add(name)
+                    }
+                }
+            }
+        }
+        val ordered = mutableListOf<ProfilePartitionSpec>()
+        val placed = mutableSetOf<String>()
+        var remaining = specs.toList()
+        // A pass places every partition whose deps are all placed; JSON order
+        // is preserved among candidates. Repeat until nothing more can move.
+        while (remaining.isNotEmpty()) {
+            val ready = remaining.filter { p -> deps[p.partition]!!.all { it in placed } }
+            if (ready.isEmpty()) break
+            ordered += ready
+            placed += ready.map { it.partition }
+            remaining -= ready.toSet()
+        }
+        ordered += remaining
+        return ordered
     }
 
     private fun parseProfile(raw: JSONObject): ProfileSpec {
         val partitionsJson = raw.getJSONObject("partitions")
         val specs = mutableListOf<ProfilePartitionSpec>()
-        val order = pickPartitionOrder(raw, partitionsJson)
-        for (name in order) {
+        for (name in partitionsJson.keys()) {
             val obj = partitionsJson.getJSONObject(name)
             specs += ProfilePartitionSpec(
                 partition = name,
@@ -454,19 +507,10 @@ class ProfileViewModel(
                 } ?: emptyList(),
             )
         }
-        return ProfileSpec(keyStorePath = raw.optString("key_store_path", "keys"), partitions = specs)
+        return ProfileSpec(keyStorePath = raw.optString("key_store_path", "keys"), partitions = orderPartitions(specs))
     }
 
-    /** vbmeta partitions last so signed outputs referenced by includes exist. */
-    private fun pickPartitionOrder(raw: JSONObject, partitionsJson: JSONObject): List<String> {
-        val order = mutableListOf<String>()
-        val keys = partitionsJson.keys()
-        while (keys.hasNext()) order += keys.next()
-        return order.sortedBy { name ->
-            val obj = partitionsJson.optJSONObject(name)
-            if (obj?.optString("descriptor") == "vbmeta") 1 else 0
-        }
-    }    private fun resolveKeyPath(profile: ProfileStore.ProfileEntry, keyId: String): String? {
+    private fun resolveKeyPath(profile: ProfileStore.ProfileEntry, keyId: String): String? {
         val keysManifest = File(profile.dir, "keys/manifest.json")
         if (keysManifest.isFile) {
             runCatching {
