@@ -1,6 +1,7 @@
 package me.wasddestroy.avbtoolandroid
 
 import android.content.Context
+import android.content.Intent
 import android.net.Uri
 import androidx.core.net.toUri
 import androidx.lifecycle.ViewModel
@@ -69,8 +70,10 @@ class ProfileViewModel(
     val uiState: StateFlow<ProfileUiState> = _uiState.asStateFlow()
 
     private val imageSelections = mutableMapOf<String, String>()
+    private val imageSelectionStore = ProfileImageSelectionStore(appContext)
 
     init {
+        imageSelections.putAll(imageSelectionStore.read())
         refresh()
     }
 
@@ -124,6 +127,9 @@ class ProfileViewModel(
                 activeStore.write(null)
             }
             imageSelections.keys.removeAll { it.startsWith("$id:") }
+            // Drop grants only after removal, so shared URIs survive.
+            imageSelections.values.forEach { releasePersistableGrant(it.toUri()) }
+            imageSelectionStore.write(imageSelections)
             refresh()
         }
     }
@@ -138,10 +144,35 @@ class ProfileViewModel(
         val profileId = _uiState.value.activeId ?: return
         if (uri != null) {
             imageSelections["$profileId:$partition"] = uri.toString()
+            // Persist read+write so the grant survives reboots and re-signing
+            // can open the image in place again without re-picking it.
+            runCatching {
+                appContext.contentResolver.takePersistableUriPermission(
+                    uri,
+                    Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION,
+                )
+            }
         } else {
-            imageSelections.remove("$profileId:$partition")
+            val removed = imageSelections.remove("$profileId:$partition")
+            removed?.let { releasePersistableGrant(it.toUri()) }
         }
+        imageSelectionStore.write(imageSelections)
         publishImageSummaries()
+    }
+
+    /**
+     * Releases the persistable grant held for [uri] unless it is still
+     * referenced by another selection; grants are app-wide and per-URI.
+     */
+    private fun releasePersistableGrant(uri: Uri) {
+        if (imageSelections.values.none { it == uri.toString() }) {
+            runCatching {
+                appContext.contentResolver.releasePersistableUriPermission(
+                    uri,
+                    Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION,
+                )
+            }
+        }
     }
 
     private fun publishImageSummaries() {

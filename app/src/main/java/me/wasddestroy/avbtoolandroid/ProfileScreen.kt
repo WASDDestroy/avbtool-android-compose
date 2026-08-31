@@ -94,12 +94,8 @@ fun ProfileScreen(
         val partition = pendingImagePartition
         pendingImagePartition = null
         if (uri != null && partition != null) {
-            runCatching {
-                context.contentResolver.takePersistableUriPermission(
-                    uri,
-                    android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION,
-                )
-            }
+            // Persistable-grant handling lives in the ViewModel alongside the
+            // selection store (read+write, released on replacement/deletion).
             viewModel.setImage(partition, uri)
         }
     }

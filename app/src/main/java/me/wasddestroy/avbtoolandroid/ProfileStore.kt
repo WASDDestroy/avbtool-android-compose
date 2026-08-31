@@ -245,6 +245,36 @@ class ActiveProfileStore(context: Context) {
     }
 }
 
+/**
+ * Persisted per-partition image picks, keyed "<profileId>:<partition>".
+ * URIs carry persistable SAF grants (taken by the ViewModel), so picks
+ * survive app restarts and re-signing needs no re-picking.
+ */
+class ProfileImageSelectionStore(context: Context) {
+    private val sp = context.applicationContext.getSharedPreferences(
+        "application_configs", Context.MODE_PRIVATE,
+    )
+
+    fun read(): Map<String, String> {
+        val json = sp.getString(KEY_IMAGE_SELECTIONS, null) ?: return emptyMap()
+        return runCatching {
+            val obj = JSONObject(json)
+            obj.keys().asSequence().filter { obj.optString(it).isNotBlank() }
+                .associateWith { obj.optString(it) }
+        }.getOrElse { emptyMap() }
+    }
+
+    fun write(selections: Map<String, String>) {
+        val obj = JSONObject()
+        selections.forEach { (key, uri) -> obj.put(key, uri) }
+        sp.edit().putString(KEY_IMAGE_SELECTIONS, obj.toString()).apply()
+    }
+
+    companion object {
+        private const val KEY_IMAGE_SELECTIONS = "profile_image_selections"
+    }
+}
+
 /** Result of one signing run, ready for the existing result renderer. */
 data class ProfileSignResult(
     val profileId: String,
