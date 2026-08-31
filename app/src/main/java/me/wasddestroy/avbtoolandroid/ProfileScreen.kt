@@ -22,11 +22,9 @@ import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Album
-import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.FileDownload
 import androidx.compose.material.icons.filled.FileUpload
-import androidx.compose.material.icons.filled.FolderOpen
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
@@ -483,48 +481,35 @@ private fun ProfileResultView(result: ProfileSignResult) {
     }
 
     if (result.result.rawOutput.isNotBlank()) {
-        androidx.compose.material3.TextButton(
-            onClick = { rawExpanded = !rawExpanded },
-            modifier = Modifier.padding(horizontal = 16.dp),
-        ) {
-            Icon(
-                imageVector = Icons.Filled.FolderOpen,
-                contentDescription = null,
-                modifier = Modifier.size(18.dp),
-            )
-            Text(
-                text = stringResource(
-                    if (rawExpanded) R.string.command_raw_output_collapse
-                    else R.string.command_raw_output_expand,
-                ),
-            )
-        }
-        if (rawExpanded) {
-            SelectionContainer {
-                Text(
-                    text = result.result.rawOutput,
-                    fontFamily = FontFamily.Monospace,
-                    fontSize = 12.sp,
-                    textAlign = TextAlign.Start,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 4.dp),
+        PreferenceGroup {
+            row("profile_raw_output_toggle") {
+                PreferenceRow(
+                    title = stringResource(R.string.command_raw_output),
+                    summary = stringResource(
+                        if (rawExpanded) R.string.command_raw_output_collapse
+                        else R.string.command_raw_output_expand,
+                    ),
+                    onClick = { rawExpanded = !rawExpanded },
                 )
             }
-            PreferenceGroup {
-                row("profile_raw_output_copy") {
+            if (rawExpanded) {
+                row("profile_raw_output_content") {
                     PreferenceRow(
-                        title = stringResource(R.string.command_raw_output),
-                        summary = stringResource(R.string.profile_result_copy_hint),
-                        trailing = {
-                            IconButton(
-                                onClick = {
-                                    clipboard.setText(AnnotatedString(result.result.rawOutput))
-                                    Toast.makeText(context, copiedMessage, Toast.LENGTH_SHORT).show()
-                                },
-                            ) {
-                                Icon(Icons.Filled.ContentCopy, contentDescription = "Copy")
+                        title = "",
+                        summaryContent = {
+                            SelectionContainer {
+                                Text(
+                                    text = result.result.rawOutput,
+                                    fontFamily = FontFamily.Monospace,
+                                    fontSize = 12.sp,
+                                    textAlign = TextAlign.Start,
+                                    modifier = Modifier.fillMaxWidth(),
+                                )
                             }
+                        },
+                        onLongClick = {
+                            clipboard.setText(AnnotatedString(result.result.rawOutput))
+                            Toast.makeText(context, copiedMessage, Toast.LENGTH_SHORT).show()
                         },
                     )
                 }
