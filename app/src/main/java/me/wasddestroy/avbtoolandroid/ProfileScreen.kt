@@ -4,8 +4,6 @@ import android.net.Uri
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -163,7 +161,7 @@ fun ProfileScreen(
                     )
                 }
             }
-            preferenceGroup(key = "import", titleRes = R.string.profile_group_import) {
+            preferenceGroup(key = "profiles") {
                 row("import") {
                     PreferenceRow(
                         title = stringResource(R.string.profile_import),
@@ -179,8 +177,6 @@ fun ProfileScreen(
                         onClick = { importLauncher.launch("*/*") },
                     )
                 }
-            }
-            preferenceGroup(key = "profiles", titleRes = R.string.profile_group_profiles) {
                 val profiles = uiState.profiles
                 if (profiles.isEmpty()) {
                     row("empty") {
@@ -280,42 +276,30 @@ private fun ProfileRow(
     onSelect: () -> Unit,
     onDelete: () -> Unit,
 ) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onSelect)
-            .padding(horizontal = 16.dp, vertical = 4.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        Icon(
-            imageVector = Icons.Filled.Description,
-            contentDescription = null,
-            modifier = Modifier.size(24.dp),
-        )
-        Column(
-            modifier = Modifier.weight(1f),
-            verticalArrangement = Arrangement.spacedBy(2.dp),
-        ) {
-            Text(
-                text = profile.name,
-                style = MaterialTheme.typography.bodyLarge,
-            )
-            Text(
-                text = profile.id,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-        IconButton(onClick = onDelete) {
+    PreferenceRow(
+        title = profile.name,
+        summary = profile.id,
+        iconContent = {
             Icon(
-                imageVector = Icons.Filled.Delete,
-                contentDescription = stringResource(R.string.profile_delete),
-                tint = MaterialTheme.colorScheme.error,
+                imageVector = Icons.Filled.Description,
+                contentDescription = null,
+                modifier = Modifier.size(24.dp),
             )
-        }
-        RadioButton(selected = selected, onClick = onSelect)
-    }
+        },
+        trailing = {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                IconButton(onClick = onDelete) {
+                    Icon(
+                        imageVector = Icons.Filled.Delete,
+                        contentDescription = stringResource(R.string.profile_delete),
+                        tint = MaterialTheme.colorScheme.error,
+                    )
+                }
+                RadioButton(selected = selected, onClick = onSelect)
+            }
+        },
+        onClick = onSelect,
+    )
 }
 
 @Composable

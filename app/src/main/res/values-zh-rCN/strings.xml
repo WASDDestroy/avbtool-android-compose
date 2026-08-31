@@ -363,12 +363,10 @@
     <!-- signing profiles -->
     <string name="nav_profile">签名配置</string>
     <string name="profile_title">签名配置</string>
-    <string name="profile_group_import">导入</string>
     <string name="profile_import">导入配置</string>
     <string name="profile_import_summary">导入签名配置压缩包（.zip）</string>
     <string name="profile_import_success">配置已导入</string>
     <string name="profile_import_failed">无效的配置压缩包</string>
-    <string name="profile_group_profiles">配置</string>
     <string name="profile_group_images">输入映像</string>
     <string name="profile_image_not_selected">点按选择映像</string>
     <string name="profile_empty">尚未导入任何配置。</string>
