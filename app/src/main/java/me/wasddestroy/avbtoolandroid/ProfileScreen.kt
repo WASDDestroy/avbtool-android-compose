@@ -6,6 +6,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -42,6 +43,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -310,69 +312,81 @@ private fun ImportExportRow(
     importEnabled: Boolean,
     exportEnabled: Boolean,
 ) {
-    Surface(
-        shape = RoundedCornerShape(16.dp),
-        color = MaterialTheme.colorScheme.surfaceContainer,
+    // First row of the card, split into two halves. Each half is its own
+    // Surface so the 2dp gap between them shows the screen background —
+    // the same segmentation look as between preference rows. Outer corners
+    // match the group's large top radius; the bottom uses the small
+    // segmented radius because more rows follow.
+    val leftShape = RoundedCornerShape(
+        topStart = 16.dp, topEnd = 4.dp, bottomStart = 16.dp, bottomEnd = 4.dp,
+    )
+    val rightShape = RoundedCornerShape(
+        topStart = 4.dp, topEnd = 16.dp, bottomStart = 4.dp, bottomEnd = 16.dp,
+    )
+    Row(
         modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(2.dp),
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            ActionHalf(
-                label = stringResource(R.string.profile_import),
-                icon = Icons.Filled.FileDownload,
-                enabled = importEnabled,
-                onClick = onImport,
-                modifier = Modifier.weight(1f),
-            )
-            // Divider between the two halves, matching the row height.
-            androidx.compose.material3.VerticalDivider(
-                modifier = Modifier.heightIn(min = 56.dp),
-            )
-            ActionHalf(
-                label = stringResource(R.string.profile_export),
-                icon = Icons.Filled.FileUpload,
-                enabled = exportEnabled,
-                onClick = onExport,
-                modifier = Modifier.weight(1f),
-            )
-        }
+        ActionHalfSurface(
+            label = stringResource(R.string.profile_import),
+            icon = Icons.Filled.FileDownload,
+            enabled = importEnabled,
+            onClick = onImport,
+            shape = leftShape,
+            modifier = Modifier.weight(1f),
+        )
+        ActionHalfSurface(
+            label = stringResource(R.string.profile_export),
+            icon = Icons.Filled.FileUpload,
+            enabled = exportEnabled,
+            onClick = onExport,
+            shape = rightShape,
+            modifier = Modifier.weight(1f),
+        )
     }
 }
 
 @Composable
-private fun ActionHalf(
+private fun ActionHalfSurface(
     label: String,
     icon: ImageVector,
     enabled: Boolean,
     onClick: () -> Unit,
+    shape: Shape,
     modifier: Modifier = Modifier,
 ) {
-    Row(
+    Surface(
+        shape = shape,
+        color = MaterialTheme.colorScheme.surfaceContainer,
         modifier = modifier
             .heightIn(min = 56.dp)
-            .clickable(enabled = enabled, onClick = onClick)
-            .padding(horizontal = 16.dp, vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
+            .clickable(enabled = enabled, onClick = onClick),
     ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = null,
-            modifier = Modifier.size(24.dp),
-            tint = if (enabled) {
-                LocalContentColor.current
-            } else {
-                MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
-            },
-        )
-        Text(
-            text = label,
-            style = MaterialTheme.typography.bodyLarge,
-            color = if (enabled) {
-                LocalContentColor.current
-            } else {
-                MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
-            },
-        )
+        Row(
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                modifier = Modifier.size(24.dp),
+                tint = if (enabled) {
+                    LocalContentColor.current
+                } else {
+                    MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                },
+            )
+            Text(
+                text = label,
+                style = MaterialTheme.typography.bodyLarge,
+                color = if (enabled) {
+                    LocalContentColor.current
+                } else {
+                    MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                },
+            )
+        }
     }
 }
 
