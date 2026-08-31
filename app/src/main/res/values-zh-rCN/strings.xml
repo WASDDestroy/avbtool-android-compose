@@ -380,6 +380,7 @@
     <string name="profile_delete_message">删除配置 %s？此操作无法撤销。</string>
     <string name="profile_sign">签名</string>
     <string name="profile_sign_no_active">请先选择一个配置。</string>
+    <string name="profile_sign_modify_message">签名将原地覆写所选的输入映像（footer 分区）。若 SAF 提供程序不允许原地写入，该映像将在应用私有存储的副本上处理，随后导出。是否继续？</string>
     <string name="profile_error_invalid_profile">配置文件无效。</string>
     <string name="profile_error_missing_images">签名前请为所有分区选择输入映像。</string>
     <string name="profile_sign_export_title">签名输出</string>

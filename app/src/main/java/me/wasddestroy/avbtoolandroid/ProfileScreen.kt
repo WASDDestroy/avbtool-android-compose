@@ -71,6 +71,7 @@ fun ProfileScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
     var pendingDeleteId by remember { mutableStateOf<String?>(null) }
+    var confirmOverwrite by remember { mutableStateOf(false) }
 
     val importLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.GetContent(),
@@ -284,7 +285,7 @@ fun ProfileScreen(
 
         Surface(tonalElevation = 3.dp) {
             Button(
-                onClick = viewModel::signActive,
+                onClick = { confirmOverwrite = true },
                 enabled = !uiState.signing && uiState.activeId != null,
                 modifier = Modifier
                     .fillMaxWidth()
@@ -294,6 +295,27 @@ fun ProfileScreen(
                 Text(stringResource(if (uiState.signing) R.string.command_running else R.string.profile_sign))
             }
         }
+    }
+
+    if (confirmOverwrite) {
+        AlertDialog(
+            onDismissRequest = { confirmOverwrite = false },
+            title = { Text(stringResource(R.string.command_modify_title)) },
+            text = { Text(stringResource(R.string.profile_sign_modify_message)) },
+            confirmButton = {
+                DialogConfirmButton(onClick = {
+                    confirmOverwrite = false
+                    viewModel.signActive()
+                }) {
+                    Text(stringResource(R.string.command_continue))
+                }
+            },
+            dismissButton = {
+                DialogDismissButton(onClick = { confirmOverwrite = false }) {
+                    Text(stringResource(R.string.command_cancel))
+                }
+            },
+        )
     }
 
     pendingDeleteId?.let { id ->

@@ -286,6 +286,14 @@ class ProfileViewModel(
         scratch.deleteRecursively()
         scratch.mkdirs()
 
+        // Partitions whose signed images are pulled into a vbmeta via
+        // --include_descriptors_from_image; their scratch copies must exist
+        // even when the image itself was signed in place.
+        val includeSources = spec.partitions
+            .filter { it.descriptor == "vbmeta" }
+            .flatMap { it.includedPartitions }
+            .toSet()
+
         val log = StringBuilder()
         var ok = true
         val outputs = mutableListOf<File>()
@@ -297,31 +305,44 @@ class ProfileViewModel(
                 val imageDir = File(scratch, p.partition)
                 imageDir.mkdirs()
                 val target = File(imageDir, p.image)
-                if (p.descriptor != "vbmeta") {
-                    // Only footer commands take a pre-existing input image;
-                    // vbmeta images are generated from scratch.
-                    val copied = copyUriToFile(srcUri.toUri(), target)
-                    if (!copied) {
-                        log.appendLine("[${p.partition}] failed to read the selected image")
+
+                // Footer images are modified in place through a SAF read-write
+                // fd when the provider allows it; only then does the file fall
+                // back to a private copy whose export needs a save dialog.
+                // vbmeta images are generated from scratch either way.
+                val fd = if (p.descriptor != "vbmeta") bridge.openReadWrite(srcUri.toUri()) else null
+                val inPlace = fd != null
+                try {
+                    if (fd == null && p.descriptor != "vbmeta") {
+                        val copied = copyUriToFile(srcUri.toUri(), target)
+                        if (!copied) {
+                            log.appendLine("[${p.partition}] failed to read the selected image")
+                            ok = false
+                            break
+                        }
+                    }
+
+                    val args = buildAvbArgs(p, profile, imageDir, scratch, spec, uiState.value.addPropsToVbmeta, fd)
+                    val res = runner.run(args)
+                    log.appendLine("[${p.partition}] " + (if (res.exitCode != 0) "FAILED" else "OK"))
+                    if (res.stdout.isNotBlank()) log.appendLine(res.stdout.trim())
+                    if (res.stderr.isNotBlank()) log.appendLine(res.stderr.trim())
+                    if (res.exitCode != 0) {
                         ok = false
                         break
                     }
-                }
 
-                val args = buildAvbArgs(p, profile, imageDir, scratch, spec, uiState.value.addPropsToVbmeta)
-                val res = runner.run(args)
-                log.appendLine("[${p.partition}] " + (if (res.exitCode != 0) "FAILED" else "OK"))
-                if (res.stdout.isNotBlank()) log.appendLine(res.stdout.trim())
-                if (res.stderr.isNotBlank()) log.appendLine(res.stderr.trim())
-                if (res.exitCode != 0) {
-                    ok = false
-                    break
-                }
-
-                if (p.descriptor == "vbmeta") {
-                    outputs += File(imageDir, p.image)
-                } else {
-                    outputs += target
+                    when {
+                        p.descriptor == "vbmeta" -> outputs += File(imageDir, p.image)
+                        inPlace -> {
+                            if (p.partition in includeSources) {
+                                copyUriToFile(srcUri.toUri(), target)
+                            }
+                        }
+                        else -> outputs += target
+                    }
+                } finally {
+                    fd?.let { bridge.closeFd(it) }
                 }
             }
         } finally {
@@ -393,6 +414,7 @@ class ProfileViewModel(
         scratchRoot: File,
         fullSpec: ProfileSpec?,
         addPropsToVbmeta: Boolean,
+        inPlaceFd: Int? = null,
     ): List<String> {
         val argv = mutableListOf("avbtool")
         if (p.descriptor == "vbmeta") {
@@ -424,7 +446,13 @@ class ProfileViewModel(
         } else {
             argv += "add_${p.descriptor}_footer"
             argv += "--image"
-            argv += File(imageDir, p.image).absolutePath
+            // When signing in place, the input is the SAF fd pseudo-path;
+            // android_bridge.py rewinds each open back to the start.
+            argv += if (inPlaceFd != null) {
+                bridge.pseudoPath(inPlaceFd)
+            } else {
+                File(imageDir, p.image).absolutePath
+            }
             argv += listOf("--partition_name", p.partitionName)
             p.partitionSize?.let { argv += listOf("--partition_size", it.toString()) }
             if (p.descriptor == "hash") {
