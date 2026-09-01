@@ -4,12 +4,13 @@ package me.wasddestroy.avbtoolandroid
  * Parses the stdout of `avbtool info_image` into a profile partition entry.
  *
  * Port of the reference project's output parser (avbpowertool2
- * `infrastructure/avbtool/output_parser.py`) plus its inspection rules
- * (`application/services/inspect_images.py`): indentation-based boundary
- * detection, with the same vbmeta-vs-footer classification — an image is
- * treated as a vbmeta image when it embeds several descriptors or its first
- * descriptor names a partition other than itself; a footer image's single
- * descriptor names the partition embedded in it.
+ * `infrastructure/avbtool/output_parser.py`), but classification differs
+ * deliberately: type is decided by footer presence, not by comparing the
+ * descriptor's partition name with the file name. A signed partition image
+ * always carries an AvbFooter and its own Hash/Hashtree descriptor; a
+ * vbmeta image is a bare blob whose descriptors (if any) name other
+ * partitions. File-name heuristics break when the user stores a partition
+ * image under an arbitrary name.
  */
 object InfoImageParser {
 
@@ -118,61 +119,54 @@ object InfoImageParser {
             }
         }
 
-        val firstFields = descs.firstOrNull()?.fields ?: emptyMap()
-        // Descriptor partition names carry no extension, so compare against
-        // the file name without its extension ("boot.img" -> "boot"); the
-        // raw name is accepted too for vbmeta files named without ".img".
-        val stem = imageFileName.substringBeforeLast('.')
-        val isVbmetaImage = descs.isNotEmpty() &&
-            (descs.size != 1 || (firstFields["Partition Name"] != stem &&
-                firstFields["Partition Name"] != imageFileName))
         val partitionSize = header["Image size"]?.removeSuffix("bytes")?.trim()?.toLongOrNull()
 
-        return if (isVbmetaImage) {
-            ImageInspection(
-                descriptor = "vbmeta",
-                partitionName = null,
-                algorithm = header["Algorithm"],
-                rollbackIndex = header["Rollback Index"]?.toLongOrNull(),
-                flags = header["Flags"]?.toLongOrNull(),
-                hashAlgorithm = null,
-                salt = null,
-                props = parsed.props,
-                includedPartitions = includedNames,
-                chainPartitions = chainEntries,
-                partitionSize = partitionSize,
-            )
-        } else if (descs.isNotEmpty()) {
-            val block = descs.first()
-            ImageInspection(
-                descriptor = block.type.toDescriptorKey(),
-                partitionName = block.fields["Partition Name"],
-                algorithm = header["Algorithm"],
-                rollbackIndex = header["Rollback Index"]?.toLongOrNull(),
-                flags = header["Flags"]?.toLongOrNull(),
-                hashAlgorithm = block.fields["Hash Algorithm"]?.lowercase(),
-                salt = block.fields["Salt"]?.takeIf { it.isNotBlank() },
-                props = parsed.props,
-                includedPartitions = emptyList(),
-                chainPartitions = emptyList(),
-                partitionSize = partitionSize,
-            )
-        } else {
-            // Header only, no descriptors at all — still valid vbmeta content.
-            ImageInspection(
-                descriptor = "vbmeta",
-                partitionName = null,
-                algorithm = header["Algorithm"],
-                rollbackIndex = header["Rollback Index"]?.toLongOrNull(),
-                flags = header["Flags"]?.toLongOrNull(),
-                hashAlgorithm = null,
-                salt = null,
-                props = parsed.props,
-                includedPartitions = emptyList(),
-                chainPartitions = emptyList(),
-                partitionSize = partitionSize,
-            )
+        // Footer presence is the type signal, not the file name: a signed
+        // partition image always carries an AvbFooter (info_image prints the
+        // "Footer version:" block), while `make_vbmeta_image` output is a
+        // bare vbmeta blob without one. File-name-based heuristics break
+        // whenever the user stores a partition image under an arbitrary
+        // name (e.g. product.img as super3.img).
+        val hasFooter = header.containsKey("Footer version")
+        if (hasFooter) {
+            // Partition image: its own descriptor is the first Hash/Hashtree
+            // block (a footer image can additionally embed props, but its
+            // chain/included descriptors belong to a separate vbmeta).
+            val own = descs.firstOrNull { it.type == "Hash" || it.type == "Hashtree" }
+            if (own != null) {
+                return ImageInspection(
+                    descriptor = own.type.toDescriptorKey(),
+                    partitionName = own.fields["Partition Name"],
+                    algorithm = header["Algorithm"],
+                    rollbackIndex = header["Rollback Index"]?.toLongOrNull(),
+                    flags = header["Flags"]?.toLongOrNull(),
+                    hashAlgorithm = own.fields["Hash Algorithm"]?.lowercase(),
+                    salt = own.fields["Salt"]?.takeIf { it.isNotBlank() },
+                    props = parsed.props,
+                    includedPartitions = emptyList(),
+                    chainPartitions = emptyList(),
+                    partitionSize = partitionSize,
+                )
+            }
+            // Footer present but only exotic descriptors — fall through and
+            // treat it like a vbmeta-style container below.
         }
+
+        // Bare vbmeta blob (or degenerate footer image): descriptors name
+        // other partitions.
+        return ImageInspection(
+            descriptor = "vbmeta",
+            partitionName = null,
+            algorithm = header["Algorithm"],
+            rollbackIndex = header["Rollback Index"]?.toLongOrNull(),
+            flags = header["Flags"]?.toLongOrNull(),
+            hashAlgorithm = null,
+            salt = null,
+            props = parsed.props,
+            includedPartitions = includedNames,
+            chainPartitions = chainEntries,
+            partitionSize = partitionSize,
+        )
     }
 
     /** "Hash descriptor" -> "hash", "Hashtree descriptor" -> "hashtree". */

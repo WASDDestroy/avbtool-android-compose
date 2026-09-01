@@ -102,6 +102,15 @@ class InfoImageParserTest {
         """.trimIndent() + "\n"
 
     @Test
+    fun hashFooterWithArbitraryFileName_isHash() {
+        // Regression: product partition image stored as super3.img must not
+        // be misclassified just because the file name differs.
+        val inspection = InfoImageParser.inspect("super3.img", hashFooterOutput(partition = "product"))
+        assertEquals("hash", inspection.descriptor)
+        assertEquals("product", inspection.partitionName)
+    }
+
+    @Test
     fun hashFooterWithImageFileName_isHash() {
         val inspection = InfoImageParser.inspect("boot.img", hashFooterOutput())
         assertEquals("hash", inspection.descriptor)
@@ -147,12 +156,36 @@ class InfoImageParserTest {
     }
 
     @Test
-    fun singleDescriptorNamingOtherPartition_isVbmeta() {
-        // A vbmeta-style image whose single descriptor points elsewhere.
+    fun bareVbmetaWithoutFooter_isVbmeta() {
+        // make_vbmeta_image output has no footer block; its descriptors name
+        // other partitions regardless of count.
         val inspection = InfoImageParser.inspect(
             "vbmeta_custom.img",
-            hashFooterOutput(partition = "boot"),
+            vbmetaOutput().lines().filter { !it.startsWith("Footer version") }.joinToString("\n"),
         )
+        assertEquals("vbmeta", inspection.descriptor)
+        assertNull(inspection.partitionName)
+        assertEquals(listOf("dtbo"), inspection.includedPartitions)
+        assertEquals(listOf("boot:2:default.bin"), inspection.chainPartitions)
+    }
+
+    @Test
+    fun bareVbmetaWithSingleForeignDescriptor_isVbmeta() {
+        // Footer-less blob with exactly one descriptor naming another
+        // partition: still vbmeta — the old file-name heuristic would have
+        // misclassified this as a footer image.
+        val singleForeign = vbmetaOutput().substringBefore("Hash descriptor:") +
+            """            Hash descriptor:
+              Image Size:            16588800 bytes
+              Hash Algorithm:        sha256
+              Partition Name:        dtbo
+              Salt:                  aabbccdd
+              Digest:                0123456789abcdef
+              Flags:                 0
+            """.trimIndent() + "\n"
+        val withoutFooter = singleForeign
+            .lines().filter { !it.startsWith("Footer version") }.joinToString("\n")
+        val inspection = InfoImageParser.inspect("vbmeta.img", withoutFooter)
         assertEquals("vbmeta", inspection.descriptor)
         assertNull(inspection.partitionName)
     }
