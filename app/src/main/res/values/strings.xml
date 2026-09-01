@@ -439,4 +439,10 @@
     <string name="rollback_warning_invalid">Value %1$s is not a writable 64-bit unsigned integer (0 to 18446744073709551615). avbtool cannot write this value.</string>
     <string name="rollback_warning_continue">Continue anyway</string>
     <string name="rollback_warning_continue_countdown">Continue anyway (%1$d)</string>
+
+    <!-- Existing-vs-requested rollback index comparison for images that
+         already carry a valid AVB footer (re-signing rewrites the index). -->
+    <string name="rollback_mismatch_title">Rollback index differs from image</string>
+    <string name="rollback_mismatch_message">The selected image already carries a valid AVB footer whose vbmeta header stores rollback index %1$s. Signing replaces it with %2$s: a higher value permanently raises the device\'s stored minimum once accepted, and a lower value may make the image fail verification on the device. Continue?</string>
+    <string name="rollback_mismatch_scope_note">Image\'s existing rollback index is %1$s, but this profile sets %2$s.</string>
 </resources>

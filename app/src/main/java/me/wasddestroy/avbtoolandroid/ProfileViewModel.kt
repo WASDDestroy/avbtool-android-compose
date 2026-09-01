@@ -83,11 +83,16 @@ data class ProfilePartitionSpec(
  * Data backing the sign-scope dialog: every partition of the active profile
  * with its descriptor type and the live result of probing its input image
  * (footer partitions only). Null while no dialog is shown.
+ *
+ * [existingRollbackIndex] carries the footer rollback index read straight
+ * from each probed image; re-signing rewrites that value, so the dialog can
+ * warn where the profile sets a different one.
  */
 data class SignScopePlan(
     val partitions: List<String> = emptyList(),
     val descriptors: Map<String, String> = emptyMap(),
     val imageAvailable: Map<String, Boolean> = emptyMap(),
+    val existingRollbackIndex: Map<String, BigInteger> = emptyMap(),
 )
 
 data class ProfileUiState(
@@ -772,7 +777,12 @@ class ProfileViewModel(
                     SignScopePlan(
                         partitions = spec.partitions.map { it.partition },
                         descriptors = spec.partitions.associate { it.partition to it.descriptor },
-                        imageAvailable = probe,
+                        imageAvailable = probe.mapValues { it.value.first },
+                        existingRollbackIndex = buildMap {
+                            probe.forEach { (partition, result) ->
+                                result.second?.let { put(partition, it) }
+                            }
+                        },
                     )
                 }
             }
@@ -780,16 +790,20 @@ class ProfileViewModel(
         }
     }
 
-    /** Opens and immediately closes the picked image to verify it is readable. */
-    private suspend fun probeImage(partition: String): Boolean {
-        val uri = getImage(partition)?.toUri() ?: return false
+    /**
+     * Opens and immediately closes the picked image to verify it is readable,
+     * then reads its existing footer rollback index (null when the image has
+     * no valid AVB footer). Runs on the IO dispatcher.
+     */
+    private suspend fun probeImage(partition: String): Pair<Boolean, BigInteger?> {
+        val uri = getImage(partition)?.toUri() ?: return false to null
         val fd = bridge.openRead(uri)
-        return if (fd == null) {
-            false
-        } else {
-            bridge.closeFd(fd)
-            true
-        }
+        if (fd == null) return false to null
+        bridge.closeFd(fd)
+        val existing = runCatching {
+            AvbFooterProbe.readRollbackIndex(appContext.contentResolver, uri)
+        }.getOrNull()
+        return true to existing
     }
 
     fun dismissSignPlan() {

@@ -61,6 +61,7 @@ import androidx.compose.ui.unit.sp
 import androidx.core.net.toUri
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import java.math.BigInteger
 import me.wasddestroy.avbtoolandroid.ui.components.DialogConfirmButton
 import me.wasddestroy.avbtoolandroid.ui.components.DialogDismissButton
 import me.wasddestroy.avbtoolandroid.ui.components.PreferenceGroup
@@ -1135,6 +1136,13 @@ private fun SignScopeDialog(
                 plan.partitions.forEach { partition ->
                     val f = feasibility[partition] ?: SignScopePlanner.Feasibility(feasible = true)
                     val isVbmeta = plan.descriptors[partition] == "vbmeta"
+                    // Re-signing rewrites the image's existing rollback index;
+                    // where the profile sets a different one, the user is
+                    // warned right where they pick the scope.
+                    val spec = specs.firstOrNull { it.partition == partition }
+                    val existingIndex = plan.existingRollbackIndex[partition]
+                    val rollbackMismatch = spec?.rollbackIndex != null && existingIndex != null &&
+                        existingIndex != BigInteger.valueOf(spec.rollbackIndex)
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -1170,6 +1178,17 @@ private fun SignScopeDialog(
                                     it,
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                            if (rollbackMismatch) {
+                                Text(
+                                    stringResource(
+                                        R.string.rollback_mismatch_scope_note,
+                                        existingIndex.toString(),
+                                        spec!!.rollbackIndex.toString(),
+                                    ),
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.error,
                                 )
                             }
                         }

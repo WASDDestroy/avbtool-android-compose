@@ -437,4 +437,10 @@
     <string name="rollback_warning_invalid">值 %1$s 不是可写入的 64 位无符号整数（0 ～ 18446744073709551615），avbtool 无法写入该值。</string>
     <string name="rollback_warning_continue">仍要继续</string>
     <string name="rollback_warning_continue_countdown">仍要继续（%1$d）</string>
+
+    <!-- 已有 AVB 页脚的镜像重签名时会整体改写防回滚指数，
+         因此将镜像原值与请求值比较并提示不一致。 -->
+    <string name="rollback_mismatch_title">防回滚指数与镜像不一致</string>
+    <string name="rollback_mismatch_message">所选镜像已包含有效的 AVB 页脚，其 vbmeta 头中的防回滚指数为 %1$s。签名会将其替换为 %2$s：更高的值一旦被设备接受将永久抬高存储的最低值；更低的值可能导致镜像无法通过设备验证。是否继续？</string>
+    <string name="rollback_mismatch_scope_note">镜像现有防回滚指数为 %1$s，与配置中的 %2$s 不一致。</string>
 </resources>

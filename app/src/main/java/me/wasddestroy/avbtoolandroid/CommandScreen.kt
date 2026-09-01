@@ -65,6 +65,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -81,6 +82,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.math.BigInteger
 import me.wasddestroy.avbtoolandroid.ui.components.DialogConfirmButton
 import me.wasddestroy.avbtoolandroid.ui.components.DialogDismissButton
 import me.wasddestroy.avbtoolandroid.ui.components.PreferenceGroup
@@ -152,6 +157,8 @@ fun CommandScreen(
     var advancedExpanded by remember { mutableStateOf(false) }
     var previewExpanded by remember { mutableStateOf(false) }
     var pendingRollbackVerdict by remember { mutableStateOf<RollbackIndexVerdict?>(null) }
+    var pendingRollbackMismatch by remember { mutableStateOf<Pair<BigInteger, BigInteger>?>(null) }
+    val coroutineScope = rememberCoroutineScope()
 
     val openDocument = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri: Uri? ->
         chainKeyPickRequest?.let { callback ->
@@ -186,6 +193,39 @@ fun CommandScreen(
         viewModel.dismissOutputFile()
     }
 
+    fun proceedAfterRollbackChecks() {
+        val firstInput = command.inputs.firstOrNull()
+        val inputUri = if (firstInput != null) values[firstInput.key].orEmpty() else null
+        if (command.readOnly) {
+            viewModel.run(command, values, inputUri?.toUri())
+        } else {
+            copyWarning = true
+        }
+    }
+
+    // Re-signing rewrites the whole vbmeta blob (avbtool truncates an existing
+    // footer away first), so when the picked image carries one, its existing
+    // rollback index is compared against the requested value and a mismatch
+    // must be confirmed explicitly.
+    fun checkExistingFooterThenProceed(requested: BigInteger) {
+        val firstInput = command.inputs.firstOrNull()
+        val raw = firstInput?.let { values[it.key].orEmpty() }.orEmpty()
+        if (raw.isBlank()) {
+            proceedAfterRollbackChecks()
+            return
+        }
+        coroutineScope.launch {
+            val existing = withContext(Dispatchers.IO) {
+                AvbFooterProbe.readRollbackIndex(context.contentResolver, raw.toUri())
+            }
+            if (existing != null && existing != requested) {
+                pendingRollbackMismatch = existing to requested
+            } else {
+                proceedAfterRollbackChecks()
+            }
+        }
+    }
+
     fun onRun() {
         val firstInput = command.inputs.firstOrNull()
         val inputUri = if (firstInput != null) values[firstInput.key].orEmpty() else null
@@ -193,27 +233,26 @@ fun CommandScreen(
             viewModel.failWithMissingImage()
             return
         }
-        fun proceed() {
-            if (command.readOnly) {
-                viewModel.run(command, values, inputUri?.toUri())
-            } else {
-                copyWarning = true
-            }
-        }
         // The rollback index is the only AVB value written to RPMB, so its
         // value is classified before any signing prompt: values matching
         // neither known scheme, or dated beyond the local clock, must be
         // confirmed deliberately.
-        val rollbackArg = command.args.firstOrNull { it.key == "--rollback_index" }
-        val rawRollback = rollbackArg?.let { values[it.key].orEmpty().trim() }.orEmpty()
-        if (rollbackArg == null || rawRollback.isEmpty()) {
-            proceed()
+        val rollbackArg = command.args.firstOrNull { it.key == "--rollback_index" } ?: run {
+            proceedAfterRollbackChecks()
             return
         }
-        when (val verdict = RollbackIndexGuard.classifyText(rawRollback, System.currentTimeMillis() / 1000)) {
-            is RollbackIndexVerdict.Ok -> proceed()
-            else -> pendingRollbackVerdict = verdict
+        val rawRollback = values[rollbackArg.key].orEmpty().trim()
+        val requested = RollbackIndexGuard.parse(rawRollback) ?: BigInteger.ZERO
+        if (rawRollback.isNotEmpty()) {
+            when (val verdict = RollbackIndexGuard.classifyText(rawRollback, System.currentTimeMillis() / 1000)) {
+                is RollbackIndexVerdict.Ok -> Unit
+                else -> {
+                    pendingRollbackVerdict = verdict
+                    return
+                }
+            }
         }
+        checkExistingFooterThenProceed(requested)
     }
 
     Scaffold(
@@ -498,21 +537,44 @@ fun CommandScreen(
             findings = listOf(RollbackIndexFinding(label, verdict)),
             onDismiss = { pendingRollbackVerdict = null },
             // Invalid values cannot be written at all, so there is nothing to
-            // confirm; anomalies continue into the normal run flow.
+            // confirm; anomalies continue into the footer comparison and the
+            // normal run flow.
             onContinue = if (verdict is RollbackIndexVerdict.Invalid) {
                 null
             } else {
                 {
                     pendingRollbackVerdict = null
-                    if (command.readOnly) {
-                        viewModel.run(
-                            command,
-                            values,
-                            command.inputs.firstOrNull()?.let { values[it.key].orEmpty().toUri() },
-                        )
-                    } else {
-                        copyWarning = true
-                    }
+                    val raw = values["--rollback_index"].orEmpty().trim()
+                    checkExistingFooterThenProceed(RollbackIndexGuard.parse(raw) ?: BigInteger.ZERO)
+                }
+            },
+        )
+    }
+
+    pendingRollbackMismatch?.let { (existing, requested) ->
+        AlertDialog(
+            onDismissRequest = { pendingRollbackMismatch = null },
+            title = { Text(stringResource(R.string.rollback_mismatch_title)) },
+            text = {
+                Text(
+                    stringResource(
+                        R.string.rollback_mismatch_message,
+                        existing.toString(),
+                        requested.toString(),
+                    ),
+                )
+            },
+            confirmButton = {
+                DialogConfirmButton(onClick = {
+                    pendingRollbackMismatch = null
+                    proceedAfterRollbackChecks()
+                }) {
+                    Text(stringResource(R.string.command_continue))
+                }
+            },
+            dismissButton = {
+                DialogDismissButton(onClick = { pendingRollbackMismatch = null }) {
+                    Text(stringResource(R.string.command_cancel))
                 }
             },
         )
