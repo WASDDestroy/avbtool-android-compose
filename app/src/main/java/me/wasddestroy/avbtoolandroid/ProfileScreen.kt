@@ -942,11 +942,9 @@ private fun ProfileRow(
 /** Sentinel image-partition key routing a launcher pick into the add-partition dialog. */
 private const val ADD_PARTITION_KEY = "\u0000add_partition"
 
-/** MIME types offered to the SAF picker for key files (.pem / .pk8). */
+/** MIME types offered to the SAF picker for key files (.pem). */
 private val KEY_FILE_MIME_TYPES = arrayOf(
     "application/x-pem-file",
-    "application/x-pkcs8",
-    "application/pkcs8",
     "application/octet-stream",
 )
 
