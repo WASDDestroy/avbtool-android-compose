@@ -20,6 +20,12 @@ import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
 
+/**
+ * One partition of an imported signing profile. Mirrors the config
+ * generator's v3 `PartitionConfig` schema (CONFIG_EXPANSION.md §3.2), so
+ * every field the generator can write is parsed and mapped onto avbtool
+ * flags in [buildAvbArgs].
+ */
 data class ProfilePartitionSpec(
     val partition: String,
     val image: String,
@@ -35,6 +41,40 @@ data class ProfilePartitionSpec(
     val setHashtreeDisabledFlag: Boolean,
     val includedPartitions: List<String>,
     val chainPartitions: List<String>,
+    // hash: partition size is derived from the image instead of fixed.
+    val dynamicPartitionSize: Boolean = false,
+    // Location of the main vbmeta rollback index (all three commands).
+    val rollbackIndexLocation: Long? = null,
+    // Footer hash algorithm; the generator defaults to sha256, while bare
+    // avbtool would silently fall back to sha1 for hashtree partitions.
+    val hashAlgorithm: String = "sha256",
+    val propFromFile: List<Pair<String, String>> = emptyList(),
+    val setVerificationDisabledFlag: Boolean = false,
+    // hashtree-specific
+    val blockSize: Long = 4096,
+    val doNotGenerateFec: Boolean = false,
+    val fecNumRoots: Long = 2,
+    val noHashtree: Boolean = false,
+    val checkAtMostOnce: Boolean = false,
+    val setupAsRootfsFromKernel: Boolean = false,
+    // vbmeta / footer common
+    val includeDescriptorsFromImage: List<String> = emptyList(),
+    val chainPartitionsDoNotUseAb: List<String> = emptyList(),
+    val kernelCmdlines: List<String> = emptyList(),
+    val setupRootfsFromKernel: String? = null,
+    val paddingSize: Long? = null,
+    val outputVbmetaImage: String? = null,
+    // behavior switches
+    val calcMaxImageSize: Boolean = false,
+    val doNotAppendVbmetaImage: Boolean = false,
+    val printRequiredLibavbVersion: Boolean = false,
+    val usePersistentDigest: Boolean = false,
+    val doNotUseAb: Boolean = false,
+    // signing helper
+    val signingHelper: String? = null,
+    val signingHelperWithFiles: String? = null,
+    val publicKeyMetadata: String? = null,
+    val appendToReleaseString: String? = null,
 )
 
 data class ProfileUiState(
@@ -453,27 +493,38 @@ class ProfileViewModel(
             // The vbmeta image is generated, not modified: p.image is the output name.
             argv += listOf("--output", File(imageDir, p.image).absolutePath)
             p.rollbackIndex?.let { argv += listOf("--rollback_index", it.toString()) }
+            p.rollbackIndexLocation?.let { argv += listOf("--rollback_index_location", it.toString()) }
             p.flags?.let { argv += listOf("--flags", it.toString()) }
             if (p.setHashtreeDisabledFlag) argv += "--set_hashtree_disabled_flag"
+            if (p.setVerificationDisabledFlag) argv += "--set_verification_disabled_flag"
+            p.paddingSize?.let { argv += listOf("--padding_size", it.toString()) }
             fullSpec?.partitions?.forEach { inc ->
                 if (inc.partition in p.includedPartitions) {
                     argv += "--include_descriptors_from_image"
                     argv += File(File(scratchRoot, inc.partition), inc.image).absolutePath
                 }
             }
-            p.chainPartitions.forEach { entry ->
-                // entry = "partition:rollback:keyfile.bin"; the key file lives
-                // in the profile's keys dir.
-                val parts = entry.split(":")
-                if (parts.size >= 3) {
-                    val keyFile = File(profile.dir, "keys/${parts.drop(2).joinToString(":")}")
-                    argv += "--chain_partition"
-                    argv += "${parts[0]}:${parts[1]}:${keyFile.absolutePath}"
-                } else {
-                    argv += "--chain_partition"
-                    argv += entry
-                }
+            p.includeDescriptorsFromImage.forEach { entry ->
+                argv += "--include_descriptors_from_image"
+                argv += resolveImageFile(entry, fullSpec, scratchRoot, profile)
             }
+            p.chainPartitions.forEach { entry ->
+                argv += "--chain_partition"
+                argv += resolveChainEntry(entry, profile)
+            }
+            p.chainPartitionsDoNotUseAb.forEach { entry ->
+                argv += "--chain_partition_do_not_use_ab"
+                argv += resolveChainEntry(entry, profile)
+            }
+            p.kernelCmdlines.forEach { argv += listOf("--kernel_cmdline", it) }
+            p.setupRootfsFromKernel?.let {
+                argv += listOf("--setup_rootfs_from_kernel", resolveImageFile(it, fullSpec, scratchRoot, profile))
+            }
+            if (p.printRequiredLibavbVersion) argv += "--print_required_libavb_version"
+            p.signingHelper?.let { argv += listOf("--signing_helper", it) }
+            p.signingHelperWithFiles?.let { argv += listOf("--signing_helper_with_files", it) }
+            p.publicKeyMetadata?.let { argv += listOf("--public_key_metadata", resolveProfileFile(profile, it)) }
+            p.appendToReleaseString?.let { argv += listOf("--append_to_release_string", it) }
         } else {
             argv += "add_${p.descriptor}_footer"
             argv += "--image"
@@ -486,12 +537,56 @@ class ProfileViewModel(
             }
             argv += listOf("--partition_name", p.partitionName)
             p.partitionSize?.let { argv += listOf("--partition_size", it.toString()) }
-            if (p.descriptor == "hash") {
-                p.rollbackIndex?.let { argv += listOf("--rollback_index", it.toString()) }
+            // Only add_hash_footer knows --dynamic_partition_size; avbtool has
+            // no such option for add_hashtree_footer.
+            if (p.descriptor == "hash" && p.dynamicPartitionSize) argv += "--dynamic_partition_size"
+            // Emitted explicitly: bare avbtool defaults hashtree to sha1,
+            // while the config generator (and this app) always mean sha256
+            // unless the profile says otherwise.
+            argv += listOf("--hash_algorithm", p.hashAlgorithm)
+            p.rollbackIndex?.let { argv += listOf("--rollback_index", it.toString()) }
+            p.rollbackIndexLocation?.let { argv += listOf("--rollback_index_location", it.toString()) }
+            p.salt?.let { argv += listOf("--salt", it) }
+            if (p.descriptor == "hashtree") {
+                argv += listOf("--block_size", p.blockSize.toString())
+                if (p.doNotGenerateFec) argv += "--do_not_generate_fec"
+                if (p.fecNumRoots != 2L) argv += listOf("--fec_num_roots", p.fecNumRoots.toString())
+                if (p.noHashtree) argv += "--no_hashtree"
+                if (p.checkAtMostOnce) argv += "--check_at_most_once"
+                if (p.setupAsRootfsFromKernel) argv += "--setup_as_rootfs_from_kernel"
             }
-            p.salt?.let {
-                argv += listOf("--salt", it)
+            p.flags?.let { argv += listOf("--flags", it.toString()) }
+            if (p.setHashtreeDisabledFlag) argv += "--set_hashtree_disabled_flag"
+            if (p.setVerificationDisabledFlag) argv += "--set_verification_disabled_flag"
+            if (p.calcMaxImageSize) argv += "--calc_max_image_size"
+            if (p.doNotAppendVbmetaImage) argv += "--do_not_append_vbmeta_image"
+            p.includeDescriptorsFromImage.forEach { entry ->
+                argv += "--include_descriptors_from_image"
+                argv += resolveImageFile(entry, fullSpec, scratchRoot, profile)
             }
+            p.chainPartitions.forEach { entry ->
+                argv += "--chain_partition"
+                argv += resolveChainEntry(entry, profile)
+            }
+            p.chainPartitionsDoNotUseAb.forEach { entry ->
+                argv += "--chain_partition_do_not_use_ab"
+                argv += resolveChainEntry(entry, profile)
+            }
+            p.outputVbmetaImage?.let {
+                val out = File(imageDir, it)
+                out.parentFile?.mkdirs()
+                argv += listOf("--output_vbmeta_image", out.absolutePath)
+            }
+            p.setupRootfsFromKernel?.let {
+                argv += listOf("--setup_rootfs_from_kernel", resolveImageFile(it, fullSpec, scratchRoot, profile))
+            }
+            if (p.printRequiredLibavbVersion) argv += "--print_required_libavb_version"
+            if (p.usePersistentDigest) argv += "--use_persistent_digest"
+            if (p.doNotUseAb) argv += "--do_not_use_ab"
+            p.signingHelper?.let { argv += listOf("--signing_helper", it) }
+            p.signingHelperWithFiles?.let { argv += listOf("--signing_helper_with_files", it) }
+            p.publicKeyMetadata?.let { argv += listOf("--public_key_metadata", resolveProfileFile(profile, it)) }
+            p.appendToReleaseString?.let { argv += listOf("--append_to_release_string", it) }
         }
         argv += listOf("--algorithm", p.algorithm)
         val keyPath = p.keyId?.let { resolveKeyPath(profile, it) }
@@ -501,14 +596,55 @@ class ProfileViewModel(
         // avbtool appends every --prop verbatim without deduplicating keys.
         // For footer commands the props land in the partition's reserved size
         // so they cannot grow the image; for make_vbmeta_image each prop
-        // extends the generated blob, so adding them is opt-in.
+        // extends the generated blob, so adding them is opt-in. The same
+        // gate covers --prop_from_file.
         if (p.descriptor != "vbmeta" || addPropsToVbmeta) {
             p.props.forEach { (k, v) ->
                 argv += "--prop"
                 argv += "$k:$v"
             }
+            p.propFromFile.forEach { (k, path) ->
+                argv += "--prop_from_file"
+                argv += "$k:${resolveProfileFile(profile, path)}"
+            }
         }
         return argv
+    }
+
+    /** Rewrites "partition:rollback:keyfile.bin", resolving the key file against the profile's keys dir. */
+    private fun resolveChainEntry(entry: String, profile: ProfileStore.ProfileEntry): String {
+        val parts = entry.split(":")
+        if (parts.size < 3) return entry
+        val keyFile = File(profile.dir, "keys/${parts.drop(2).joinToString(":")}")
+        return "${parts[0]}:${parts[1]}:${keyFile.absolutePath}"
+    }
+
+    /**
+     * Resolves an image reference from the profile: a staged partition image
+     * by file name, else a file inside the profile folder, else the raw value
+     * (avbtool reports the missing file).
+     */
+    private fun resolveImageFile(
+        entry: String,
+        fullSpec: ProfileSpec?,
+        scratchRoot: File,
+        profile: ProfileStore.ProfileEntry,
+    ): String {
+        fullSpec?.partitions?.firstOrNull { it.image == entry }?.let {
+            return File(File(scratchRoot, it.partition), it.image).absolutePath
+        }
+        val inProfile = File(profile.dir, entry)
+        if (inProfile.isFile) return inProfile.absolutePath
+        return entry
+    }
+
+    /** Resolves a loose file reference (public key metadata, prop source) against the profile folder / key store. */
+    private fun resolveProfileFile(profile: ProfileStore.ProfileEntry, path: String): String {
+        val inProfile = File(profile.dir, path)
+        if (inProfile.isFile) return inProfile.absolutePath
+        val inKeys = File(profile.dir, "keys/$path")
+        if (inKeys.isFile) return inKeys.absolutePath
+        return path
     }
 
     /**
@@ -567,22 +703,67 @@ class ProfileViewModel(
                 rollbackIndex = obj.optLong("rollback_index").takeIf { obj.has("rollback_index") },
                 salt = obj.optString("salt").takeIf { it.isNotBlank() },
                 flags = obj.optLong("flags").takeIf { obj.has("flags") },
-                props = obj.optJSONArray("props")?.let { arr ->
-                    (0 until arr.length()).mapNotNull { i ->
-                        val pair = arr.optJSONArray(i) ?: return@mapNotNull null
-                        if (pair.length() >= 2) pair.optString(0) to pair.optString(1) else null
-                    }
-                } ?: emptyList(),
-                setHashtreeDisabledFlag = obj.optBoolean("set_hashtree_disabled_flag", false),
-                includedPartitions = obj.optJSONArray("included_partitions")?.let { arr ->
-                    (0 until arr.length()).map { arr.optString(it) }
-                } ?: emptyList(),
-                chainPartitions = obj.optJSONArray("chain_partitions")?.let { arr ->
-                    (0 until arr.length()).map { arr.optString(it) }
-                } ?: emptyList(),
+                props = parsePairs(obj.opt("props")),                setHashtreeDisabledFlag = obj.optBoolean("set_hashtree_disabled_flag", false),
+                includedPartitions = obj.optStringList("included_partitions"),
+                chainPartitions = obj.optStringList("chain_partitions"),
+                dynamicPartitionSize = obj.optBoolean("dynamic_partition_size", false),
+                rollbackIndexLocation = obj.optLong("rollback_index_location").takeIf { obj.has("rollback_index_location") },
+                hashAlgorithm = obj.optString("hash_algorithm", "sha256").ifBlank { "sha256" },
+                propFromFile = parsePairs(obj.opt("prop_from_file")),
+                setVerificationDisabledFlag = obj.optBoolean("set_verification_disabled_flag", false),
+                blockSize = obj.optLong("block_size", 4096),
+                doNotGenerateFec = obj.optBoolean("do_not_generate_fec", false),
+                fecNumRoots = obj.optLong("fec_num_roots", 2),
+                noHashtree = obj.optBoolean("no_hashtree", false),
+                checkAtMostOnce = obj.optBoolean("check_at_most_once", false),
+                setupAsRootfsFromKernel = obj.optBoolean("setup_as_rootfs_from_kernel", false),
+                includeDescriptorsFromImage = obj.optStringList("include_descriptors_from_image"),
+                chainPartitionsDoNotUseAb = obj.optStringList("chain_partitions_do_not_use_ab"),
+                kernelCmdlines = obj.optStringList("kernel_cmdlines"),
+                setupRootfsFromKernel = obj.optString("setup_rootfs_from_kernel").takeIf { it.isNotBlank() },
+                paddingSize = obj.optLong("padding_size").takeIf { it > 0 },
+                outputVbmetaImage = obj.optString("output_vbmeta_image").takeIf { it.isNotBlank() },
+                calcMaxImageSize = obj.optBoolean("calc_max_image_size", false),
+                doNotAppendVbmetaImage = obj.optBoolean("do_not_append_vbmeta_image", false),
+                printRequiredLibavbVersion = obj.optBoolean("print_required_libavb_version", false),
+                usePersistentDigest = obj.optBoolean("use_persistent_digest", false),
+                doNotUseAb = obj.optBoolean("do_not_use_ab", false),
+                signingHelper = obj.optString("signing_helper").takeIf { it.isNotBlank() },
+                signingHelperWithFiles = obj.optString("signing_helper_with_files").takeIf { it.isNotBlank() },
+                publicKeyMetadata = obj.optString("public_key_metadata").takeIf { it.isNotBlank() },
+                appendToReleaseString = obj.optString("append_to_release_string").takeIf { it.isNotBlank() },
             )
         }
         return ProfileSpec(keyStorePath = raw.optString("key_store_path", "keys"), partitions = orderPartitions(specs))
+    }
+
+    /**
+     * Parses props/prop_from_file. Accepts the canonical [[k, v], ...] form,
+     * a flat [k, v] pair, or a {k: v} object (all three are produced by the
+     * config generator or its legacy codecs).
+     */
+    private fun parsePairs(value: Any?): List<Pair<String, String>> {
+        return when (value) {
+            is JSONObject -> value.keys().asSequence().map { k -> k to value.optString(k) }.toList()
+            is JSONArray -> {
+                // A flat pair has two scalar elements, no nested array.
+                if (value.length() == 2 && value.optJSONArray(0) == null) {
+                    listOf(value.optString(0) to value.optString(1))
+                } else {
+                    (0 until value.length()).mapNotNull { i ->
+                        val pair = value.optJSONArray(i) ?: return@mapNotNull null
+                        if (pair.length() >= 2) pair.optString(0) to pair.optString(1) else null
+                    }
+                }
+            }
+            else -> emptyList()
+        }
+    }
+
+    private fun JSONObject.optStringList(name: String): List<String> {
+        return optJSONArray(name)?.let { arr ->
+            (0 until arr.length()).map { arr.optString(it) }
+        } ?: emptyList()
     }
 
     private fun resolveKeyPath(profile: ProfileStore.ProfileEntry, keyId: String): String? {
