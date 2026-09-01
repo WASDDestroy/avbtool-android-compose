@@ -281,26 +281,35 @@ fun ProfileScreen(
                     )
                 }
             }
-            if (uiState.activeId != null && uiState.activeSpecs.isNotEmpty()) {
+            if (uiState.activeId != null) {
                 preferenceGroup(key = "images", titleRes = R.string.profile_group_images) {
-                    uiState.activeSpecs.forEach { spec ->
-                        row("image_${spec.partition}") {
+                    val specs = uiState.activeSpecs
+                    if (specs.isEmpty()) {
+                        row("partitions_empty") {
                             PreferenceRow(
-                                title = spec.partition,
-                                summary = uiState.imageSummaries[spec.partition]
-                                    ?: stringResource(R.string.profile_image_not_selected),
-                                iconContent = {
-                                    Icon(
-                                        imageVector = Icons.Filled.Album,
-                                        contentDescription = null,
-                                        modifier = Modifier.size(24.dp),
-                                    )
-                                },
-                                onClick = {
-                                    pendingImagePartition = spec.partition
-                                    imageLauncher.launch(arrayOf("*/*"))
-                                },
+                                title = stringResource(R.string.profile_partitions_empty),
                             )
+                        }
+                    } else {
+                        specs.forEach { spec ->
+                            row("image_${spec.partition}") {
+                                PreferenceRow(
+                                    title = spec.partition,
+                                    summary = uiState.imageSummaries[spec.partition]
+                                        ?: stringResource(R.string.profile_image_not_selected),
+                                    iconContent = {
+                                        Icon(
+                                            imageVector = Icons.Filled.Album,
+                                            contentDescription = null,
+                                            modifier = Modifier.size(24.dp),
+                                        )
+                                    },
+                                    onClick = {
+                                        pendingImagePartition = spec.partition
+                                        imageLauncher.launch(arrayOf("*/*"))
+                                    },
+                                )
+                            }
                         }
                     }
                     row("partition_actions") {

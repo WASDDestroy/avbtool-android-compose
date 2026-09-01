@@ -419,4 +419,5 @@
     <string name="profile_partition_warning_default">Use default descriptor</string>
     <string name="profile_partition_add_conflict">A partition with this name already exists.</string>
     <string name="profile_partition_add_failed">Could not add the partition.</string>
+    <string name="profile_partitions_empty">The profile does not contain any partitions.</string>
 </resources>

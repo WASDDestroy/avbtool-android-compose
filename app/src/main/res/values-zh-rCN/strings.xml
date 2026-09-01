@@ -417,4 +417,5 @@
     <string name="profile_partition_warning_default">使用默认描述符</string>
     <string name="profile_partition_add_conflict">同名分区已存在。</string>
     <string name="profile_partition_add_failed">添加分区失败。</string>
+    <string name="profile_partitions_empty">配置文件中不包含分区信息。</string>
 </resources>
