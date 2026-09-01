@@ -346,6 +346,85 @@ class ProfileStore(private val context: Context) {
             return true
         }
     }
+
+    /**
+     * One entry of a profile's key store manifest (`keys/manifest.json`,
+     * schema v3): both file names are relative to the profile's `keys/`
+     * folder and the public key follows the `<private key file name>.bin`
+     * convention. No digests are recorded here — the schema keeps only the
+     * two file names.
+     */
+    data class KeyManifestEntry(
+        val privateKey: String,
+        val publicKey: String?,
+    )
+
+    fun keysDir(profileId: String): File = File(File(profileDir, profileId), "keys")
+
+    /** Resolves a file name recorded in the key manifest against `keys/`. */
+    fun keyFile(profileId: String, fileName: String): File = File(keysDir(profileId), fileName)
+
+    /**
+     * Loads the key manifest of [profileId], sorted by key id. Returns an
+     * empty map when the profile or its manifest is missing/unreadable, so
+     * callers can treat a broken store as "no keys".
+     */
+    fun readKeyManifest(profileId: String): LinkedHashMap<String, KeyManifestEntry> {
+        val result = LinkedHashMap<String, KeyManifestEntry>()
+        val file = File(keysDir(profileId), "manifest.json")
+        if (!file.isFile) return result
+        return try {
+            val obj = JSONObject(file.readText())
+            for (id in obj.keys().asSequence().sorted()) {
+                val entry = obj.optJSONObject(id) ?: continue
+                val privateKey = entry.optString("private_key")
+                if (privateKey.isBlank()) continue
+                result[id] = KeyManifestEntry(
+                    privateKey = privateKey,
+                    publicKey = entry.optString("public_key").takeIf { it.isNotBlank() },
+                )
+            }
+            result
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to read key manifest of '$profileId'", e)
+            LinkedHashMap()
+        }
+    }
+
+    /**
+     * Replaces the key manifest of [profileId] with [entries] (temp file +
+     * rename). Entries are written in exactly the schema v3 shape; entries
+     * without a public key file omit that field.
+     */
+    fun writeKeyManifest(profileId: String, entries: Map<String, KeyManifestEntry>): Boolean {
+        if (!isValidProfileId(profileId)) return false
+        val dir = keysDir(profileId)
+        if (!dir.isDirectory && !dir.mkdirs()) return false
+        val obj = JSONObject()
+        entries.forEach { (id, entry) ->
+            obj.put(
+                id,
+                JSONObject().apply {
+                    put("private_key", entry.privateKey)
+                    entry.publicKey?.let { put("public_key", it) }
+                },
+            )
+        }
+        return try {
+            val file = File(dir, "manifest.json")
+            val tmp = File(dir, "manifest.json.tmp_${System.nanoTime()}")
+            tmp.writeText(obj.toString(2))
+            if (!tmp.renameTo(file)) {
+                tmp.delete()
+                false
+            } else {
+                true
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to write key manifest of '$profileId'", e)
+            false
+        }
+    }
 }
 
 /** Persisted "active profile" choice, stored in SharedPreferences. */
@@ -362,6 +441,31 @@ class ActiveProfileStore(context: Context) {
 
     companion object {
         private const val KEY_ACTIVE_PROFILE = "active_profile_id"
+    }
+}
+
+/**
+ * Persisted per-profile "default key" choice — the key id new partition
+ * entries fall back to when an image's public key digest matches nothing in
+ * the key store. Lives in its own preferences file so it never mixes with
+ * the settings panel's preferences, and the entry is dropped together with
+ * the profile.
+ */
+class ProfileKeyActivationStore(context: Context) {
+    private val sp = context.applicationContext.getSharedPreferences(
+        "profile_key_activation", Context.MODE_PRIVATE,
+    )
+
+    fun read(profileId: String): String? = sp.getString(profileId, null)
+
+    fun write(profileId: String, keyId: String?) {
+        val editor = sp.edit()
+        if (keyId == null) {
+            editor.remove(profileId)
+        } else {
+            editor.putString(profileId, keyId)
+        }
+        editor.apply()
     }
 }
 

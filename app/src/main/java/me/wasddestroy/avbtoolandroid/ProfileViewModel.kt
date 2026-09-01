@@ -20,6 +20,7 @@ import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
 import java.math.BigInteger
+import java.security.MessageDigest
 
 /**
  * One partition of an imported signing profile. Mirrors the config
@@ -95,6 +96,43 @@ data class SignScopePlan(
     val existingRollbackIndex: Map<String, BigInteger> = emptyMap(),
 )
 
+/**
+ * One key of the active profile's key store, as shown by the key-store
+ * segment. [sha1] is the digest of the extracted public key file (lowercase
+ * hex); null means it is still being computed, and [sha1Failed] marks a
+ * missing or unreadable `.bin` so the row can show "unavailable" instead of
+ * an endless "computing".
+ */
+data class ProfileKeyUi(
+    val id: String,
+    val fileName: String,
+    val publicKeyFile: String?,
+    val sha1: String?,
+    val sha1Failed: Boolean = false,
+)
+
+/** Outcome of one add-key attempt. Success closes the dialog; the rest toast. */
+sealed class KeyImportEvent {
+    /** The key file was copied, pre-checked via extract_public_key and registered. */
+    data object Success : KeyImportEvent()
+
+    /** A key with this id is already in the store. */
+    data object DuplicateId : KeyImportEvent()
+
+    /** avbtool could not extract a public key from the picked file. */
+    data object InvalidKey : KeyImportEvent()
+
+    /** The key file could not be copied or the manifest could not be written. */
+    data object Failed : KeyImportEvent()
+}
+
+/** Multi-select outcome awaiting the delete-keys confirmation dialog. */
+data class PendingKeyDelete(
+    val ids: List<String>,
+    /** Key ids still referenced by profile.json entries; deletion warns but proceeds. */
+    val referencedIds: Set<String>,
+)
+
 data class ProfileUiState(
     val profiles: List<ProfileStore.ProfileEntry> = emptyList(),
     val activeId: String? = null,
@@ -129,6 +167,16 @@ data class ProfileUiState(
     val rollbackFindings: List<RollbackIndexFinding>? = null,
     /** Validated archive awaiting the rollback-index confirmation, one-shot. */
     val pendingImport: ProfileStore.StagedProfileImport? = null,
+    /** Keys of the active profile's key store, for the key-store segment. */
+    val keys: List<ProfileKeyUi> = emptyList(),
+    /** Key id the active profile treats as its default (activation) key. */
+    val defaultKeyId: String? = null,
+    /** Set while a key import runs; disables the add-key dialog buttons. */
+    val addingKey: Boolean = false,
+    /** One-shot outcome of an add-key attempt; consumed by the screen. */
+    val keyImportEvent: KeyImportEvent? = null,
+    /** Non-null shows the delete-keys confirmation dialog. */
+    val pendingKeyDelete: PendingKeyDelete? = null,
 )
 
 /**
@@ -158,6 +206,7 @@ class ProfileViewModel(
     private val bridge: SafFileBridge,
     /** Read fresh at import time, so the dangerous skip-verification toggle applies immediately. */
     private val settings: SettingsStore,
+    private val keyActivationStore: ProfileKeyActivationStore,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(ProfileUiState(activeId = activeStore.read()))
@@ -189,6 +238,7 @@ class ProfileViewModel(
             )
         }
         publishImageSummaries()
+        refreshKeys()
     }
 
     fun importProfile(bytes: ByteArray) {
@@ -317,6 +367,7 @@ class ProfileViewModel(
             if (_uiState.value.activeId == id) {
                 activeStore.write(null)
             }
+            keyActivationStore.write(id, null)
             imageSelections.keys.removeAll { it.startsWith("$id:") }
             // Drop grants only after removal, so shared URIs survive.
             imageSelections.values.forEach { releasePersistableGrant(it.toUri()) }
@@ -333,6 +384,10 @@ class ProfileViewModel(
 
     fun consumeAddPartitionEvent() {
         _uiState.update { it.copy(addPartitionEvent = null) }
+    }
+
+    fun consumeKeyImportEvent() {
+        _uiState.update { it.copy(keyImportEvent = null) }
     }
 
     /** Next "defaultN" name that avoids all existing partitions of the active profile. */
@@ -458,7 +513,7 @@ class ProfileViewModel(
         val ok = store.updateProfileJson(profileId) { obj ->
             obj.optJSONObject("partitions")?.put(
                 partitionName,
-                buildPartitionEntry(inspection, partitionName, fileName),
+                buildPartitionEntry(inspection, partitionName, fileName, profileId),
             )
         }
         return if (ok) {
@@ -480,7 +535,7 @@ class ProfileViewModel(
                 val name = desiredName.takeIf { it.isNotEmpty() && it !in existing }
                     ?: descriptorFallback?.takeIf { it !in existing }
                     ?: nextDefaultPartitionName(existing)
-                val entry = defaultPartitionEntry(name)
+                val entry = defaultPartitionEntry(profileId, name)
                 store.updateProfileJson(profileId) { obj ->
                     obj.optJSONObject("partitions")?.put(name, entry)
                 }.let { name to it }
@@ -499,14 +554,15 @@ class ProfileViewModel(
     /**
      * The default descriptor offered when an image is missing or invalid:
      * hash footer, 4096 bytes, rollback index 0, algorithm NONE, sha256,
-     * key mapping "default" (the key store is assumed pre-provisioned).
+     * key mapping "default" — or the profile's activated key when one is
+     * set (new entries default to the active key).
      */
-    private fun defaultPartitionEntry(partitionName: String): JSONObject {
+    private fun defaultPartitionEntry(profileId: String, partitionName: String): JSONObject {
         return JSONObject().apply {
             put("image", "$partitionName.img")
             put("descriptor", "hash")
             put("algorithm", "NONE")
-            put("key_id", "default")
+            put("key_id", keyActivationStore.read(profileId) ?: "default")
             put("partition_name", partitionName)
             put("partition_size", 4096)
             put("rollback_index", 0)
@@ -520,18 +576,23 @@ class ProfileViewModel(
      * rollback index come from the vbmeta header, the hash algorithm from the
      * descriptor (defaulting to sha256), flags are preserved as an integer,
      * and hash footers reuse the image's total size as the partition size so
-     * `add_hash_footer` has a size to work with.
+     * `add_hash_footer` has a size to work with. The key id mirrors the
+     * generator's mapping: the image's "Public key (sha1)" header is matched
+     * against the key store's extracted public keys, falling back to the
+     * profile's default (activated) key — or "default" when none is set.
      */
     private fun buildPartitionEntry(
         inspection: InfoImageParser.ImageInspection,
         partitionName: String,
         imageFileName: String,
+        profileId: String,
     ): JSONObject {
         val flags = inspection.flags ?: 0L
         val entry = JSONObject().apply {
             put("image", imageFileName)
             put("descriptor", inspection.descriptor)
             put("algorithm", inspection.algorithm ?: "NONE")
+            put("key_id", resolveEntryKeyId(profileId, inspection.publicKeySha1))
             put("rollback_index", inspection.rollbackIndex ?: 0L)
             if (flags != 0L) put("flags", flags)
             if (inspection.props.isNotEmpty()) {
@@ -599,6 +660,276 @@ class ProfileViewModel(
     fun setImage(partition: String, uri: Uri?) {
         val profileId = _uiState.value.activeId ?: return
         setImageInternal(profileId, partition, uri)
+    }
+
+    // ---- Key store management -------------------------------------------
+
+    /**
+     * Reloads the active profile's key store: publish the manifest entries
+     * immediately (digests blank), then fill in each public key SHA-1 off the
+     * main thread. Digests are never stored in the manifest — the schema v3
+     * manifest keeps only file names — so they are recomputed from the
+     * persisted `.bin` files on every reload. Every publish re-checks that
+     * the active profile has not switched in the meantime.
+     */
+    private fun refreshKeys() {
+        val profileId = _uiState.value.activeId
+        if (profileId == null) {
+            _uiState.update { it.copy(keys = emptyList(), defaultKeyId = null) }
+            return
+        }
+        viewModelScope.launch {
+            val manifest = withContext(Dispatchers.IO) {
+                runCatching { store.readKeyManifest(profileId) }.getOrNull() ?: LinkedHashMap()
+            }
+            val defaultId = withContext(Dispatchers.IO) { keyActivationStore.read(profileId) }
+            if (_uiState.value.activeId != profileId) return@launch
+            if (defaultId != null && defaultId !in manifest) {
+                // The activated key no longer exists (e.g. the profile was
+                // re-imported without it); drop the stale activation too.
+                keyActivationStore.write(profileId, null)
+            }
+            _uiState.update {
+                it.copy(
+                    keys = manifest.map { (id, entry) ->
+                        ProfileKeyUi(id = id, fileName = entry.privateKey, publicKeyFile = entry.publicKey, sha1 = null)
+                    },
+                    defaultKeyId = defaultId?.takeIf { id -> manifest.containsKey(id) },
+                )
+            }
+            for ((id, entry) in manifest) {
+                if (_uiState.value.activeId != profileId) return@launch
+                val sha1 = withContext(Dispatchers.Default) {
+                    entry.publicKey?.let { name -> sha1Hex(store.keyFile(profileId, name)) }
+                }
+                if (_uiState.value.activeId != profileId) return@launch
+                _uiState.update { state ->
+                    state.copy(
+                        keys = state.keys.map { key ->
+                            if (key.id == id) {
+                                key.copy(sha1 = sha1, sha1Failed = sha1 == null)
+                            } else {
+                                key
+                            }
+                        },
+                    )
+                }
+            }
+        }
+    }
+
+    /**
+     * Imports a key into the active profile's key store: the picked file is
+     * copied into `keys/` (renamed when the name is taken), pre-checked by
+     * running `avbtool extract_public_key` against it, and only then
+     * registered in the key manifest. The extracted public key `.bin` is
+     * persisted next to the private key per the schema v3 naming convention.
+     */
+    fun addKey(keyId: String, uri: Uri?, originalFileName: String?) {
+        val profileId = _uiState.value.activeId ?: return
+        val trimmedId = keyId.trim()
+        if (uri == null) {
+            _uiState.update { it.copy(keyImportEvent = KeyImportEvent.Failed) }
+            return
+        }
+        if (trimmedId.isEmpty() || !trimmedId.all { it.code in 0..127 }) {
+            _uiState.update { it.copy(keyImportEvent = KeyImportEvent.Failed) }
+            return
+        }
+        if (_uiState.value.addingKey) return
+        viewModelScope.launch {
+            _uiState.update { it.copy(addingKey = true, keyImportEvent = null) }
+            val event = withContext(Dispatchers.IO) {
+                importKey(profileId, trimmedId, uri, originalFileName)
+            }
+            _uiState.update { it.copy(addingKey = false, keyImportEvent = event) }
+            if (event == KeyImportEvent.Success) refreshKeys()
+        }
+    }
+
+    private suspend fun importKey(profileId: String, keyId: String, uri: Uri, originalFileName: String?): KeyImportEvent {
+        val manifest = runCatching { store.readKeyManifest(profileId) }.getOrNull() ?: return KeyImportEvent.Failed
+        if (keyId in manifest) return KeyImportEvent.DuplicateId
+
+        val keysDir = store.keysDir(profileId)
+        if (!keysDir.isDirectory && !keysDir.mkdirs()) return KeyImportEvent.Failed
+        val storedName = uniqueKeyName(keysDir, originalFileName)
+        val pemFile = File(keysDir, storedName)
+        val binFile = File(keysDir, "$storedName.bin")
+
+        // Copy first, pre-check on the stored copy: the pre-check doubles as
+        // the public key extraction, so its output is the persisted .bin.
+        val copied = runCatching {
+            appContext.contentResolver.openInputStream(uri)?.use { input ->
+                pemFile.outputStream().use { output -> input.copyTo(output) }
+            }
+        }.getOrNull()
+        if (copied == null) return KeyImportEvent.Failed
+
+        val extracted = runCatching {
+            runner.run(
+                listOf(
+                    "avbtool", "extract_public_key",
+                    "--key", pemFile.absolutePath,
+                    "--output", binFile.absolutePath,
+                ),
+            )
+        }.getOrNull()
+        if (extracted == null || extracted.exitCode != 0 || !binFile.isFile) {
+            // Rejected by the pre-check: leave no half-imported files behind.
+            binFile.delete()
+            pemFile.delete()
+            return KeyImportEvent.InvalidKey
+        }
+
+        val updated = LinkedHashMap(manifest)
+        updated[keyId] = ProfileStore.KeyManifestEntry(privateKey = storedName, publicKey = "$storedName.bin")
+        if (!store.writeKeyManifest(profileId, updated)) {
+            binFile.delete()
+            pemFile.delete()
+            return KeyImportEvent.Failed
+        }
+        return KeyImportEvent.Success
+    }
+
+    /**
+     * A stored file name for [originalFileName] that collides with neither
+     * an existing key file nor its future `.bin` sibling — same-named files
+     * are renamed with a numeric suffix before the extension.
+     */
+    private fun uniqueKeyName(keysDir: File, originalFileName: String?): String {
+        val name = (originalFileName ?: "")
+            .substringAfterLast('/')
+            .trim()
+            .ifBlank { "key.pem" }
+        fun free(candidate: String) = !File(keysDir, candidate).exists() && !File(keysDir, "$candidate.bin").exists()
+        if (free(name)) return name
+        // Rename with a numeric suffix before the extension ("k.pem" -> "k_1.pem").
+        val dot = name.lastIndexOf('.')
+        val base = if (dot > 0) name.substring(0, dot) else name
+        val ext = if (dot > 0) name.substring(dot) else ""
+        var i = 1
+        while (true) {
+            val candidate = "${base}_$i$ext"
+            if (free(candidate)) return candidate
+            i++
+        }
+    }
+
+    /** Activates (marks as default) the given key of the active profile. */
+    fun activateKey(keyId: String) {
+        val profileId = _uiState.value.activeId ?: return
+        keyActivationStore.write(profileId, keyId)
+        _uiState.update { it.copy(defaultKeyId = keyId) }
+    }
+
+    /**
+     * Starts the delete-keys flow: scans profile.json for references to the
+     * selected keys (partition key ids, chain partition key files, public key
+     * metadata) so the confirmation dialog can warn before deleting.
+     */
+    fun requestDeleteKeys(ids: Set<String>) {
+        val profileId = _uiState.value.activeId ?: return
+        if (ids.isEmpty()) return
+        viewModelScope.launch {
+            val referenced = withContext(Dispatchers.IO) { findKeyReferences(profileId, ids) }
+            _uiState.update { it.copy(pendingKeyDelete = PendingKeyDelete(ids.sorted(), referenced)) }
+        }
+    }
+
+    /** Confirms the pending key deletion and drops the key files with it. */
+    fun confirmDeleteKeys() {
+        val pending = _uiState.value.pendingKeyDelete ?: return
+        val profileId = _uiState.value.activeId
+        _uiState.update { it.copy(pendingKeyDelete = null) }
+        if (profileId == null) return
+        viewModelScope.launch {
+            withContext(Dispatchers.IO) {
+                val manifest = runCatching { store.readKeyManifest(profileId) }.getOrNull() ?: return@withContext
+                val updated = LinkedHashMap(manifest)
+                pending.ids.forEach { id ->
+                    val entry = updated.remove(id) ?: return@forEach
+                    entry.privateKey.takeIf { it.isNotBlank() }?.let { store.keyFile(profileId, it).delete() }
+                    entry.publicKey?.let { store.keyFile(profileId, it).delete() }
+                }
+                store.writeKeyManifest(profileId, updated)
+            }
+            if (pending.ids.contains(_uiState.value.defaultKeyId)) {
+                // The default key is gone; fall back to the store-less default.
+                keyActivationStore.write(profileId, null)
+                _uiState.update { it.copy(defaultKeyId = null) }
+            }
+            refreshKeys()
+        }
+    }
+
+    fun dismissPendingKeyDelete() {
+        _uiState.update { it.copy(pendingKeyDelete = null) }
+    }
+
+    /**
+     * Key ids among [ids] that profile.json still points at: partition
+     * `key_id` values, chain partition key files, and public key metadata
+     * files resolve against the key store's file names.
+     */
+    private fun findKeyReferences(profileId: String, ids: Set<String>): Set<String> {
+        val entry = _uiState.value.profiles.find { it.id == profileId } ?: return emptySet()
+        val specs = runCatching {
+            parseProfile(JSONObject(File(entry.dir, "profile.json").readText()))
+        }.getOrNull()?.partitions ?: return emptySet()
+        val manifest = runCatching { store.readKeyManifest(profileId) }.getOrNull() ?: return emptySet()
+        val filesToIds = HashMap<String, String>()
+        ids.forEach { id ->
+            manifest[id]?.let { key ->
+                filesToIds[key.privateKey] = id
+                key.publicKey?.let { filesToIds[it] = id }
+            }
+        }
+        val referenced = mutableSetOf<String>()
+        specs.forEach { spec ->
+            if (spec.keyId in ids) referenced += spec.keyId!!
+            spec.chainPartitions.forEach { chain ->
+                // entry = "partition:rollback:keyfile" — the file part may itself contain colons.
+                val keyFile = chain.split(":").drop(2).joinToString(":")
+                filesToIds[keyFile]?.let { referenced += it }
+            }
+            spec.publicKeyMetadata?.let { meta ->
+                filesToIds[meta]?.let { referenced += it }
+            }
+        }
+        return referenced
+    }
+
+    /** Lowercase hex SHA-1 of [file], or null when it cannot be read. */
+    private fun sha1Hex(file: File): String? = runCatching {
+        if (!file.isFile) return null
+        val digest = MessageDigest.getInstance("SHA-1")
+        file.inputStream().use { input ->
+            val buf = ByteArray(64 * 1024)
+            while (true) {
+                val n = input.read(buf)
+                if (n < 0) break
+                digest.update(buf, 0, n)
+            }
+        }
+        digest.digest().joinToString("") { "%02x".format(it) }
+    }.getOrNull()
+
+    /**
+     * Key id for a newly inspected partition entry: the image's "Public key
+     * (sha1)" header is matched against the SHA-1 of every key store entry's
+     * extracted public key; an unmatched or missing digest falls back to the
+     * profile's default (activated) key, or "default" when none is set.
+     */
+    private fun resolveEntryKeyId(profileId: String, imageSha1: String?): String {
+        if (imageSha1 != null) {
+            val manifest = runCatching { store.readKeyManifest(profileId) }.getOrNull().orEmpty()
+            for ((id, key) in manifest) {
+                val bin = key.publicKey ?: continue
+                if (sha1Hex(store.keyFile(profileId, bin)) == imageSha1) return id
+            }
+        }
+        return keyActivationStore.read(profileId) ?: "default"
     }
 
     /**
@@ -1293,6 +1624,7 @@ class ProfileViewModel(
                     settings = SettingsStore(
                         app.getSharedPreferences("application_configs", Context.MODE_PRIVATE),
                     ),
+                    keyActivationStore = ProfileKeyActivationStore(app),
                 )
             }
         }

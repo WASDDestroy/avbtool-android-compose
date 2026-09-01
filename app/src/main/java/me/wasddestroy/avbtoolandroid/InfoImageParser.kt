@@ -45,6 +45,12 @@ object InfoImageParser {
          * partition size the image was signed for; null for bare vbmeta.
          */
         val partitionSize: Long?,
+        /**
+         * "Public key (sha1)" header line — lowercase hex digest of the
+         * AVB public key the image was signed with; null when unsigned
+         * (algorithm NONE prints no key line).
+         */
+        val publicKeySha1: String?,
     )
 
     fun parse(text: String): ParsedInfoImage {
@@ -146,6 +152,7 @@ object InfoImageParser {
                     includedPartitions = emptyList(),
                     chainPartitions = emptyList(),
                     partitionSize = partitionSize,
+                    publicKeySha1 = header["Public key (sha1)"]?.lowercase(),
                 )
             }
             // Footer present but only exotic descriptors — fall through and
@@ -166,6 +173,7 @@ object InfoImageParser {
             includedPartitions = includedNames,
             chainPartitions = chainEntries,
             partitionSize = partitionSize,
+            publicKeySha1 = header["Public key (sha1)"]?.lowercase(),
         )
     }
 

@@ -25,16 +25,21 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Album
+import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.FileDownload
 import androidx.compose.material.icons.filled.FileUpload
+import androidx.compose.material.icons.filled.Key
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Surface
@@ -78,6 +83,9 @@ fun ProfileScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
     AppContextHolder.resolver = context.applicationContext.contentResolver
+    @Suppress("DEPRECATION")
+    val clipboard = LocalClipboardManager.current
+    val copiedMessage = stringResource(R.string.copied_to_clipboard)
     var pendingDeleteId by remember { mutableStateOf<String?>(null) }
     var confirmOverwrite by remember { mutableStateOf(false) }
     var showCreateDialog by remember { mutableStateOf(false) }
@@ -86,6 +94,11 @@ fun ProfileScreen(
     var pendingDeletePartitions by remember { mutableStateOf<Set<String>?>(null) }
     var pendingSignScope by remember { mutableStateOf<Set<String>?>(null) }
     var signRollbackFindings by remember { mutableStateOf<List<RollbackIndexFinding>?>(null) }
+    var showAddKeyDialog by remember { mutableStateOf(false) }
+    var showDeleteKeysDialog by remember { mutableStateOf(false) }
+    var keyMenuTarget by remember { mutableStateOf<ProfileKeyUi?>(null) }
+    var pendingKeyFile by remember { mutableStateOf<Uri?>(null) }
+    var pendingKeyFileName by remember { mutableStateOf<String?>(null) }
 
     val addPartitionEvent = uiState.addPartitionEvent
     LaunchedEffect(addPartitionEvent) {
@@ -142,6 +155,50 @@ fun ProfileScreen(
                 // selection store (read+write, released on replacement/deletion).
                 viewModel.setImage(partition, uri)
             }
+        }
+    }
+
+    val keyFileLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocument(),
+    ) { uri: Uri? ->
+        pendingKeyFile = uri
+        pendingKeyFileName = uri?.let { resolveDisplayName(it) }
+    }
+
+    val keyImportEvent = uiState.keyImportEvent
+    LaunchedEffect(keyImportEvent) {
+        when (keyImportEvent) {
+            KeyImportEvent.Success -> {
+                showAddKeyDialog = false
+                pendingKeyFile = null
+                pendingKeyFileName = null
+                viewModel.consumeKeyImportEvent()
+            }
+            KeyImportEvent.DuplicateId -> {
+                Toast.makeText(
+                    context,
+                    context.getString(R.string.profile_key_id_taken),
+                    Toast.LENGTH_SHORT,
+                ).show()
+                viewModel.consumeKeyImportEvent()
+            }
+            KeyImportEvent.InvalidKey -> {
+                Toast.makeText(
+                    context,
+                    context.getString(R.string.profile_key_import_invalid),
+                    Toast.LENGTH_SHORT,
+                ).show()
+                viewModel.consumeKeyImportEvent()
+            }
+            KeyImportEvent.Failed -> {
+                Toast.makeText(
+                    context,
+                    context.getString(R.string.profile_key_import_failed),
+                    Toast.LENGTH_SHORT,
+                ).show()
+                viewModel.consumeKeyImportEvent()
+            }
+            null -> Unit
         }
     }
 
@@ -296,6 +353,38 @@ fun ProfileScreen(
                 }
             }
             if (uiState.activeId != null) {
+                preferenceGroup(key = "keys", titleRes = R.string.profile_group_keys) {
+                    val keys = uiState.keys
+                    if (keys.isEmpty()) {
+                        row("keys_empty") {
+                            PreferenceRow(
+                                title = stringResource(R.string.profile_keys_empty),
+                            )
+                        }
+                    } else {
+                        keys.forEach { key ->
+                            row("key_${key.id}") {
+                                KeyRow(
+                                    key = key,
+                                    isDefault = key.id == uiState.defaultKeyId,
+                                    onLongClick = { keyMenuTarget = key },
+                                )
+                            }
+                        }
+                    }
+                    row("key_actions") {
+                        SegmentActionsRow(
+                            addLabel = stringResource(R.string.profile_key_add),
+                            deleteLabel = stringResource(R.string.profile_key_delete),
+                            addEnabled = true,
+                            deleteEnabled = keys.isNotEmpty(),
+                            onAdd = { showAddKeyDialog = true },
+                            onDelete = { showDeleteKeysDialog = true },
+                        )
+                    }
+                }
+            }
+            if (uiState.activeId != null) {
                 preferenceGroup(key = "images", titleRes = R.string.profile_group_images) {
                     val specs = uiState.activeSpecs
                     if (specs.isEmpty()) {
@@ -347,7 +436,11 @@ fun ProfileScreen(
                         }
                     }
                     row("partition_actions") {
-                        PartitionActionsRow(
+                        SegmentActionsRow(
+                            addLabel = stringResource(R.string.profile_partition_add),
+                            deleteLabel = stringResource(R.string.profile_partition_delete),
+                            addEnabled = true,
+                            deleteEnabled = uiState.activeSpecs.isNotEmpty(),
                             onAdd = { showAddPartitionDialog = true },
                             onDelete = { showDeletePartitionsDialog = true },
                         )
@@ -501,7 +594,7 @@ fun ProfileScreen(
                 imageLauncher.launch(arrayOf("*/*"))
             },
             pickedImageFileName = pendingAddPartitionImage?.toUri()
-                ?.let { resolveImageDisplayName(it) },
+                ?.let { resolveDisplayName(it) },
             pickedImageUri = pendingAddPartitionImage?.toUri(),
             onDismiss = { showAddPartitionDialog = false },
             onConfirm = { name, useImageFileName, imageFileName, uri ->
@@ -553,6 +646,83 @@ fun ProfileScreen(
             },
             dismissButton = {
                 DialogDismissButton(onClick = { pendingDeletePartitions = null }) {
+                    Text(stringResource(R.string.command_cancel))
+                }
+            },
+        )
+    }
+
+    keyMenuTarget?.let { key ->
+        KeyMenuSheet(
+            key = key,
+            isActive = key.id == uiState.defaultKeyId,
+            onDismiss = { keyMenuTarget = null },
+            onCopyId = {
+                clipboard.setText(AnnotatedString(key.id))
+                Toast.makeText(context, copiedMessage, Toast.LENGTH_SHORT).show()
+                keyMenuTarget = null
+            },
+            onCopyFile = {
+                clipboard.setText(AnnotatedString(key.fileName))
+                Toast.makeText(context, copiedMessage, Toast.LENGTH_SHORT).show()
+                keyMenuTarget = null
+            },
+            onActivate = {
+                viewModel.activateKey(key.id)
+                keyMenuTarget = null
+            },
+        )
+    }
+
+    if (showAddKeyDialog) {
+        AddKeyDialog(
+            existingIds = uiState.keys.map { it.id }.toSet(),
+            pickedFileName = pendingKeyFileName,
+            hasPickedFile = pendingKeyFile != null,
+            adding = uiState.addingKey,
+            onPickFile = { keyFileLauncher.launch(KEY_FILE_MIME_TYPES) },
+            onDismiss = { showAddKeyDialog = false },
+            onConfirm = { keyId -> viewModel.addKey(keyId, pendingKeyFile, pendingKeyFileName) },
+        )
+    }
+
+    if (showDeleteKeysDialog) {
+        DeleteKeysDialog(
+            keys = uiState.keys,
+            onDismiss = { showDeleteKeysDialog = false },
+            onConfirm = { selected ->
+                showDeleteKeysDialog = false
+                viewModel.requestDeleteKeys(selected)
+            },
+        )
+    }
+
+    uiState.pendingKeyDelete?.let { pending ->
+        AlertDialog(
+            onDismissRequest = viewModel::dismissPendingKeyDelete,
+            title = { Text(stringResource(R.string.profile_key_delete_title)) },
+            text = {
+                Column {
+                    Text(stringResource(R.string.profile_key_delete_message, pending.ids.joinToString(", ")))
+                    if (pending.referencedIds.isNotEmpty()) {
+                        Text(
+                            stringResource(
+                                R.string.profile_key_referenced_warning,
+                                pending.referencedIds.sorted().joinToString(", "),
+                            ),
+                            style = MaterialTheme.typography.bodyMedium,
+                            modifier = Modifier.padding(top = 8.dp),
+                        )
+                    }
+                }
+            },
+            confirmButton = {
+                DialogConfirmButton(onClick = viewModel::confirmDeleteKeys) {
+                    Text(stringResource(R.string.command_continue))
+                }
+            },
+            dismissButton = {
+                DialogDismissButton(onClick = viewModel::dismissPendingKeyDelete) {
                     Text(stringResource(R.string.command_cancel))
                 }
             },
@@ -772,11 +942,19 @@ private fun ProfileRow(
 /** Sentinel image-partition key routing a launcher pick into the add-partition dialog. */
 private const val ADD_PARTITION_KEY = "\u0000add_partition"
 
+/** MIME types offered to the SAF picker for key files (.pem / .pk8). */
+private val KEY_FILE_MIME_TYPES = arrayOf(
+    "application/x-pem-file",
+    "application/x-pkcs8",
+    "application/pkcs8",
+    "application/octet-stream",
+)
+
 /**
- * Resolves the display name of a SAF-picked image on the caller's thread —
+ * Resolves the display name of a SAF-picked file on the caller's thread —
  * a single cheap provider query, with the URI's last segment as fallback.
  */
-private fun resolveImageDisplayName(uri: Uri): String? {
+private fun resolveDisplayName(uri: Uri): String? {
     return try {
         val resolver = AppContextHolder.resolver ?: return uri.lastPathSegment
         resolver.query(uri, null, null, null, null)?.use { cursor ->
@@ -788,20 +966,291 @@ private fun resolveImageDisplayName(uri: Uri): String? {
     }
 }
 
+/**
+ * One key entry of the key-store card: "<id> (<stored file name>)" plus the
+ * SHA-1 of the extracted public key. Rows have no click action — all
+ * operations live behind the long-press sheet.
+ */
+@Composable
+private fun KeyRow(
+    key: ProfileKeyUi,
+    isDefault: Boolean,
+    onLongClick: () -> Unit,
+) {
+    PreferenceRow(
+        title = stringResource(R.string.profile_key_title, key.id, key.fileName),
+        summaryContent = {
+            Text(
+                text = when {
+                    key.sha1 != null -> stringResource(R.string.profile_key_sha1, key.sha1)
+                    key.sha1Failed -> stringResource(R.string.profile_key_sha1_unavailable)
+                    else -> stringResource(R.string.profile_key_sha1_computing)
+                },
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                fontFamily = if (key.sha1 != null) FontFamily.Monospace else null,
+            )
+        },
+        iconContent = {
+            Icon(
+                imageVector = Icons.Filled.Key,
+                contentDescription = null,
+                modifier = Modifier.size(24.dp),
+            )
+        },
+        trailing = if (isDefault) {
+            {
+                Text(
+                    text = stringResource(R.string.profile_key_default_badge),
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.primary,
+                )
+            }
+        } else {
+            null
+        },
+        onLongClick = onLongClick,
+    )
+}
+
+/**
+ * Long-press action sheet for a key entry. The "activate" item turns into a
+ * disabled row while the key is already the profile's default.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun KeyMenuSheet(
+    key: ProfileKeyUi,
+    isActive: Boolean,
+    onDismiss: () -> Unit,
+    onCopyId: () -> Unit,
+    onCopyFile: () -> Unit,
+    onActivate: () -> Unit,
+) {
+    ModalBottomSheet(onDismissRequest = onDismiss) {
+        Column(Modifier.padding(bottom = 24.dp)) {
+            SheetActionRow(
+                label = stringResource(R.string.profile_key_menu_copy_id),
+                icon = Icons.Filled.ContentCopy,
+                onClick = onCopyId,
+            )
+            SheetActionRow(
+                label = stringResource(R.string.profile_key_menu_copy_file),
+                icon = Icons.Filled.ContentCopy,
+                onClick = onCopyFile,
+            )
+            SheetActionRow(
+                label = stringResource(R.string.profile_key_menu_activate),
+                icon = Icons.Filled.Star,
+                enabled = !isActive,
+                onClick = onActivate,
+            )
+        }
+    }
+}
+
+@Composable
+private fun SheetActionRow(
+    label: String,
+    icon: ImageVector,
+    enabled: Boolean = true,
+    onClick: () -> Unit,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .heightIn(min = 48.dp)
+            .clickable(enabled = enabled, onClick = onClick)
+            .padding(horizontal = 24.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(16.dp),
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            modifier = Modifier.size(24.dp),
+            tint = if (enabled) {
+                LocalContentColor.current
+            } else {
+                MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+            },
+        )
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodyLarge,
+            color = if (enabled) {
+                LocalContentColor.current
+            } else {
+                MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+            },
+        )
+    }
+}
+
+/**
+ * Add-key dialog. A key file must be picked before the import can proceed;
+ * the key id either comes from the "use key file name" toggle (file name
+ * minus extension, text field disabled) or is typed manually. Both paths
+ * run through the same ASCII/uniqueness validation on the effective id.
+ */
+@Composable
+private fun AddKeyDialog(
+    existingIds: Set<String>,
+    pickedFileName: String?,
+    hasPickedFile: Boolean,
+    adding: Boolean,
+    onPickFile: () -> Unit,
+    onDismiss: () -> Unit,
+    onConfirm: (keyId: String) -> Unit,
+) {
+    var useFileName by remember { mutableStateOf(true) }
+    var id by remember { mutableStateOf("") }
+
+    val effectiveId = if (useFileName) {
+        pickedFileName?.substringBeforeLast('.')?.trim().orEmpty()
+    } else {
+        id.trim()
+    }
+    val idError = when {
+        effectiveId.isEmpty() -> null
+        !effectiveId.all { it.code in 0..127 } -> stringResource(R.string.profile_key_id_error)
+        effectiveId in existingIds -> stringResource(R.string.profile_key_id_taken)
+        else -> null
+    }
+    val canConfirm = hasPickedFile && adding.not() && idError == null && effectiveId.isNotEmpty()
+
+    AlertDialog(
+        onDismissRequest = { if (!adding) onDismiss() },
+        title = { Text(stringResource(R.string.profile_key_add_title)) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                OutlinedTextField(
+                    value = id,
+                    onValueChange = { id = it },
+                    label = { Text(stringResource(R.string.profile_key_id_label)) },
+                    singleLine = true,
+                    enabled = !useFileName && !adding,
+                    isError = idError != null,
+                    supportingText = if (idError != null) {
+                        { Text(idError) }
+                    } else {
+                        null
+                    },
+                )
+                PreferenceSwitchRow(
+                    title = stringResource(R.string.profile_key_use_file_name),
+                    checked = useFileName,
+                    enabled = !adding,
+                    onCheckedChange = { useFileName = it },
+                )
+                PreferenceRow(
+                    title = stringResource(R.string.profile_key_pick),
+                    summary = pickedFileName?.let {
+                        stringResource(R.string.profile_key_selected, it)
+                    } ?: stringResource(R.string.profile_key_none),
+                    onClick = { if (!adding) onPickFile() },
+                )
+            }
+        },
+        confirmButton = {
+            DialogConfirmButton(
+                onClick = { onConfirm(effectiveId) },
+                enabled = canConfirm,
+            ) {
+                Text(stringResource(R.string.command_continue))
+            }
+        },
+        dismissButton = {
+            DialogDismissButton(onClick = { if (!adding) onDismiss() }) {
+                Text(stringResource(R.string.command_cancel))
+            }
+        },
+    )
+}
+
+/** Multi-select dialog over the active profile's key store entries. */
+@Composable
+private fun DeleteKeysDialog(
+    keys: List<ProfileKeyUi>,
+    onDismiss: () -> Unit,
+    onConfirm: (Set<String>) -> Unit,
+) {
+    var selected by remember { mutableStateOf(setOf<String>()) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.profile_key_delete_title)) },
+        text = {
+            Column(Modifier.verticalScroll(rememberScrollState())) {
+                keys.forEach { key ->
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                selected = if (key.id in selected) {
+                                    selected - key.id
+                                } else {
+                                    selected + key.id
+                                }
+                            }
+                            .padding(vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Checkbox(
+                            checked = key.id in selected,
+                            onCheckedChange = { checked ->
+                                selected = if (checked) selected + key.id else selected - key.id
+                            },
+                        )
+                        Column(Modifier.weight(1f)) {
+                            Text(key.id, style = MaterialTheme.typography.bodyLarge)
+                            Text(
+                                key.fileName,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            DialogConfirmButton(
+                onClick = { onConfirm(selected) },
+                enabled = selected.isNotEmpty(),
+            ) {
+                Text(stringResource(R.string.command_continue))
+            }
+        },
+        dismissButton = {
+            DialogDismissButton(onClick = onDismiss) {
+                Text(stringResource(R.string.command_cancel))
+            }
+        },
+    )
+}
+
 /** Process-wide application context holder, populated from the screen. */
 private object AppContextHolder {
     @Volatile
     var resolver: android.content.ContentResolver? = null
 }
 
+/**
+ * Half-and-half "add / delete" action row closing a preference card —
+ * mirrors the import/export row's split-surface look, with the large bottom
+ * corners since nothing follows. Delete is disabled while the card has no
+ * entries to delete.
+ */
 @Composable
-private fun PartitionActionsRow(
+private fun SegmentActionsRow(
+    addLabel: String,
+    deleteLabel: String,
+    addEnabled: Boolean,
+    deleteEnabled: Boolean,
     onAdd: () -> Unit,
     onDelete: () -> Unit,
 ) {
-    // Last row of the images card, below the per-partition rows — mirrors
-    // the import/export row's split-surface look, but with the large bottom
-    // corners since nothing follows.
     val leftShape = RoundedCornerShape(
         topStart = 4.dp, topEnd = 4.dp, bottomStart = 16.dp, bottomEnd = 4.dp,
     )
@@ -813,17 +1262,17 @@ private fun PartitionActionsRow(
         horizontalArrangement = Arrangement.spacedBy(2.dp),
     ) {
         ActionHalfSurface(
-            label = stringResource(R.string.profile_partition_add),
+            label = addLabel,
             icon = Icons.Filled.Add,
-            enabled = true,
+            enabled = addEnabled,
             onClick = onAdd,
             shape = leftShape,
             modifier = Modifier.weight(1f),
         )
         ActionHalfSurface(
-            label = stringResource(R.string.profile_partition_delete),
+            label = deleteLabel,
             icon = Icons.Filled.Delete,
-            enabled = true,
+            enabled = deleteEnabled,
             onClick = onDelete,
             shape = rightShape,
             modifier = Modifier.weight(1f),
