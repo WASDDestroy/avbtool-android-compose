@@ -77,6 +77,17 @@ data class ProfilePartitionSpec(
     val appendToReleaseString: String? = null,
 )
 
+/**
+ * Data backing the sign-scope dialog: every partition of the active profile
+ * with its descriptor type and the live result of probing its input image
+ * (footer partitions only). Null while no dialog is shown.
+ */
+data class SignScopePlan(
+    val partitions: List<String> = emptyList(),
+    val descriptors: Map<String, String> = emptyMap(),
+    val imageAvailable: Map<String, Boolean> = emptyMap(),
+)
+
 data class ProfileUiState(
     val profiles: List<ProfileStore.ProfileEntry> = emptyList(),
     val activeId: String? = null,
@@ -100,6 +111,10 @@ data class ProfileUiState(
     val addingPartition: Boolean = false,
     /** One-shot outcome of an add-partition attempt; consumed by the screen. */
     val addPartitionEvent: AddPartitionEvent? = null,
+    /** Set while the sign-scope probes run; the Sign button shows busy. */
+    val probingScope: Boolean = false,
+    /** Non-null shows the sign-scope dialog, populated by [ProfileViewModel.prepareSignScope]. */
+    val signPlan: SignScopePlan? = null,
 )
 
 /**
@@ -633,7 +648,7 @@ class ProfileViewModel(
      * chain-partition sibling lookups resolve inside the profile; the vbmeta
      * output is exported via SAF afterwards.
      */
-    fun signActive() {
+    fun signActive(scope: Set<String>) {
         val state = _uiState.value
         val profile = state.profiles.find { it.id == state.activeId }
         if (profile == null) {
@@ -644,7 +659,7 @@ class ProfileViewModel(
 
         viewModelScope.launch {
             _uiState.update { it.copy(signing = true, result = null) }
-            val outcome = withContext(Dispatchers.IO) { signProfile(profile) }
+            val outcome = withContext(Dispatchers.IO) { signProfile(profile, scope) }
             val (signResult, exports) = outcome
             _uiState.update {
                 it.copy(
@@ -657,12 +672,63 @@ class ProfileViewModel(
         }
     }
 
+    /**
+     * Prepares the sign-scope dialog data: probes every footer partition's
+     * picked image by actually opening it (catches deleted files and dead
+     * SAF grants that a mere map lookup would miss) and computes each
+     * partition's dependency feasibility. vbmeta rows need no input image
+     * but demand their image dependencies inside the scope.
+     */
+    fun prepareSignScope() {
+        val state = _uiState.value
+        val profile = state.profiles.find { it.id == state.activeId } ?: return
+        if (state.signing || state.probingScope) return
+        viewModelScope.launch {
+            _uiState.update { it.copy(probingScope = true) }
+            val plan = withContext(Dispatchers.IO) {
+                val raw = runCatching {
+                    JSONObject(File(profile.dir, "profile.json").readText())
+                }.getOrNull()
+                val spec = raw?.let { runCatching { parseProfile(it) }.getOrNull() }
+                if (spec == null) {
+                    SignScopePlan(partitions = emptyList())
+                } else {
+                    val probe = spec.partitions
+                        .filter { it.descriptor != "vbmeta" }
+                        .associate { it.partition to probeImage(it.partition) }
+                    SignScopePlan(
+                        partitions = spec.partitions.map { it.partition },
+                        descriptors = spec.partitions.associate { it.partition to it.descriptor },
+                        imageAvailable = probe,
+                    )
+                }
+            }
+            _uiState.update { it.copy(probingScope = false, signPlan = plan) }
+        }
+    }
+
+    /** Opens and immediately closes the picked image to verify it is readable. */
+    private suspend fun probeImage(partition: String): Boolean {
+        val uri = getImage(partition)?.toUri() ?: return false
+        val fd = bridge.openRead(uri)
+        return if (fd == null) {
+            false
+        } else {
+            bridge.closeFd(fd)
+            true
+        }
+    }
+
+    fun dismissSignPlan() {
+        _uiState.update { it.copy(signPlan = null) }
+    }
+
     private data class SignOutcome(
         val result: ProfileSignResult?,
         val exports: List<File>,
     )
 
-    private suspend fun signProfile(profile: ProfileStore.ProfileEntry): SignOutcome {
+    private suspend fun signProfile(profile: ProfileStore.ProfileEntry, scope: Set<String>): SignOutcome {
         val raw = runCatching {
             JSONObject(File(profile.dir, "profile.json").readText())
         }.getOrElse {
@@ -675,10 +741,11 @@ class ProfileViewModel(
         // vbmeta partitions generate their image at sign time; only footer
         // partitions consume a picked input image.
         val missing = spec.partitions
-            .filter { it.descriptor != "vbmeta" && getImage(it.partition) == null }
+            .filter { it.partition in scope && it.descriptor != "vbmeta" && getImage(it.partition) == null }
         if (missing.isNotEmpty()) {
             return failedOutcome(profile, R.string.profile_error_missing_images)
         }
+        val planned = spec.partitions.filter { it.partition in scope }
 
         val scratch = File(appContext.filesDir, "profile_sign/${profile.id}")
         scratch.deleteRecursively()
@@ -686,8 +753,9 @@ class ProfileViewModel(
 
         // Partitions whose signed images are pulled into a vbmeta via
         // --include_descriptors_from_image; their scratch copies must exist
-        // even when the image itself was signed in place.
-        val includeSources = spec.partitions
+        // even when the image itself was signed in place. Computed from the
+        // scope: only in-scope vbmeta partitions pull sources this run.
+        val includeSources = planned
             .filter { it.descriptor == "vbmeta" }
             .flatMap { it.includedPartitions }
             .toSet()
@@ -697,8 +765,9 @@ class ProfileViewModel(
         val outputs = mutableListOf<File>()
 
         try {
-            // spec.partitions is already in dependency order (see parseProfile).
-            for (p in spec.partitions) {
+            // planned keeps spec.partitions order, which is dependency order
+            // (see parseProfile).
+            for (p in planned) {
                 // vbmeta images are generated, not read: the picked-URI map
                 // has no entry for them (the UI no longer offers a picker).
                 val srcUri = if (p.descriptor != "vbmeta") getImage(p.partition)!! else null

@@ -83,6 +83,7 @@ fun ProfileScreen(
     var showAddPartitionDialog by remember { mutableStateOf(false) }
     var showDeletePartitionsDialog by remember { mutableStateOf(false) }
     var pendingDeletePartitions by remember { mutableStateOf<Set<String>?>(null) }
+    var pendingSignScope by remember { mutableStateOf<Set<String>?>(null) }
 
     val addPartitionEvent = uiState.addPartitionEvent
     LaunchedEffect(addPartitionEvent) {
@@ -364,14 +365,22 @@ fun ProfileScreen(
 
         Surface(tonalElevation = 3.dp) {
             Button(
-                onClick = { confirmOverwrite = true },
-                enabled = !uiState.signing && uiState.activeId != null,
+                onClick = { viewModel.prepareSignScope() },
+                enabled = (!uiState.signing && !uiState.probingScope) && uiState.activeId != null,
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp, vertical = 12.dp)
                     .navigationBarsPadding(),
             ) {
-                Text(stringResource(if (uiState.signing) R.string.command_running else R.string.profile_sign))
+                Text(
+                    stringResource(
+                        when {
+                            uiState.signing -> R.string.command_running
+                            uiState.probingScope -> R.string.profile_sign_probing
+                            else -> R.string.profile_sign
+                        },
+                    ),
+                )
             }
         }
     }
@@ -384,7 +393,7 @@ fun ProfileScreen(
             confirmButton = {
                 DialogConfirmButton(onClick = {
                     confirmOverwrite = false
-                    viewModel.signActive()
+                    viewModel.signActive(pendingSignScope ?: emptySet())
                 }) {
                     Text(stringResource(R.string.command_continue))
                 }
@@ -393,6 +402,19 @@ fun ProfileScreen(
                 DialogDismissButton(onClick = { confirmOverwrite = false }) {
                     Text(stringResource(R.string.command_cancel))
                 }
+            },
+        )
+    }
+
+    uiState.signPlan?.let { plan ->
+        SignScopeDialog(
+            plan = plan,
+            specs = uiState.activeSpecs,
+            onDismiss = { viewModel.dismissSignPlan() },
+            onConfirm = { scope ->
+                pendingSignScope = scope
+                viewModel.dismissSignPlan()
+                confirmOverwrite = true
             },
         )
     }
@@ -899,8 +921,7 @@ private fun DeletePartitionsDialog(
     partitions: List<String>,
     onDismiss: () -> Unit,
     onConfirm: (Set<String>) -> Unit,
-) {
-    var selected by remember { mutableStateOf(setOf<String>()) }
+) {    var selected by remember { mutableStateOf(setOf<String>()) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -1034,4 +1055,97 @@ private fun ProfileResultView(result: ProfileSignResult) {
             }
         }
     }
+}
+
+/**
+ * Sign-scope dialog: pick which partitions this run should touch. Rows are
+ * gated by [SignScopePlanner.feasibility] — a footer partition without a
+ * readable image and a vbmeta whose dependencies fall outside the scope are
+ * disabled with the reason. Footer partitions start checked, vbmeta ones
+ * unchecked (regenerating vbmeta is opt-in per run).
+ */
+@Composable
+private fun SignScopeDialog(
+    plan: SignScopePlan,
+    specs: List<ProfilePartitionSpec>,
+    onDismiss: () -> Unit,
+    onConfirm: (Set<String>) -> Unit,
+) {
+    var scope by remember(plan) {
+        mutableStateOf(
+            plan.partitions.filter { plan.descriptors[it] != "vbmeta" }.toSet(),
+        )
+    }
+
+    val feasibility = remember(plan, scope) {
+        SignScopePlanner.feasibility(
+            specs = specs,
+            scope = scope,
+            imagePresent = { plan.imageAvailable[it] == true },
+        )
+    }
+    val anyFeasible = feasibility.values.any { it.feasible }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.profile_sign_scope_title)) },
+        text = {
+            Column(Modifier.verticalScroll(rememberScrollState())) {
+                plan.partitions.forEach { partition ->
+                    val f = feasibility[partition] ?: SignScopePlanner.Feasibility(feasible = true)
+                    val isVbmeta = plan.descriptors[partition] == "vbmeta"
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable(enabled = f.feasible) {
+                                scope = if (partition in scope) scope - partition else scope + partition
+                            }
+                            .padding(vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Checkbox(
+                            checked = partition in scope,
+                            onCheckedChange = { checked ->
+                                if (f.feasible) {
+                                    scope = if (checked) scope + partition else scope - partition
+                                }
+                            },
+                            enabled = f.feasible,
+                        )
+                        Column(Modifier.weight(1f)) {
+                            Text(partition, style = MaterialTheme.typography.bodyLarge)
+                            val note = when {
+                                !f.feasible && f.missingDependencies.isNotEmpty() -> stringResource(
+                                    R.string.profile_sign_scope_missing,
+                                    f.missingDependencies.joinToString(", "),
+                                )
+                                isVbmeta -> stringResource(R.string.profile_sign_scope_vbmeta)
+                                else -> null
+                            }
+                            note?.let {
+                                Text(
+                                    it,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            DialogConfirmButton(
+                onClick = { onConfirm(scope) },
+                enabled = anyFeasible && scope.isNotEmpty(),
+            ) {
+                Text(stringResource(R.string.command_continue))
+            }
+        },
+        dismissButton = {
+            DialogDismissButton(onClick = onDismiss) {
+                Text(stringResource(R.string.command_cancel))
+            }
+        },
+    )
 }

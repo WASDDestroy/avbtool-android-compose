@@ -378,6 +378,13 @@
     <string name="profile_group_sign_options">Sign options</string>
     <string name="profile_image_not_selected">Tap to select image</string>
     <string name="profile_image_output">Generated at sign time: %s</string>
+    <string name="profile_sign_probing">Checking…</string>
+
+    <string name="profile_sign_scope_title">Select partitions to sign</string>
+
+    <string name="profile_sign_scope_missing">Missing: %s</string>
+
+    <string name="profile_sign_scope_vbmeta">Generated image, dependencies must be selected</string>
     <string name="profile_empty">No profiles imported yet.</string>
     <string name="profile_delete">Delete profile</string>
     <string name="profile_delete_title">Delete profile</string>
