@@ -358,6 +358,7 @@
     <string name="flags_0">0 — 全部验证开启</string>
     <string name="flags_1">1 — 禁用哈希树</string>
     <string name="flags_2">2 — 禁用验证</string>
+    <string name="flags_3">3 — 禁用哈希树 + 禁用验证（全部关闭）</string>
     <string name="size_unit_B">字节（B）</string>
     <string name="size_unit_KiB">千字节（KiB）</string>
     <!-- signing profiles -->

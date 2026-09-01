@@ -110,6 +110,7 @@ private val FLAGS_OPTIONS = listOf(
     FlagOption("0", R.string.flags_0),
     FlagOption("1", R.string.flags_1),
     FlagOption("2", R.string.flags_2),
+    FlagOption("3", R.string.flags_3),
 )
 
 private fun storageKey(arg: AvbArg): String = if (arg.type == ArgType.IMAGE) IMAGE_STORAGE_KEY else arg.key
