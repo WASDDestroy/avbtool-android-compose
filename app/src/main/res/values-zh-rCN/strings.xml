@@ -389,4 +389,13 @@
     <string name="profile_sign_result_title">%1$s — 签名结果</string>
     <string name="profile_add_props_to_vbmeta">将配置属性写入 vbmeta</string>
     <string name="profile_add_props_to_vbmeta_summary">生成 vbmeta 镜像时插入配置中记录的属性。avbtool 不会过滤重复的属性键，重复项会增大镜像体积；从其他镜像包含的描述符不受影响。</string>
+    <string name="profile_create">新增配置</string>
+    <string name="profile_create_title">新增配置</string>
+    <string name="profile_create_id_label">配置 ID</string>
+    <string name="profile_create_name_label">配置名称</string>
+    <string name="profile_create_id_error">ID 只能包含 ASCII 字母、数字、点、下划线和连字符。</string>
+    <string name="profile_create_id_taken">该 ID 已被占用。</string>
+    <string name="profile_create_success">配置已创建</string>
+    <string name="profile_create_failed">创建配置失败，ID 可能已被占用。</string>
+    <string name="profile_create_invalid_id">配置 ID 无效。</string>
 </resources>

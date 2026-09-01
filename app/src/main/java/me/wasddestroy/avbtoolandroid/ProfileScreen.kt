@@ -10,17 +10,20 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Album
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.FileDownload
@@ -31,9 +34,11 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -72,6 +77,7 @@ fun ProfileScreen(
     val context = LocalContext.current
     var pendingDeleteId by remember { mutableStateOf<String?>(null) }
     var confirmOverwrite by remember { mutableStateOf(false) }
+    var showCreateDialog by remember { mutableStateOf(false) }
 
     val importLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.GetContent(),
@@ -213,6 +219,12 @@ fun ProfileScreen(
                         exportEnabled = !uiState.exporting && uiState.activeId != null,
                     )
                 }
+                row("create") {
+                    CreateProfileRow(
+                        enabled = !uiState.importing,
+                        onClick = { showCreateDialog = true },
+                    )
+                }
                 val profiles = uiState.profiles
                 if (profiles.isEmpty()) {
                     row("empty") {
@@ -335,6 +347,87 @@ fun ProfileScreen(
             },
         )
     }
+
+    if (showCreateDialog) {
+        CreateProfileDialog(
+            existingIds = uiState.profiles.map { it.id }.toSet(),
+            onDismiss = { showCreateDialog = false },
+            onConfirm = { id, name ->
+                showCreateDialog = false
+                viewModel.createProfile(id, name)
+            },
+        )
+    }
+}
+
+/**
+ * New-profile dialog. Both fields are required; the confirm button stays
+ * disabled until the id passes [ProfileStore.isValidProfileId] (ASCII only,
+ * mirrors the on-disk folder naming rules) and is not taken by an existing
+ * profile. Editing existing profiles will reuse this dialog later, so the
+ * field wiring is kept self-contained here.
+ */
+@Composable
+private fun CreateProfileDialog(
+    existingIds: Set<String>,
+    onDismiss: () -> Unit,
+    onConfirm: (id: String, name: String) -> Unit,
+) {
+    var id by remember { mutableStateOf("") }
+    var name by remember { mutableStateOf("") }
+    var idTouched by remember { mutableStateOf(false) }
+
+    val idError = when {
+        id.isEmpty() -> null
+        !ProfileStore.isValidProfileId(id) -> stringResource(R.string.profile_create_id_error)
+        id in existingIds -> stringResource(R.string.profile_create_id_taken)
+        else -> null
+    }
+    val idValid = idError == null
+    val canConfirm = id.isNotBlank() && name.isNotBlank() && idValid
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.profile_create_title)) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                OutlinedTextField(
+                    value = id,
+                    onValueChange = {
+                        id = it
+                        idTouched = true
+                    },
+                    label = { Text(stringResource(R.string.profile_create_id_label)) },
+                    singleLine = true,
+                    isError = idTouched && !idValid,
+                    supportingText = if (idTouched && idError != null) {
+                        { Text(idError) }
+                    } else {
+                        null
+                    },
+                )
+                OutlinedTextField(
+                    value = name,
+                    onValueChange = { name = it },
+                    label = { Text(stringResource(R.string.profile_create_name_label)) },
+                    singleLine = true,
+                )
+            }
+        },
+        confirmButton = {
+            DialogConfirmButton(
+                onClick = { onConfirm(id.trim(), name.trim()) },
+                enabled = canConfirm,
+            ) {
+                Text(stringResource(R.string.command_continue))
+            }
+        },
+        dismissButton = {
+            DialogDismissButton(onClick = onDismiss) {
+                Text(stringResource(R.string.command_cancel))
+            }
+        },
+    )
 }
 
 @Composable
@@ -375,6 +468,39 @@ private fun ImportExportRow(
             shape = rightShape,
             modifier = Modifier.weight(1f),
         )
+    }
+}
+
+@Composable
+private fun CreateProfileRow(
+    enabled: Boolean,
+    onClick: () -> Unit,
+) {
+    // Second row of the card, below import/export. The group always keeps at
+    // least one more row after it (empty hint or profiles), so it never needs
+    // the large bottom corners — plain small segmented corners match the rows
+    // in between.
+    Surface(
+        shape = RoundedCornerShape(4.dp),
+        color = MaterialTheme.colorScheme.surfaceContainer,
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .heightIn(min = 56.dp),
+            contentAlignment = Alignment.Center,
+        ) {
+            TextButton(onClick = onClick, enabled = enabled) {
+                Icon(
+                    imageVector = Icons.Filled.Add,
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp),
+                )
+                Spacer(Modifier.width(8.dp))
+                Text(stringResource(R.string.profile_create))
+            }
+        }
     }
 }
 

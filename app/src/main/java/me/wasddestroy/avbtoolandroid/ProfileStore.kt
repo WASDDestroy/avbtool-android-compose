@@ -53,6 +53,42 @@ class ProfileStore(private val context: Context) {
     }
 
     /**
+     * Creates an empty profile folder matching the import layout: a minimal
+     * valid v3 profile.json plus an empty key manifest (so the profile can be
+     * exported again as a complete archive). Returns false when the id is
+     * invalid, already taken, or writing failed; the folder is removed on
+     * partial failure so no broken entry is left behind.
+     */
+    fun createProfile(id: String, name: String): Boolean {
+        if (!isValidProfileId(id)) return false
+        val dir = File(profileDir, id)
+        if (dir.exists()) return false
+        val profileJson = JSONObject().apply {
+            put("schema_version", SUPPORTED_SCHEMA_VERSION)
+            put(
+                "profile",
+                JSONObject().apply {
+                    put("id", id)
+                    put("name", name.ifBlank { id })
+                },
+            )
+            put("key_store_path", "keys")
+            put("partitions", JSONObject())
+        }
+        return try {
+            if (!dir.mkdirs()) return false
+            File(dir, "profile.json").writeText(profileJson.toString(2))
+            File(dir, "keys").mkdirs()
+            File(dir, "keys/manifest.json").writeText(JSONObject().toString(2))
+            true
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to create profile '$id'", e)
+            dir.deleteRecursively()
+            false
+        }
+    }
+
+    /**
      * Validates the manifest checksums, then extracts the archive into
      * `profile/<profile_id>/`. The id comes from manifest.json, never from the
      * zip file name. Returns the profile id, or null on validation failure.

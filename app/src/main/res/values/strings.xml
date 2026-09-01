@@ -391,4 +391,13 @@
     <string name="profile_sign_result_title">%1$s — sign result</string>
     <string name="profile_add_props_to_vbmeta">Add profile props to vbmeta</string>
     <string name="profile_add_props_to_vbmeta_summary">Insert the profile&#8217;s configured properties into generated vbmeta images. avbtool does not deduplicate prop keys, so duplicates enlarge the image; descriptors from included images are unaffected.</string>
+    <string name="profile_create">New profile</string>
+    <string name="profile_create_title">New profile</string>
+    <string name="profile_create_id_label">Profile ID</string>
+    <string name="profile_create_name_label">Profile name</string>
+    <string name="profile_create_id_error">ID may only contain ASCII letters, digits, dot, underscore and hyphen.</string>
+    <string name="profile_create_id_taken">This ID is already in use.</string>
+    <string name="profile_create_success">Profile created</string>
+    <string name="profile_create_failed">Could not create the profile. The ID may already be in use.</string>
+    <string name="profile_create_invalid_id">Invalid profile ID.</string>
 </resources>

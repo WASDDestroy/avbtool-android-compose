@@ -160,6 +160,33 @@ class ProfileViewModel(
         }
     }
 
+    /**
+     * Creates an empty profile with the given id/name and activates it.
+     * Id validity is checked again here so the dialog cannot be bypassed;
+     * duplicate ids fail inside [ProfileStore.createProfile].
+     */
+    fun createProfile(id: String, name: String) {
+        if (!ProfileStore.isValidProfileId(id)) {
+            _uiState.update { it.copy(message = R.string.profile_create_invalid_id) }
+            return
+        }
+        viewModelScope.launch {
+            val ok = withContext(Dispatchers.IO) { store.createProfile(id, name) }
+            _uiState.update {
+                if (ok) {
+                    activeStore.write(id)
+                    it.copy(
+                        activeId = id,
+                        message = R.string.profile_create_success,
+                    )
+                } else {
+                    it.copy(message = R.string.profile_create_failed)
+                }
+            }
+            refresh()
+        }
+    }
+
     fun deleteProfile(id: String) {
         viewModelScope.launch {
             withContext(Dispatchers.IO) { store.deleteProfile(id) }
