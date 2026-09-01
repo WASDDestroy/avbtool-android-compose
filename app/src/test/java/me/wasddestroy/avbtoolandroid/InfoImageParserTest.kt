@@ -204,4 +204,73 @@ class InfoImageParserTest {
             parsed.props,
         )
     }
+
+    /**
+     * Mirrors a real device vbmeta (tb710fu): chain descriptors carry their
+     * own "Public key (sha1)" lines. Their digests deliberately differ from
+     * the header one, so picking a descriptor line would fail this test —
+     * the image's own key digest lives only in the indent-0 header block,
+     * and that is what [InfoImageParser.inspect] must report.
+     */
+    private fun multiChainVbmetaOutput() =
+        """
+        Minimum libavb version:   1.0
+        Header Block:             256 bytes
+        Authentication Block:     576 bytes
+        Auxiliary Block:          7680 bytes
+        Public key (sha1):        8fcb864f11f53ed11284615fb67685522085d3a2
+        Algorithm:                SHA256_RSA4096
+        Rollback Index:           0
+        Flags:                    0
+        Rollback Index Location:  0
+        Release String:           'avbtool 1.3.0'
+        Descriptors:
+            Chain Partition descriptor:
+              Partition Name:          boot
+              Rollback Index Location: 3
+              Public key (sha1):       00112233445566778899aabbccddeeff00112233
+              Flags:                   0
+            Chain Partition descriptor:
+              Partition Name:          recovery
+              Rollback Index Location: 1
+              Public key (sha1):       00112233445566778899aabbccddeeff00112233
+              Flags:                   0
+            Chain Partition descriptor:
+              Partition Name:          vbmeta_system
+              Rollback Index Location: 2
+              Public key (sha1):       00112233445566778899aabbccddeeff00112233
+              Flags:                   0
+            Prop: com.android.build.dtbo.fingerprint -> 'Lenovo/TB710FU_PRC/TB710FU:15/AQ3A.250129.001'
+            Hash descriptor:
+              Image Size:            11606630 bytes
+              Hash Algorithm:        sha256
+              Partition Name:        dtbo
+              Salt:                  d459f948619d059bd587519f5956386f2d5ee940440205bc6d077cb2583eb59e
+              Digest:                125567f439e94e67c97482cb191cc720c79883b47c10254c181dd9b1b8b3c25e
+              Flags:                 0
+        """.trimIndent() + "\n"
+
+    @Test
+    fun headerKeySha1_winsOverChainDescriptorKeyLines() {
+        val inspection = InfoImageParser.inspect("vbmeta.img", multiChainVbmetaOutput())
+        assertEquals("8fcb864f11f53ed11284615fb67685522085d3a2", inspection.publicKeySha1)
+        assertEquals("vbmeta", inspection.descriptor)
+        assertEquals(listOf("boot:3:default.bin", "recovery:1:default.bin", "vbmeta_system:2:default.bin"), inspection.chainPartitions)
+    }
+
+    @Test
+    fun footerImageKeySha1_comesFromHeader() {
+        // The header digest differs from every descriptor-level digest on
+        // purpose; hash footers embed no key lines at all, but the guard is
+        // the same one the vbmeta path relies on.
+        val inspection = InfoImageParser.inspect("boot.img", hashFooterOutput())
+        assertEquals("abcdef0123456789abcdef0123456789abcdef01", inspection.publicKeySha1)
+    }
+
+    @Test
+    fun unsignedImages_reportNullKeySha1() {
+        // Algorithm NONE prints no "Public key (sha1)" header line at all.
+        val inspection = InfoImageParser.inspect("system.img", hashtreeFooterOutput())
+        assertNull(inspection.publicKeySha1)
+    }
 }
