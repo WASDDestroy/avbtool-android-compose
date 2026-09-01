@@ -116,27 +116,73 @@ class ProfileStore(private val context: Context) {
     }
 
     /**
-     * Validates the manifest checksums, then extracts the archive into
-     * `profile/<profile_id>/`. The id comes from manifest.json, never from the
-     * zip file name. Returns the profile id, or null on validation failure.
+     * A profile archive that passed manifest and checksum validation and was
+     * extracted into a staging directory. It is committed into place by
+     * [commitImport] or dropped by [discardImport].
+     */
+    class StagedProfileImport internal constructor(
+        internal val dir: File,
+        val profileId: String,
+    )
+
+    /**
+     * Validates the archive (manifest checksums, schema version) and extracts
+     * it into a staging directory without touching installed profiles. The
+     * id comes from manifest.json, never from the zip file name. Returns the
+     * staged import, or null when the archive is invalid.
+     */
+    fun stageImport(zipBytes: ByteArray): StagedProfileImport? {
+        // Staging dirs only live while an import is pending in this process,
+        // so anything left on disk was abandoned by a killed run — drop it.
+        profileDir.listFiles()?.forEach { dir ->
+            if (dir.name.startsWith("import_tmp_")) dir.deleteRecursively()
+        }
+        val tmpDir = File(profileDir, "import_tmp_${System.nanoTime()}")
+        val manifest = try {
+            extractVerified(zipBytes, tmpDir)
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to extract profile archive", e)
+            null
+        }
+        if (manifest == null) {
+            tmpDir.deleteRecursively()
+            return null
+        }
+        val profileId = manifest.optString("profile_id")
+        val schemaVersion = manifest.optInt("schema_version", -1)
+        if (!isValidProfileId(profileId) || schemaVersion != SUPPORTED_SCHEMA_VERSION) {
+            Log.w(TAG, "Unsupported profile: id='$profileId', schema=$schemaVersion")
+            tmpDir.deleteRecursively()
+            return null
+        }
+        return StagedProfileImport(tmpDir, profileId)
+    }
+
+    /**
+     * Moves a staged archive into place, replacing any existing profile with
+     * the same id. Returns the profile id, or null when the target could not
+     * be written (the staged archive is discarded either way on failure).
+     */
+    fun commitImport(staged: StagedProfileImport): String? {
+        val target = File(profileDir, staged.profileId)
+        val ok = (!target.exists() || target.deleteRecursively()) && staged.dir.renameTo(target)
+        if (!ok) staged.dir.deleteRecursively()
+        return if (ok) staged.profileId else null
+    }
+
+    /** Deletes a staged archive without importing it. */
+    fun discardImport(staged: StagedProfileImport) {
+        staged.dir.deleteRecursively()
+    }
+
+    /**
+     * Validates the manifest checksums, extracts the archive into
+     * `profile/<profile_id>/` and commits it in one step. Returns the profile
+     * id, or null on validation failure.
      */
     fun importProfile(zipBytes: ByteArray): String? {
-        val tmpDir = File(profileDir, "import_tmp_${System.nanoTime()}")
-        return try {
-            val manifest = extractVerified(zipBytes, tmpDir) ?: return null
-            val profileId = manifest.optString("profile_id")
-            val schemaVersion = manifest.optInt("schema_version", -1)
-            if (!isValidProfileId(profileId) || schemaVersion != SUPPORTED_SCHEMA_VERSION) {
-                Log.w(TAG, "Unsupported profile: id='$profileId', schema=$schemaVersion")
-                return null
-            }
-            val target = File(profileDir, profileId)
-            if (target.exists() && !target.deleteRecursively()) return null
-            if (!tmpDir.renameTo(target)) return null
-            profileId
-        } finally {
-            tmpDir.deleteRecursively()
-        }
+        val staged = stageImport(zipBytes) ?: return null
+        return commitImport(staged)
     }
 
     private fun extractVerified(zipBytes: ByteArray, destDir: File): JSONObject? {

@@ -20,7 +20,6 @@ import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
 import java.math.BigInteger
-import java.util.zip.ZipInputStream
 
 /**
  * One partition of an imported signing profile. Mirrors the config
@@ -125,11 +124,11 @@ data class ProfileUiState(
     val signPlan: SignScopePlan? = null,
     /**
      * Non-null shows the rollback-index warning before a pending action
-     * (profile import). The stashed action continues on confirmation.
+     * (profile import). The staged archive continues on confirmation.
      */
     val rollbackFindings: List<RollbackIndexFinding>? = null,
-    /** Zip awaiting the rollback-index confirmation, one-shot. */
-    val pendingImportBytes: ByteArray? = null,
+    /** Validated archive awaiting the rollback-index confirmation, one-shot. */
+    val pendingImport: ProfileStore.StagedProfileImport? = null,
 )
 
 /**
@@ -191,39 +190,49 @@ class ProfileViewModel(
     }
 
     fun importProfile(bytes: ByteArray) {
-        if (_uiState.value.importing || _uiState.value.pendingImportBytes != null) return
+        if (_uiState.value.importing || _uiState.value.pendingImport != null) return
         viewModelScope.launch {
-            // Classify every rollback_index in the archive before anything is
-            // written to disk: an imported profile is a trusted-content
-            // decision the user must make knowingly.
-            val findings = withContext(Dispatchers.IO) { scanProfileZipRollbackIndexes(bytes) }
+            // Validate the archive (manifest, checksums, schema) and stage it
+            // first, so the rollback-index warning below is only ever shown
+            // for an import that will actually succeed on confirmation.
+            val staged = withContext(Dispatchers.IO) { store.stageImport(bytes) }
+            if (staged == null) {
+                _uiState.update { it.copy(message = R.string.profile_import_failed) }
+                refresh()
+                return@launch
+            }
+            val findings = withContext(Dispatchers.IO) { scanStagedRollbackIndexes(staged) }
             if (findings.isEmpty()) {
-                performImport(bytes)
+                finishImport(staged)
             } else {
-                _uiState.update {
-                    it.copy(pendingImportBytes = bytes, rollbackFindings = findings)
-                }
+                _uiState.update { it.copy(pendingImport = staged, rollbackFindings = findings) }
             }
         }
     }
 
     /** Continues an import that was gated by the rollback-index warning. */
     fun confirmRollbackImport() {
-        val bytes = _uiState.value.pendingImportBytes
-        _uiState.update { it.copy(pendingImportBytes = null, rollbackFindings = null) }
-        if (bytes != null) performImport(bytes)
+        val staged = _uiState.value.pendingImport
+        _uiState.update { it.copy(pendingImport = null, rollbackFindings = null) }
+        if (staged != null) finishImport(staged)
     }
 
     /** Aborts an import gated by the rollback-index warning. */
     fun dismissRollbackWarning() {
-        _uiState.update { it.copy(pendingImportBytes = null, rollbackFindings = null) }
+        val staged = _uiState.value.pendingImport
+        _uiState.update { it.copy(pendingImport = null, rollbackFindings = null) }
+        staged?.let { pending ->
+            viewModelScope.launch {
+                withContext(Dispatchers.IO) { store.discardImport(pending) }
+            }
+        }
     }
 
-    private fun performImport(bytes: ByteArray) {
+    private fun finishImport(staged: ProfileStore.StagedProfileImport) {
         if (_uiState.value.importing) return
         viewModelScope.launch {
             _uiState.update { it.copy(importing = true, message = null) }
-            val id = withContext(Dispatchers.IO) { store.importProfile(bytes) }
+            val id = withContext(Dispatchers.IO) { store.commitImport(staged) }
             _uiState.update {
                 if (id != null) {
                     // First imported profile becomes active automatically.
@@ -243,25 +252,16 @@ class ProfileViewModel(
     }
 
     /**
-     * Reads profile.json from the import zip and classifies every partition's
-     * rollback_index. Long semantics match [parseProfile], so what this flags
-     * is exactly what signing would later emit; a missing or unreadable
-     * profile.json yields no findings (the regular import validation reports
-     * the broken archive).
+     * Classifies every partition's rollback_index in a staged, already
+     * checksum-verified profile. Long semantics match [parseProfile], so what
+     * this flags is exactly what signing would later emit; a missing or
+     * unreadable profile.json yields no findings.
      */
-    private fun scanProfileZipRollbackIndexes(bytes: ByteArray): List<RollbackIndexFinding> {
+    private fun scanStagedRollbackIndexes(
+        staged: ProfileStore.StagedProfileImport,
+    ): List<RollbackIndexFinding> {
         val profileJson = runCatching {
-            var found: JSONObject? = null
-            ZipInputStream(bytes.inputStream().buffered()).use { zip ->
-                while (true) {
-                    val entry = zip.nextEntry ?: break
-                    if (entry.name == "profile.json") {
-                        found = runCatching { JSONObject(zip.readBytes().decodeToString()) }.getOrNull()
-                        break
-                    }
-                }
-            }
-            found
+            JSONObject(File(staged.dir, "profile.json").readText())
         }.getOrNull() ?: return emptyList()
         val partitions = profileJson.optJSONObject("partitions") ?: return emptyList()
         val now = System.currentTimeMillis() / 1000
