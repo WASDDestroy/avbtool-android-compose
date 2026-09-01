@@ -44,6 +44,33 @@ class ProfileStore(private val context: Context) {
         return entries
     }
 
+    /**
+     * Loads the raw profile.json of [id], applies [transform] to the parsed
+     * object and writes it back (temp file + rename). All fields the
+     * transform does not touch are preserved verbatim. Returns false when the
+     * profile does not exist or its JSON is unreadable.
+     */
+    fun updateProfileJson(id: String, transform: (JSONObject) -> Unit): Boolean {
+        if (!isValidProfileId(id)) return false
+        val file = File(File(profileDir, id), "profile.json")
+        if (!file.isFile) return false
+        return try {
+            val obj = JSONObject(file.readText())
+            transform(obj)
+            val tmp = File(file.parentFile, "profile.json.tmp_${System.nanoTime()}")
+            tmp.writeText(obj.toString(2))
+            if (!tmp.renameTo(file)) {
+                tmp.delete()
+                false
+            } else {
+                true
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to update profile '$id'", e)
+            false
+        }
+    }
+
     fun getProfile(id: String): ProfileEntry? = listProfiles().find { it.id == id }
 
     fun deleteProfile(id: String): Boolean {

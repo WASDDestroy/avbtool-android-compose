@@ -96,7 +96,30 @@ data class ProfileUiState(
     val imageSummaries: Map<String, String> = emptyMap(),
     /** Toast event, one-shot. */
     val message: Int? = null,
+    /** Set while an add-partition parse is in flight; disables the dialog buttons. */
+    val addingPartition: Boolean = false,
+    /** One-shot outcome of an add-partition attempt; consumed by the screen. */
+    val addPartitionEvent: AddPartitionEvent? = null,
 )
+
+/**
+ * Outcome of one add-partition attempt. The dialog stays open on
+ * [InvalidImage] / [NoImage] / [NameConflict] so the user can pick
+ * "use default descriptor" or give up; [Success] closes it.
+ */
+sealed class AddPartitionEvent {
+    /** The picked image carried valid descriptors and was added to the profile. */
+    data class Success(val partitionName: String) : AddPartitionEvent()
+
+    /** avbtool ran but the image carries no valid VBMeta descriptors. */
+    data object InvalidImage : AddPartitionEvent()
+
+    /** No image file was picked for the new partition. */
+    data object NoImage : AddPartitionEvent()
+
+    /** The resolved partition name already exists in the profile. */
+    data object NameConflict : AddPartitionEvent()
+}
 
 class ProfileViewModel(
     private val appContext: Context,
@@ -207,8 +230,279 @@ class ProfileViewModel(
         refresh()
     }
 
+    fun consumeAddPartitionEvent() {
+        _uiState.update { it.copy(addPartitionEvent = null) }
+    }
+
+    /** Next "defaultN" name that avoids all existing partitions of the active profile. */
+    private fun nextDefaultPartitionName(existing: Set<String>): String {
+        var n = 1
+        while ("default$n" in existing) n++
+        return "default$n"
+    }
+
+    private fun existingPartitionNames(profileId: String): Set<String> {
+        val entry = _uiState.value.profiles.find { it.id == profileId } ?: return emptySet()
+        return runCatching {
+            JSONObject(File(entry.dir, "profile.json").readText())
+        }.getOrNull()?.optJSONObject("partitions")?.let { obj ->
+            obj.keys().asSequence().toSet()
+        } ?: emptySet()
+    }
+
+    /**
+     * Resolves the partition name for a new entry, per the product rules:
+     * the user-entered name (or the image file name when the toggle is on)
+     * wins; otherwise the parsed descriptor's Partition Name; otherwise an
+     * auto-incremented defaultN. Returns null on collision with an existing
+     * partition so the caller can reject the entry.
+     */
+    private fun resolvePartitionName(
+        userInput: String?,
+        imageFileName: String?,
+        parsedName: String?,
+        existing: Set<String>,
+    ): String? {
+        val candidate = userInput?.trim()?.takeIf { it.isNotEmpty() }
+            ?: imageFileName?.substringBeforeLast('.')?.trim()?.takeIf { it.isNotEmpty() }
+            ?: parsedName?.trim()?.takeIf { it.isNotEmpty() }
+            ?: return null
+        if (candidate in existing) return null
+        return candidate
+    }
+
+    /**
+     * Adds a partition from the add-partition dialog inputs. When [uri] is
+     * set, the image is registered like a normal per-partition pick and
+     * inspected via `avbtool info_image`; a parseable footer/vbmeta is
+     * written into profile.json, anything else raises
+     * [AddPartitionEvent.InvalidImage]. With [uri] null — or after the user
+     * chose "use default descriptor" on the warning dialog — a default
+     * entry (hash, auto-incremented defaultN unless a name is available,
+     * 4096 bytes, rollback index 0, algorithm NONE, sha256, key "default")
+     * is written instead.
+     */
+    fun addPartition(name: String, useImageFileName: Boolean, imageFileName: String?, uri: Uri?) {
+        val profileId = _uiState.value.activeId ?: return
+        val trimmed = name.trim()
+        val desired = when {
+            useImageFileName && !imageFileName.isNullOrBlank() ->
+                imageFileName.substringBeforeLast('.').trim()
+            else -> trimmed
+        }
+        // When the toggle is on the user input is disabled and carries no
+        // meaning; otherwise it doubles as the descriptor-name fallback.
+        val descriptorFallback = if (useImageFileName) null else trimmed.takeIf { it.isNotEmpty() }
+
+        if (uri == null) {
+            writeDefaultPartition(profileId, desired, descriptorFallback)
+            return
+        }
+
+        if (_uiState.value.addingPartition) return
+        viewModelScope.launch {
+            _uiState.update { it.copy(addingPartition = true, addPartitionEvent = null) }
+            val event = withContext(Dispatchers.IO) {
+                inspectAndAddPartition(profileId, uri, desired, descriptorFallback)
+            }
+            _uiState.update {
+                it.copy(addingPartition = false, addPartitionEvent = event)
+            }
+        }
+    }
+
+    private suspend fun inspectAndAddPartition(
+        profileId: String,
+        uri: Uri,
+        desiredName: String,
+        descriptorFallback: String?,
+    ): AddPartitionEvent {
+        val fileName = bridge.displayName(uri)
+        val fd = bridge.openRead(uri)
+        if (fd == null) {
+            return AddPartitionEvent.InvalidImage
+        }
+        val result = try {
+            runner.run(listOf("avbtool", "info_image", "--image", bridge.pseudoPath(fd)))
+        } finally {
+            bridge.closeFd(fd)
+        }
+
+        // avbtool exits non-zero for images without a footer/vbmeta; a blank
+        // stderr plus parseable descriptors means the image is valid.
+        val inspection = if (result.stderr.isBlank()) {
+            runCatching { InfoImageParser.inspect(fileName, result.stdout) }.getOrNull()
+        } else {
+            null
+        } ?: return AddPartitionEvent.InvalidImage
+
+        val existing = existingPartitionNames(profileId)
+        val partitionName = resolvePartitionName(
+            userInput = desiredName.takeIf { it.isNotEmpty() },
+            imageFileName = fileName,
+            parsedName = inspection.partitionName,
+            existing = existing,
+        )
+        if (partitionName == null) {
+            return AddPartitionEvent.NameConflict
+        }
+
+        // The image itself is registered like any per-partition pick so
+        // signing re-uses the existing scratch-copy pipeline.
+        setImageInternal(profileId, partitionName, uri)
+
+        val ok = store.updateProfileJson(profileId) { obj ->
+            obj.optJSONObject("partitions")?.put(
+                partitionName,
+                buildPartitionEntry(inspection, partitionName, fileName),
+            )
+        }
+        return if (ok) {
+            refresh()
+            AddPartitionEvent.Success(partitionName)
+        } else {
+            // JSON write failed: undo the image pick so no orphan grant/URI
+            // survives for a partition the profile does not know about.
+            setImageInternal(profileId, partitionName, null)
+            AddPartitionEvent.InvalidImage
+        }
+    }
+
+    /** Writes a fallback default-descriptor partition entry into profile.json. */
+    private fun writeDefaultPartition(profileId: String, desiredName: String, descriptorFallback: String?) {
+        viewModelScope.launch {
+            val created = withContext(Dispatchers.IO) {
+                val existing = existingPartitionNames(profileId)
+                val name = desiredName.takeIf { it.isNotEmpty() && it !in existing }
+                    ?: descriptorFallback?.takeIf { it !in existing }
+                    ?: nextDefaultPartitionName(existing)
+                val entry = defaultPartitionEntry(name)
+                store.updateProfileJson(profileId) { obj ->
+                    obj.optJSONObject("partitions")?.put(name, entry)
+                }.let { name to it }
+            }
+            _uiState.update { state ->
+                if (created.second) {
+                    refresh()
+                    state.copy(addPartitionEvent = AddPartitionEvent.Success(created.first))
+                } else {
+                    state.copy(addPartitionEvent = AddPartitionEvent.InvalidImage)
+                }
+            }
+        }
+    }
+
+    /**
+     * The default descriptor offered when an image is missing or invalid:
+     * hash footer, 4096 bytes, rollback index 0, algorithm NONE, sha256,
+     * key mapping "default" (the key store is assumed pre-provisioned).
+     */
+    private fun defaultPartitionEntry(partitionName: String): JSONObject {
+        return JSONObject().apply {
+            put("image", "$partitionName.img")
+            put("descriptor", "hash")
+            put("algorithm", "NONE")
+            put("key_id", "default")
+            put("partition_name", partitionName)
+            put("partition_size", 4096)
+            put("rollback_index", 0)
+            put("hash_algorithm", "sha256")
+        }
+    }
+
+    /**
+     * Maps a parsed info_image inspection onto a v3 partition entry, mirroring
+     * the reference project's `_build_auto_partition`: signing algorithm and
+     * rollback index come from the vbmeta header, the hash algorithm from the
+     * descriptor (defaulting to sha256), flags are preserved as an integer,
+     * and hash footers reuse the image's total size as the partition size so
+     * `add_hash_footer` has a size to work with.
+     */
+    private fun buildPartitionEntry(
+        inspection: InfoImageParser.ImageInspection,
+        partitionName: String,
+        imageFileName: String,
+    ): JSONObject {
+        val flags = inspection.flags ?: 0L
+        val entry = JSONObject().apply {
+            put("image", imageFileName)
+            put("descriptor", inspection.descriptor)
+            put("algorithm", inspection.algorithm ?: "NONE")
+            put("rollback_index", inspection.rollbackIndex ?: 0L)
+            if (flags != 0L) put("flags", flags)
+            if (inspection.props.isNotEmpty()) {
+                put(
+                    "props",
+                    JSONArray().apply {
+                        inspection.props.forEach { (k, v) ->
+                            put(JSONArray().put(k).put(v))
+                        }
+                    },
+                )
+            }
+        }
+        if (inspection.descriptor == "vbmeta") {
+            if (inspection.includedPartitions.isNotEmpty()) {
+                entry.put(
+                    "included_partitions",
+                    JSONArray().apply { inspection.includedPartitions.forEach { put(it) } },
+                )
+            }
+            if (inspection.chainPartitions.isNotEmpty()) {
+                entry.put(
+                    "chain_partitions",
+                    JSONArray().apply { inspection.chainPartitions.forEach { put(it) } },
+                )
+            }
+        } else {
+            entry.put("partition_name", inspection.partitionName ?: partitionName)
+            entry.put("hash_algorithm", inspection.hashAlgorithm ?: "sha256")
+            inspection.salt?.let { entry.put("salt", it) }
+            if (inspection.descriptor == "hash" && inspection.partitionSize != null && inspection.partitionSize > 0) {
+                entry.put("partition_size", inspection.partitionSize)
+            }
+            if (flags and 1L != 0L) entry.put("set_hashtree_disabled_flag", true)
+            if (flags and 2L != 0L) entry.put("set_verification_disabled_flag", true)
+        }
+        return entry
+    }
+
+    /**
+     * Deletes the given partitions from the active profile's profile.json and
+     * drops their image picks (releasing SAF grants when no longer shared).
+     */
+    fun deletePartitions(names: Collection<String>) {
+        val profileId = _uiState.value.activeId ?: return
+        if (names.isEmpty()) return
+        viewModelScope.launch {
+            withContext(Dispatchers.IO) {
+                store.updateProfileJson(profileId) { obj ->
+                    obj.optJSONObject("partitions")?.let { partitions ->
+                        names.forEach { partitions.remove(it) }
+                    }
+                }
+                names.forEach { name ->
+                    imageSelections.remove("$profileId:$name")?.let { uriStr ->
+                        releasePersistableGrant(uriStr.toUri())
+                    }
+                }
+                imageSelectionStore.write(imageSelections)
+            }
+            refresh()
+        }
+    }
+
     fun setImage(partition: String, uri: Uri?) {
         val profileId = _uiState.value.activeId ?: return
+        setImageInternal(profileId, partition, uri)
+    }
+
+    /**
+     * Records or clears a per-partition image pick. Persistable grants are
+     * taken on record and released on removal — but only when no other
+     * partition still references the same URI (grants are app-wide).
+     */
+    private fun setImageInternal(profileId: String, partition: String, uri: Uri?) {
         if (uri != null) {
             imageSelections["$profileId:$partition"] = uri.toString()
             // Persist read+write so the grant survives reboots and re-signing

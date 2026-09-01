@@ -398,4 +398,23 @@
     <string name="profile_create_success">配置已创建</string>
     <string name="profile_create_failed">创建配置失败，ID 可能已被占用。</string>
     <string name="profile_create_invalid_id">配置 ID 无效。</string>
+    <string name="profile_group_partition_actions">分区操作</string>
+    <string name="profile_partition_add">添加分区</string>
+    <string name="profile_partition_delete">删除分区</string>
+    <string name="profile_partition_add_title">添加一个分区</string>
+    <string name="profile_partition_name_label">输入分区名称</string>
+    <string name="profile_partition_name_error">只允许 ASCII 字符。</string>
+    <string name="profile_partition_use_image_name">使用镜像文件名称</string>
+    <string name="profile_partition_pick_image">选择一个镜像文件</string>
+    <string name="profile_partition_image_none">未选择镜像文件</string>
+    <string name="profile_partition_image_selected">镜像：%s</string>
+    <string name="profile_partition_delete_title">删除分区</string>
+    <string name="profile_partition_delete_message">确定删除这些分区吗：%s</string>
+    <string name="profile_partition_warning_title">警告</string>
+    <string name="profile_partition_warning_invalid_image">镜像不包含有效的 VBMeta 描述符，您希望怎么处理这条配置？</string>
+    <string name="profile_partition_warning_no_image">未选择镜像文件，您希望怎么处理这条配置？</string>
+    <string name="profile_partition_warning_discard">放弃导入</string>
+    <string name="profile_partition_warning_default">使用默认描述符</string>
+    <string name="profile_partition_add_conflict">同名分区已存在。</string>
+    <string name="profile_partition_add_failed">添加分区失败。</string>
 </resources>

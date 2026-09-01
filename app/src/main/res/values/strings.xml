@@ -400,4 +400,23 @@
     <string name="profile_create_success">Profile created</string>
     <string name="profile_create_failed">Could not create the profile. The ID may already be in use.</string>
     <string name="profile_create_invalid_id">Invalid profile ID.</string>
+    <string name="profile_group_partition_actions">Partition actions</string>
+    <string name="profile_partition_add">Add partition</string>
+    <string name="profile_partition_delete">Delete partitions</string>
+    <string name="profile_partition_add_title">Add a partition</string>
+    <string name="profile_partition_name_label">Partition name</string>
+    <string name="profile_partition_name_error">Only ASCII characters are allowed.</string>
+    <string name="profile_partition_use_image_name">Use image file name</string>
+    <string name="profile_partition_pick_image">Select an image file</string>
+    <string name="profile_partition_image_none">No image selected</string>
+    <string name="profile_partition_image_selected">Image: %s</string>
+    <string name="profile_partition_delete_title">Delete partitions</string>
+    <string name="profile_partition_delete_message">Delete these partitions: %s?</string>
+    <string name="profile_partition_warning_title">Warning</string>
+    <string name="profile_partition_warning_invalid_image">The image does not contain valid VBMeta descriptors. How do you want to handle this entry?</string>
+    <string name="profile_partition_warning_no_image">No image file was selected. How do you want to handle this entry?</string>
+    <string name="profile_partition_warning_discard">Discard</string>
+    <string name="profile_partition_warning_default">Use default descriptor</string>
+    <string name="profile_partition_add_conflict">A partition with this name already exists.</string>
+    <string name="profile_partition_add_failed">Could not add the partition.</string>
 </resources>
