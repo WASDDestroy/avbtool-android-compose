@@ -380,9 +380,8 @@
     <string name="profile_sign_probing">正在检查…</string>
 
     <string name="profile_sign_scope_title">选择本次要签名的分区</string>
-
-    <string name="profile_sign_scope_missing">缺少：%s</string>
-
+    <string name="profile_sign_scope_missing">无法访问 %s</string>
+    <string name="profile_sign_scope_retry">请在镜像列表中选择文件后重试。</string>
     <string name="profile_sign_scope_vbmeta">签名时生成，依赖分区需同时选择</string>
     <string name="profile_empty">尚未导入任何配置。</string>
     <string name="profile_delete">删除配置</string>

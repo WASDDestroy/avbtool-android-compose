@@ -1084,6 +1084,9 @@ private fun SignScopeDialog(
             imagePresent = { plan.imageAvailable[it] == true },
         )
     }
+    // Display file names, not partition keys: the user is told which *file*
+    // is gone ("Cannot access init_boot.img"), then how to fix it.
+    val imageByPartition = remember(specs) { specs.associate { it.partition to it.image } }
     val anyFeasible = feasibility.values.any { it.feasible }
 
     AlertDialog(
@@ -1117,7 +1120,9 @@ private fun SignScopeDialog(
                             val note = when {
                                 !f.feasible && f.missingDependencies.isNotEmpty() -> stringResource(
                                     R.string.profile_sign_scope_missing,
-                                    f.missingDependencies.joinToString(", "),
+                                    f.missingDependencies.joinToString(", ") { dep ->
+                                        imageByPartition[dep] ?: dep
+                                    },
                                 )
                                 isVbmeta -> stringResource(R.string.profile_sign_scope_vbmeta)
                                 else -> null
@@ -1132,6 +1137,12 @@ private fun SignScopeDialog(
                         }
                     }
                 }
+                Text(
+                    stringResource(R.string.profile_sign_scope_retry),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = 8.dp),
+                )
             }
         },
         confirmButton = {

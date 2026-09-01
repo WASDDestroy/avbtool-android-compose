@@ -381,9 +381,8 @@
     <string name="profile_sign_probing">Checking…</string>
 
     <string name="profile_sign_scope_title">Select partitions to sign</string>
-
-    <string name="profile_sign_scope_missing">Missing: %s</string>
-
+    <string name="profile_sign_scope_missing">Cannot access %s</string>
+    <string name="profile_sign_scope_retry">Select the file in the image list and try again.</string>
     <string name="profile_sign_scope_vbmeta">Generated image, dependencies must be selected</string>
     <string name="profile_empty">No profiles imported yet.</string>
     <string name="profile_delete">Delete profile</string>
