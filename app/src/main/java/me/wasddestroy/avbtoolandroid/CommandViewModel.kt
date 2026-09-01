@@ -16,6 +16,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
+import java.math.BigInteger
 
 data class CommandUiState(
     val running: Boolean = false,
@@ -54,6 +55,14 @@ class CommandViewModel(
     fun dismissOutputFile() {
         _uiState.update { it.copy(outputFile = null) }
     }
+
+    /**
+     * Rollback index the picked image currently carries (`avbtool info_image`
+     * first, direct footer/vbmeta header read as fallback); null when none is
+     * readable.
+     */
+    suspend fun readExistingRollbackIndex(uri: Uri): BigInteger? =
+        AvbRollbackIndexReader.read(runner, bridge, appContext, uri)
 
     fun run(cmd: AvbCommand, values: Map<String, String>, uri: Uri?) {
         if (_uiState.value.running) return

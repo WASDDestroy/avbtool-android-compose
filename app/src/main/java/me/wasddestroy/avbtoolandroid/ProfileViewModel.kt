@@ -84,9 +84,10 @@ data class ProfilePartitionSpec(
  * with its descriptor type and the live result of probing its input image
  * (footer partitions only). Null while no dialog is shown.
  *
- * [existingRollbackIndex] carries the footer rollback index read straight
- * from each probed image; re-signing rewrites that value, so the dialog can
- * warn where the profile sets a different one.
+ * [existingRollbackIndex] carries the rollback index each probed image
+ * currently stores (info_image parse with a direct header read as fallback);
+ * re-signing rewrites that value, so the dialog can warn where the profile
+ * sets a different one.
  */
 data class SignScopePlan(
     val partitions: List<String> = emptyList(),
@@ -792,17 +793,15 @@ class ProfileViewModel(
 
     /**
      * Opens and immediately closes the picked image to verify it is readable,
-     * then reads its existing footer rollback index (null when the image has
-     * no valid AVB footer). Runs on the IO dispatcher.
+     * then resolves its current rollback index (info_image parse with the
+     * direct footer/header read as fallback; null when none is readable).
      */
     private suspend fun probeImage(partition: String): Pair<Boolean, BigInteger?> {
         val uri = getImage(partition)?.toUri() ?: return false to null
         val fd = bridge.openRead(uri)
         if (fd == null) return false to null
         bridge.closeFd(fd)
-        val existing = runCatching {
-            AvbFooterProbe.readRollbackIndex(appContext.contentResolver, uri)
-        }.getOrNull()
+        val existing = AvbRollbackIndexReader.read(runner, bridge, appContext, uri)
         return true to existing
     }
 

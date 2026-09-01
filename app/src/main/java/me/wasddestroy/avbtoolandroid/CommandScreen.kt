@@ -82,9 +82,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import java.math.BigInteger
 import me.wasddestroy.avbtoolandroid.ui.components.DialogConfirmButton
 import me.wasddestroy.avbtoolandroid.ui.components.DialogDismissButton
@@ -215,9 +213,7 @@ fun CommandScreen(
             return
         }
         coroutineScope.launch {
-            val existing = withContext(Dispatchers.IO) {
-                AvbFooterProbe.readRollbackIndex(context.contentResolver, raw.toUri())
-            }
+            val existing = viewModel.readExistingRollbackIndex(raw.toUri())
             if (existing != null && existing != requested) {
                 pendingRollbackMismatch = existing to requested
             } else {
