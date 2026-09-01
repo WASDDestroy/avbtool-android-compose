@@ -426,4 +426,15 @@
     <string name="profile_partition_add_conflict">同名分区已存在。</string>
     <string name="profile_partition_add_failed">添加分区失败。</string>
     <string name="profile_partitions_empty">配置文件中不包含分区信息。</string>
+
+    <!-- 防回滚指数守卫：防回滚指数是 AVB 体系中唯一写入 RPMB 的值，
+         因此在签名前与配置导入前拦截数值异常或来自不可信来源的值。 -->
+    <string name="rollback_warning_title">检测到异常的防回滚指数</string>
+    <string name="rollback_warning_intro">防回滚指数是 AVB 体系中唯一会写入 RPMB 的值。设备一旦接受签名镜像，其存储的最低值将被永久抬高，旧镜像将无法再启动。</string>
+    <string name="rollback_warning_unrecognized">值 %1$s 不匹配任何已知的防回滚指数模式（既不是逐次递增的序号，也不是 SPL 日期对应的 UNIX 时间戳）。可能是误输入，也可能来自不可信的教程或配置。</string>
+    <string name="rollback_warning_future">值 %1$s 对应日期 %2$s，比本机当前日期（%3$s）晚一年以上。常见原因：误用毫秒时间戳、多敲了一位数字，或该值来自不可信来源。</string>
+    <string name="rollback_warning_future_unrepresentable">值 %1$s 超出可表示的日期范围。常见原因：误用毫秒时间戳、多敲了一位数字，或该值来自不可信来源。</string>
+    <string name="rollback_warning_invalid">值 %1$s 不是可写入的 64 位无符号整数（0 ～ 18446744073709551615），avbtool 无法写入该值。</string>
+    <string name="rollback_warning_continue">仍要继续</string>
+    <string name="rollback_warning_continue_countdown">仍要继续（%1$d）</string>
 </resources>

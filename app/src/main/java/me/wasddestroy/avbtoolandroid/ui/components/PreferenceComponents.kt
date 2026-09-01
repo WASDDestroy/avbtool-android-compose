@@ -28,7 +28,12 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.compositionLocalOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -310,6 +315,31 @@ fun DialogConfirmButton(
     enabled = enabled,
     content = content,
 )
+
+/**
+ * Confirm button for high-severity warnings: shows the remaining seconds and
+ * stays disabled for [countdownSeconds], forcing the user to actually read
+ * the dialog before continuing. The countdown restarts whenever the button
+ * enters composition.
+ */
+@Composable
+fun CountdownDialogConfirmButton(
+    text: String,
+    countdownText: (remaining: Int) -> String,
+    countdownSeconds: Int = 5,
+    onClick: () -> Unit,
+) {
+    var remaining by remember { mutableIntStateOf(countdownSeconds) }
+    LaunchedEffect(countdownSeconds) {
+        while (remaining > 0) {
+            kotlinx.coroutines.delay(1000)
+            remaining--
+        }
+    }
+    DialogConfirmButton(onClick = onClick, enabled = remaining <= 0) {
+        Text(if (remaining > 0) countdownText(remaining) else text)
+    }
+}
 
 @Suppress("unused")
 @Composable

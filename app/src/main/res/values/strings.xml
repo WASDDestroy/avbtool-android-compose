@@ -427,4 +427,16 @@
     <string name="profile_partition_add_conflict">A partition with this name already exists.</string>
     <string name="profile_partition_add_failed">Could not add the partition.</string>
     <string name="profile_partitions_empty">The profile does not contain any partitions.</string>
+
+    <!-- Rollback index guard: the rollback index is the only AVB value written
+         to RPMB, so mis-scaled or malicious values are gated before signing
+         and before a profile import is committed. -->
+    <string name="rollback_warning_title">Abnormal rollback index detected</string>
+    <string name="rollback_warning_intro">The rollback index is the only AVB value written to RPMB. Once the device accepts a signed image, the stored minimum rises permanently and older images will no longer boot.</string>
+    <string name="rollback_warning_unrecognized">Value %1$s matches no known rollback index scheme (neither a release counter nor an SPL UNIX timestamp). It may be mistyped or come from an untrusted tutorial or config.</string>
+    <string name="rollback_warning_future">Value %1$s decodes to date %2$s, more than one year ahead of this device\'s date (%3$s). Usual causes: milliseconds instead of seconds, one extra digit, or an untrusted source.</string>
+    <string name="rollback_warning_future_unrepresentable">Value %1$s is beyond any representable date. Usual causes: milliseconds instead of seconds, one extra digit, or an untrusted source.</string>
+    <string name="rollback_warning_invalid">Value %1$s is not a writable 64-bit unsigned integer (0 to 18446744073709551615). avbtool cannot write this value.</string>
+    <string name="rollback_warning_continue">Continue anyway</string>
+    <string name="rollback_warning_continue_countdown">Continue anyway (%1$d)</string>
 </resources>

@@ -19,6 +19,8 @@ import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
+import java.math.BigInteger
+import java.util.zip.ZipInputStream
 
 /**
  * One partition of an imported signing profile. Mirrors the config
@@ -115,6 +117,13 @@ data class ProfileUiState(
     val probingScope: Boolean = false,
     /** Non-null shows the sign-scope dialog, populated by [ProfileViewModel.prepareSignScope]. */
     val signPlan: SignScopePlan? = null,
+    /**
+     * Non-null shows the rollback-index warning before a pending action
+     * (profile import). The stashed action continues on confirmation.
+     */
+    val rollbackFindings: List<RollbackIndexFinding>? = null,
+    /** Zip awaiting the rollback-index confirmation, one-shot. */
+    val pendingImportBytes: ByteArray? = null,
 )
 
 /**
@@ -176,6 +185,35 @@ class ProfileViewModel(
     }
 
     fun importProfile(bytes: ByteArray) {
+        if (_uiState.value.importing || _uiState.value.pendingImportBytes != null) return
+        viewModelScope.launch {
+            // Classify every rollback_index in the archive before anything is
+            // written to disk: an imported profile is a trusted-content
+            // decision the user must make knowingly.
+            val findings = withContext(Dispatchers.IO) { scanProfileZipRollbackIndexes(bytes) }
+            if (findings.isEmpty()) {
+                performImport(bytes)
+            } else {
+                _uiState.update {
+                    it.copy(pendingImportBytes = bytes, rollbackFindings = findings)
+                }
+            }
+        }
+    }
+
+    /** Continues an import that was gated by the rollback-index warning. */
+    fun confirmRollbackImport() {
+        val bytes = _uiState.value.pendingImportBytes
+        _uiState.update { it.copy(pendingImportBytes = null, rollbackFindings = null) }
+        if (bytes != null) performImport(bytes)
+    }
+
+    /** Aborts an import gated by the rollback-index warning. */
+    fun dismissRollbackWarning() {
+        _uiState.update { it.copy(pendingImportBytes = null, rollbackFindings = null) }
+    }
+
+    private fun performImport(bytes: ByteArray) {
         if (_uiState.value.importing) return
         viewModelScope.launch {
             _uiState.update { it.copy(importing = true, message = null) }
@@ -196,6 +234,41 @@ class ProfileViewModel(
             }
             refresh()
         }
+    }
+
+    /**
+     * Reads profile.json from the import zip and classifies every partition's
+     * rollback_index. Long semantics match [parseProfile], so what this flags
+     * is exactly what signing would later emit; a missing or unreadable
+     * profile.json yields no findings (the regular import validation reports
+     * the broken archive).
+     */
+    private fun scanProfileZipRollbackIndexes(bytes: ByteArray): List<RollbackIndexFinding> {
+        val profileJson = runCatching {
+            var found: JSONObject? = null
+            ZipInputStream(bytes.inputStream().buffered()).use { zip ->
+                while (true) {
+                    val entry = zip.nextEntry ?: break
+                    if (entry.name == "profile.json") {
+                        found = runCatching { JSONObject(zip.readBytes().decodeToString()) }.getOrNull()
+                        break
+                    }
+                }
+            }
+            found
+        }.getOrNull() ?: return emptyList()
+        val partitions = profileJson.optJSONObject("partitions") ?: return emptyList()
+        val now = System.currentTimeMillis() / 1000
+        val findings = mutableListOf<RollbackIndexFinding>()
+        for (name in partitions.keys()) {
+            val obj = partitions.optJSONObject(name) ?: continue
+            if (!obj.has("rollback_index")) continue
+            val verdict = RollbackIndexGuard.classify(BigInteger.valueOf(obj.optLong("rollback_index")), now)
+            if (verdict !is RollbackIndexVerdict.Ok) {
+                findings += RollbackIndexFinding(name, verdict)
+            }
+        }
+        return findings
     }
 
     /**

@@ -84,6 +84,7 @@ fun ProfileScreen(
     var showDeletePartitionsDialog by remember { mutableStateOf(false) }
     var pendingDeletePartitions by remember { mutableStateOf<Set<String>?>(null) }
     var pendingSignScope by remember { mutableStateOf<Set<String>?>(null) }
+    var signRollbackFindings by remember { mutableStateOf<List<RollbackIndexFinding>?>(null) }
 
     val addPartitionEvent = uiState.addPartitionEvent
     LaunchedEffect(addPartitionEvent) {
@@ -231,6 +232,17 @@ fun ProfileScreen(
                     Text(stringResource(R.string.command_dismiss))
                 }
             },
+        )
+    }
+
+    uiState.rollbackFindings?.let { findings ->
+        // Import is all-or-nothing: entries avbtool cannot write at all block
+        // the import; merely anomalous ones need the countdown confirmation.
+        val hasInvalid = findings.any { it.verdict is RollbackIndexVerdict.Invalid }
+        RollbackIndexWarningDialog(
+            findings = findings,
+            onDismiss = viewModel::dismissRollbackWarning,
+            onContinue = if (hasInvalid) null else viewModel::confirmRollbackImport,
         )
     }
 
@@ -386,6 +398,14 @@ fun ProfileScreen(
     }
 
     if (confirmOverwrite) {
+        val scope = pendingSignScope ?: emptySet()
+        // Classify before the run starts: signing accepts the image's rollback
+        // index into RPMB, so anomalous values must be confirmed explicitly.
+        val findings = RollbackIndexGuard.scanSpecs(
+            specs = uiState.activeSpecs,
+            scope = scope,
+            nowSeconds = System.currentTimeMillis() / 1000,
+        )
         AlertDialog(
             onDismissRequest = { confirmOverwrite = false },
             title = { Text(stringResource(R.string.command_modify_title)) },
@@ -393,7 +413,11 @@ fun ProfileScreen(
             confirmButton = {
                 DialogConfirmButton(onClick = {
                     confirmOverwrite = false
-                    viewModel.signActive(pendingSignScope ?: emptySet())
+                    if (findings.isEmpty()) {
+                        viewModel.signActive(scope)
+                    } else {
+                        signRollbackFindings = findings
+                    }
                 }) {
                     Text(stringResource(R.string.command_continue))
                 }
@@ -402,6 +426,20 @@ fun ProfileScreen(
                 DialogDismissButton(onClick = { confirmOverwrite = false }) {
                     Text(stringResource(R.string.command_cancel))
                 }
+            },
+        )
+    }
+
+    signRollbackFindings?.let { findings ->
+        RollbackIndexWarningDialog(
+            findings = findings,
+            onDismiss = {
+                signRollbackFindings = null
+                pendingSignScope = null
+            },
+            onContinue = {
+                signRollbackFindings = null
+                viewModel.signActive(pendingSignScope ?: emptySet())
             },
         )
     }

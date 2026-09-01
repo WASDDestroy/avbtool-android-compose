@@ -151,6 +151,7 @@ fun CommandScreen(
     var editingSizeArg by remember { mutableStateOf<AvbArg?>(null) }
     var advancedExpanded by remember { mutableStateOf(false) }
     var previewExpanded by remember { mutableStateOf(false) }
+    var pendingRollbackVerdict by remember { mutableStateOf<RollbackIndexVerdict?>(null) }
 
     val openDocument = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri: Uri? ->
         chainKeyPickRequest?.let { callback ->
@@ -192,10 +193,26 @@ fun CommandScreen(
             viewModel.failWithMissingImage()
             return
         }
-        if (command.readOnly) {
-            viewModel.run(command, values, inputUri?.toUri())
-        } else {
-            copyWarning = true
+        fun proceed() {
+            if (command.readOnly) {
+                viewModel.run(command, values, inputUri?.toUri())
+            } else {
+                copyWarning = true
+            }
+        }
+        // The rollback index is the only AVB value written to RPMB, so its
+        // value is classified before any signing prompt: values matching
+        // neither known scheme, or dated beyond the local clock, must be
+        // confirmed deliberately.
+        val rollbackArg = command.args.firstOrNull { it.key == "--rollback_index" }
+        val rawRollback = rollbackArg?.let { values[it.key].orEmpty().trim() }.orEmpty()
+        if (rollbackArg == null || rawRollback.isEmpty()) {
+            proceed()
+            return
+        }
+        when (val verdict = RollbackIndexGuard.classifyText(rawRollback, System.currentTimeMillis() / 1000)) {
+            is RollbackIndexVerdict.Ok -> proceed()
+            else -> pendingRollbackVerdict = verdict
         }
     }
 
@@ -469,6 +486,33 @@ fun CommandScreen(
             dismissButton = {
                 DialogDismissButton(onClick = { copyWarning = false }) {
                     Text(stringResource(R.string.command_cancel))
+                }
+            },
+        )
+    }
+
+    pendingRollbackVerdict?.let { verdict ->
+        val label = command.args.firstOrNull { it.key == "--rollback_index" }
+            ?.let { stringResource(it.labelRes) } ?: "--rollback_index"
+        RollbackIndexWarningDialog(
+            findings = listOf(RollbackIndexFinding(label, verdict)),
+            onDismiss = { pendingRollbackVerdict = null },
+            // Invalid values cannot be written at all, so there is nothing to
+            // confirm; anomalies continue into the normal run flow.
+            onContinue = if (verdict is RollbackIndexVerdict.Invalid) {
+                null
+            } else {
+                {
+                    pendingRollbackVerdict = null
+                    if (command.readOnly) {
+                        viewModel.run(
+                            command,
+                            values,
+                            command.inputs.firstOrNull()?.let { values[it.key].orEmpty().toUri() },
+                        )
+                    } else {
+                        copyWarning = true
+                    }
                 }
             },
         )
