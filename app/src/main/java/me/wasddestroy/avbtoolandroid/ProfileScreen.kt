@@ -211,20 +211,6 @@ fun ProfileScreen(
                 }
             }
             preferenceGroup(key = "profiles") {
-                row("import_export") {
-                    ImportExportRow(
-                        onImport = { importLauncher.launch("*/*") },
-                        onExport = viewModel::exportActiveProfile,
-                        importEnabled = !uiState.importing,
-                        exportEnabled = !uiState.exporting && uiState.activeId != null,
-                    )
-                }
-                row("create") {
-                    CreateProfileRow(
-                        enabled = !uiState.importing,
-                        onClick = { showCreateDialog = true },
-                    )
-                }
                 val profiles = uiState.profiles
                 if (profiles.isEmpty()) {
                     row("empty") {
@@ -243,6 +229,20 @@ fun ProfileScreen(
                             )
                         }
                     }
+                }
+                row("import_export") {
+                    ImportExportRow(
+                        onImport = { importLauncher.launch("*/*") },
+                        onExport = viewModel::exportActiveProfile,
+                        importEnabled = !uiState.importing,
+                        exportEnabled = !uiState.exporting && uiState.activeId != null,
+                    )
+                }
+                row("create") {
+                    CreateProfileRow(
+                        enabled = !uiState.importing,
+                        onClick = { showCreateDialog = true },
+                    )
                 }
             }
             if (uiState.activeId != null && uiState.activeSpecs.isNotEmpty()) {
@@ -437,17 +437,11 @@ private fun ImportExportRow(
     importEnabled: Boolean,
     exportEnabled: Boolean,
 ) {
-    // First row of the card, split into two halves. Each half is its own
+    // Middle row of the card, split into two halves. Each half is its own
     // Surface so the 2dp gap between them shows the screen background —
-    // the same segmentation look as between preference rows. Only the outer
-    // top corners use the large radius; everything else stays small because
-    // more rows follow below.
-    val leftShape = RoundedCornerShape(
-        topStart = 16.dp, topEnd = 4.dp, bottomStart = 4.dp, bottomEnd = 4.dp,
-    )
-    val rightShape = RoundedCornerShape(
-        topStart = 4.dp, topEnd = 16.dp, bottomStart = 4.dp, bottomEnd = 4.dp,
-    )
+    // the same segmentation look as between preference rows. Profile rows sit
+    // above and the create row below, so all corners stay small.
+    val halfShape = RoundedCornerShape(4.dp)
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(2.dp),
@@ -457,7 +451,7 @@ private fun ImportExportRow(
             icon = Icons.Filled.FileDownload,
             enabled = importEnabled,
             onClick = onImport,
-            shape = leftShape,
+            shape = halfShape,
             modifier = Modifier.weight(1f),
         )
         ActionHalfSurface(
@@ -465,7 +459,7 @@ private fun ImportExportRow(
             icon = Icons.Filled.FileUpload,
             enabled = exportEnabled,
             onClick = onExport,
-            shape = rightShape,
+            shape = halfShape,
             modifier = Modifier.weight(1f),
         )
     }
@@ -476,12 +470,13 @@ private fun CreateProfileRow(
     enabled: Boolean,
     onClick: () -> Unit,
 ) {
-    // Second row of the card, below import/export. The group always keeps at
-    // least one more row after it (empty hint or profiles), so it never needs
-    // the large bottom corners — plain small segmented corners match the rows
-    // in between.
+    // Last row of the card, below import/export. The profiles above and the
+    // import/export row in between keep small corners, so only this row's two
+    // bottom corners use the large card radius.
     Surface(
-        shape = RoundedCornerShape(4.dp),
+        shape = RoundedCornerShape(
+            topStart = 4.dp, topEnd = 4.dp, bottomStart = 16.dp, bottomEnd = 16.dp,
+        ),
         color = MaterialTheme.colorScheme.surfaceContainer,
         modifier = Modifier.fillMaxWidth(),
     ) {
