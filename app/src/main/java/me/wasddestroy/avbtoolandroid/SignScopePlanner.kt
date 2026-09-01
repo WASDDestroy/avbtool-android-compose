@@ -93,4 +93,26 @@ object SignScopePlanner {
         specs.forEach { evaluate(it.partition, mutableSetOf()) }
         return result
     }
+
+    /**
+     * Reduces [candidate] to its self-consistent core: repeatedly drops
+     * partitions that are infeasible within the current set (missing image,
+     * or dependencies outside the set) until the set stabilizes. The dialog
+     * runs every default and toggle through this so the scope can never
+     * contain a partition that would fail — including the disabled-row trap
+     * where an infeasible partition starts checked and cannot be unchecked.
+     */
+    fun prune(
+        specs: List<ProfilePartitionSpec>,
+        candidate: Set<String>,
+        imagePresent: (String) -> Boolean,
+    ): Set<String> {
+        var current = candidate
+        while (true) {
+            val f = feasibility(specs, current, imagePresent)
+            val next = current.filter { f[it]?.feasible == true }.toSet()
+            if (next.size == current.size) return current
+            current = next
+        }
+    }
 }

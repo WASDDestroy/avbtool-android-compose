@@ -1547,8 +1547,10 @@ private fun ProfileResultView(result: ProfileSignResult) {
  * Sign-scope dialog: pick which partitions this run should touch. Rows are
  * gated by [SignScopePlanner.feasibility] — a footer partition without a
  * readable image and a vbmeta whose dependencies fall outside the scope are
- * disabled with the reason. Footer partitions start checked, vbmeta ones
- * unchecked (regenerating vbmeta is opt-in per run).
+ * disabled with the reason. The checked set always passes
+ * [SignScopePlanner.prune]: footer partitions with a readable image start
+ * checked, vbmeta ones unchecked (opt-in per run), and unchecking a
+ * partition cascades to anything that depends on it.
  */
 @Composable
 private fun SignScopeDialog(
@@ -1557,9 +1559,14 @@ private fun SignScopeDialog(
     onDismiss: () -> Unit,
     onConfirm: (Set<String>) -> Unit,
 ) {
+    val imagePresent: (String) -> Boolean = { plan.imageAvailable[it] == true }
+
+    fun prune(candidate: Set<String>): Set<String> =
+        SignScopePlanner.prune(specs, candidate, imagePresent)
+
     var scope by remember(plan) {
         mutableStateOf(
-            plan.partitions.filter { plan.descriptors[it] != "vbmeta" }.toSet(),
+            prune(plan.partitions.filter { plan.descriptors[it] != "vbmeta" }.toSet()),
         )
     }
 
@@ -1594,7 +1601,9 @@ private fun SignScopeDialog(
                         modifier = Modifier
                             .fillMaxWidth()
                             .clickable(enabled = f.feasible) {
-                                scope = if (partition in scope) scope - partition else scope + partition
+                                scope = prune(
+                                    if (partition in scope) scope - partition else scope + partition,
+                                )
                             }
                             .padding(vertical = 4.dp),
                         verticalAlignment = Alignment.CenterVertically,
@@ -1603,7 +1612,9 @@ private fun SignScopeDialog(
                             checked = partition in scope,
                             onCheckedChange = { checked ->
                                 if (f.feasible) {
-                                    scope = if (checked) scope + partition else scope - partition
+                                    scope = prune(
+                                        if (checked) scope + partition else scope - partition,
+                                    )
                                 }
                             },
                             enabled = f.feasible,

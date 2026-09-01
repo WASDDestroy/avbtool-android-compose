@@ -156,3 +156,82 @@ class SignScopePlannerTest {
         assertFalse(result.getValue("vbmeta").feasible)
     }
 }
+
+class SignScopePlannerPruneTest {
+
+    private fun hashSpec(partition: String) = ProfilePartitionSpec(
+        partition = partition,
+        image = "$partition.img",
+        descriptor = "hash",
+        algorithm = "SHA256_RSA4096",
+        keyId = "default",
+        partitionName = partition,
+        partitionSize = 4096L,
+        rollbackIndex = 0L,
+        salt = null,
+        flags = 0L,
+        props = emptyList(),
+        setHashtreeDisabledFlag = false,
+        includedPartitions = emptyList(),
+        chainPartitions = emptyList(),
+    )
+
+    private fun vbmetaSpec(included: List<String>) = ProfilePartitionSpec(
+        partition = "vbmeta",
+        image = "vbmeta.img",
+        descriptor = "vbmeta",
+        algorithm = "SHA256_RSA4096",
+        keyId = "default",
+        partitionName = "vbmeta",
+        partitionSize = null,
+        rollbackIndex = 0L,
+        salt = null,
+        flags = 0L,
+        props = emptyList(),
+        setHashtreeDisabledFlag = false,
+        includedPartitions = included,
+        chainPartitions = emptyList(),
+    )
+
+    private val specs = listOf(hashSpec("boot"), hashSpec("dtbo"), hashSpec("init_boot"), vbmetaSpec(listOf("dtbo", "init_boot")))
+    private val imagePresent: (String) -> Boolean = { it != "init_boot" }
+
+    @Test
+    fun defaultWithoutPrune_leaksInfeasiblePartitions() {
+        // The pre-fix dialog defaulted to every footer partition; the prune
+        // must drop partitions without a readable image.
+        val raw = specs.filter { it.descriptor != "vbmeta" }.map { it.partition }.toSet()
+        val pruned = SignScopePlanner.prune(specs, raw, imagePresent)
+        assertEquals(setOf("boot", "dtbo"), pruned)
+    }
+
+    @Test
+    fun uncheckingDependency_cascadesToDependents() {
+        val pruned = SignScopePlanner.prune(
+            specs,
+            setOf("boot", "dtbo", "vbmeta"),
+            imagePresent,
+        )
+        // vbmeta stays only while both of its dependencies are present.
+        assertEquals(setOf("boot", "dtbo"), pruned)
+
+        val afterDrop = SignScopePlanner.prune(
+            specs,
+            setOf("boot", "dtbo", "init_boot", "vbmeta"),
+            imagePresent,
+        )
+        // vbmeta is feasible with everything checked despite init_boot's
+        // missing file? No: its image cannot be opened, so it is pruned.
+        assertEquals(setOf("boot", "dtbo"), afterDrop)
+    }
+
+    @Test
+    fun consistentScope_survivesPrune() {
+        val pruned = SignScopePlanner.prune(
+            specs,
+            setOf("boot", "dtbo"),
+            imagePresent,
+        )
+        assertEquals(setOf("boot", "dtbo"), pruned)
+    }
+}
