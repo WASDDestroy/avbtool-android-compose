@@ -443,4 +443,9 @@
     <string name="rollback_mismatch_title">防回滚指数与镜像不一致</string>
     <string name="rollback_mismatch_message">所选镜像已包含有效的 AVB 页脚，其 vbmeta 头中的防回滚指数为 %1$s。签名会将其替换为 %2$s：更高的值一旦被设备接受将永久抬高存储的最低值；更低的值可能导致镜像无法通过设备验证。是否继续？</string>
     <string name="rollback_mismatch_scope_note">镜像现有防回滚指数为 %1$s，与配置中的 %2$s 不一致。</string>
+
+    <!-- 危险导入选项：绕过 manifest 校验和验证，
+         以便导入手动修复过（例如修复防回滚指数）的配置包。 -->
+    <string name="settings_skip_profile_verification">导入配置时不校验配置文件</string>
+    <string name="settings_skip_profile_verification_summary">危险：导入配置时不再校验 manifest 清单校验和，被篡改的配置包将无法被察觉。仅建议在测试或自行修复配置时临时开启。</string>
 </resources>

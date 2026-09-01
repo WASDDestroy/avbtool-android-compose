@@ -17,6 +17,7 @@ import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Style
 import androidx.compose.material.icons.filled.Tune
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -129,6 +130,15 @@ fun SettingsScreen(
                     title = stringResource(R.string.settings_function_keyboard),
                     summary = stringResource(R.string.settings_function_keyboard_summary),
                     iconContent = { SettingsIcon(Icons.Filled.Keyboard) },
+                )
+            }
+            row("skip_profile_archive_verification") {
+                PreferenceSwitchRow(
+                    checked = settings.skipProfileArchiveVerification,
+                    onCheckedChange = viewModel::setSkipProfileArchiveVerification,
+                    title = stringResource(R.string.settings_skip_profile_verification),
+                    summary = stringResource(R.string.settings_skip_profile_verification_summary),
+                    iconContent = { SettingsIcon(Icons.Filled.Warning) },
                 )
             }
             row("language") {

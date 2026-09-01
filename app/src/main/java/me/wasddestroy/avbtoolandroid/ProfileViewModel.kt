@@ -156,6 +156,8 @@ class ProfileViewModel(
     private val activeStore: ActiveProfileStore,
     private val runner: AvbTaskRunner,
     private val bridge: SafFileBridge,
+    /** Read fresh at import time, so the dangerous skip-verification toggle applies immediately. */
+    private val settings: SettingsStore,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(ProfileUiState(activeId = activeStore.read()))
@@ -195,7 +197,12 @@ class ProfileViewModel(
             // Validate the archive (manifest, checksums, schema) and stage it
             // first, so the rollback-index warning below is only ever shown
             // for an import that will actually succeed on confirmation.
-            val staged = withContext(Dispatchers.IO) { store.stageImport(bytes) }
+            val staged = withContext(Dispatchers.IO) {
+                store.stageImport(
+                    bytes,
+                    verifyChecksums = !settings.read().skipProfileArchiveVerification,
+                )
+            }
             if (staged == null) {
                 _uiState.update { it.copy(message = R.string.profile_import_failed) }
                 refresh()
@@ -1283,6 +1290,9 @@ class ProfileViewModel(
                     activeStore = ActiveProfileStore(app),
                     runner = AvbTaskRunner(app),
                     bridge = SafFileBridge(app),
+                    settings = SettingsStore(
+                        app.getSharedPreferences("application_configs", Context.MODE_PRIVATE),
+                    ),
                 )
             }
         }

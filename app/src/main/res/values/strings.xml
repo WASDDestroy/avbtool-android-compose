@@ -445,4 +445,9 @@
     <string name="rollback_mismatch_title">Rollback index differs from image</string>
     <string name="rollback_mismatch_message">The selected image already carries a valid AVB footer whose vbmeta header stores rollback index %1$s. Signing replaces it with %2$s: a higher value permanently raises the device\'s stored minimum once accepted, and a lower value may make the image fail verification on the device. Continue?</string>
     <string name="rollback_mismatch_scope_note">Image\'s existing rollback index is %1$s, but this profile sets %2$s.</string>
+
+    <!-- Dangerous import option: bypass manifest checksum verification so
+         hand-edited archives (e.g. repaired rollback indexes) can be imported. -->
+    <string name="settings_skip_profile_verification">Skip profile archive verification</string>
+    <string name="settings_skip_profile_verification_summary">Dangerous: profile archives are imported without verifying manifest checksums, so tampered archives cannot be detected. Only enable this temporarily for testing or repairing your own configs.</string>
 </resources>

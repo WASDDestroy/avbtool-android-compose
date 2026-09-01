@@ -23,6 +23,8 @@ data class SettingsUiState(
     val showFunctionKeyboard: Boolean = true,
     val colorSpecVersion: ColorSpecVersion = ColorSpecVersion.SPEC_2021,
     val colorVariant: ColorVariant = ColorVariant.TONAL_SPOT,
+    /** Dangerous: import profile archives without manifest checksum checks. */
+    val skipProfileArchiveVerification: Boolean = false,
 )
 
 class SettingsViewModel(private val store: SettingsStore) : ViewModel() {
@@ -38,6 +40,7 @@ class SettingsViewModel(private val store: SettingsStore) : ViewModel() {
     fun setShowFunctionKeyboard(value: Boolean) = update { it.copy(showFunctionKeyboard = value) }
     fun setColorSpecVersion(value: ColorSpecVersion) = update { it.copy(colorSpecVersion = value) }
     fun setColorVariant(value: ColorVariant) = update { it.copy(colorVariant = value) }
+    fun setSkipProfileArchiveVerification(value: Boolean) = update { it.copy(skipProfileArchiveVerification = value) }
 
     private fun update(transform: (SettingsUiState) -> SettingsUiState) {
         _uiState.update { current ->

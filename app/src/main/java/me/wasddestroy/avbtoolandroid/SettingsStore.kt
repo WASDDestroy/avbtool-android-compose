@@ -24,6 +24,7 @@ class SettingsStore(private val sp: SharedPreferences) {
         colorVariant = sp.getString(KEY_COLOR_VARIANT, null)
             ?.let { runCatching { ColorVariant.valueOf(it) }.getOrNull() }
             ?: ColorVariant.TONAL_SPOT,
+        skipProfileArchiveVerification = sp.getBoolean(KEY_SKIP_PROFILE_VERIFICATION, false),
     )
 
     fun write(s: SettingsUiState) {
@@ -36,6 +37,7 @@ class SettingsStore(private val sp: SharedPreferences) {
             .putBoolean(KEY_SHOW_FUNCTION_KEYBOARD, s.showFunctionKeyboard)
             .putString(KEY_COLOR_SPEC_VERSION, s.colorSpecVersion.name)
             .putString(KEY_COLOR_VARIANT, s.colorVariant.name)
+            .putBoolean(KEY_SKIP_PROFILE_VERIFICATION, s.skipProfileArchiveVerification)
             .apply()
     }
 
@@ -48,5 +50,6 @@ class SettingsStore(private val sp: SharedPreferences) {
         private const val KEY_SHOW_FUNCTION_KEYBOARD = "show_function_keyboard"
         private const val KEY_COLOR_SPEC_VERSION = "color_spec_version"
         private const val KEY_COLOR_VARIANT = "color_variant"
+        private const val KEY_SKIP_PROFILE_VERIFICATION = "skip_profile_archive_verification"
     }
 }

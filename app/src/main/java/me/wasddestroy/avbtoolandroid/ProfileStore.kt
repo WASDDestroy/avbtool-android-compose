@@ -126,12 +126,19 @@ class ProfileStore(private val context: Context) {
     )
 
     /**
-     * Validates the archive (manifest checksums, schema version) and extracts
-     * it into a staging directory without touching installed profiles. The
-     * id comes from manifest.json, never from the zip file name. Returns the
-     * staged import, or null when the archive is invalid.
+     * Validates the archive (manifest, schema version) and extracts it into a
+     * staging directory without touching installed profiles. The id comes from
+     * manifest.json, never from the zip file name. With [verifyChecksums]
+     * false — the dangerous "skip verification" setting — the manifest
+     * checksums are not enforced, so hand-edited archives import; the
+     * manifest is still required and still drives which entries are
+     * extracted. Returns the staged import, or null when the archive is
+     * invalid.
      */
-    fun stageImport(zipBytes: ByteArray): StagedProfileImport? {
+    fun stageImport(
+        zipBytes: ByteArray,
+        verifyChecksums: Boolean = true,
+    ): StagedProfileImport? {
         // Staging dirs only live while an import is pending in this process,
         // so anything left on disk was abandoned by a killed run — drop it.
         profileDir.listFiles()?.forEach { dir ->
@@ -139,7 +146,7 @@ class ProfileStore(private val context: Context) {
         }
         val tmpDir = File(profileDir, "import_tmp_${System.nanoTime()}")
         val manifest = try {
-            extractVerified(zipBytes, tmpDir)
+            extractVerified(zipBytes, tmpDir, verifyChecksums)
         } catch (e: Exception) {
             Log.w(TAG, "Failed to extract profile archive", e)
             null
@@ -185,7 +192,11 @@ class ProfileStore(private val context: Context) {
         return commitImport(staged)
     }
 
-    private fun extractVerified(zipBytes: ByteArray, destDir: File): JSONObject? {
+    private fun extractVerified(
+        zipBytes: ByteArray,
+        destDir: File,
+        verifyChecksums: Boolean = true,
+    ): JSONObject? {
         destDir.mkdirs()
         val manifest = readManifest(zipBytes) ?: return null
         val files = manifest.optJSONArray("files") ?: return null
@@ -209,7 +220,7 @@ class ProfileStore(private val context: Context) {
                     if (!target.canonicalPath.startsWith(destDir.canonicalPath + File.separator)) return null
                     target.parentFile?.mkdirs()
                     target.outputStream().use { out -> zip.copyTo(out) }
-                    if (sha256(target) != expected[entry.name]) return null
+                    if (verifyChecksums && sha256(target) != expected[entry.name]) return null
                 } finally {
                     zip.closeEntry()
                 }
