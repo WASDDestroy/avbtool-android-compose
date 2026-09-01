@@ -253,7 +253,8 @@
     <string name="settings_language_placeholder">占位符</string>
     <string name="settings_about">关于</string>
     <string name="settings_about_dialog_title">AVBDroid</string>
-    <string name="settings_about_dialog_message">版本 %1$s (%2$s)\n作者：WASDDestroy（100%% Vibe Coding）</string>
+    <string name="settings_about_dialog_message">版本 %1$s (%2$s)\n作者：WASDDestroy，以及DeepSeek V4 Pro 0813，MiMo 2.5 Pro，ChatGPT 5.6 Sol 和 GLM 5.3 Flash</string>
+    <string name="settings_about_license_notice">本应用包含开源软件。其中 Reed-Solomon 编解码器（Copyright (C) 2002-2004 Phil Karn, KA9Q）根据 LGPL 2.1 版本许可证进行分发。源代码位于 app/src/main/cpp/fec_rs。有关完整许可证信息，请参阅本应用内附的 assets/open_source_licenses.txt 及 assets/LGPL-2.1.txt 文件。</string>
     <string name="settings_about_github">GitHub</string>
     <string name="settings_about_github_url">https://github.com/WASDDestroy/avbtool-android-compose</string>
     <string name="settings_ok">确定</string>
