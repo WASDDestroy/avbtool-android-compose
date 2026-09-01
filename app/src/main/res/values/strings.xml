@@ -377,6 +377,7 @@
     <string name="profile_group_images">Input images</string>
     <string name="profile_group_sign_options">Sign options</string>
     <string name="profile_image_not_selected">Tap to select image</string>
+    <string name="profile_image_output">Generated at sign time: %s</string>
     <string name="profile_empty">No profiles imported yet.</string>
     <string name="profile_delete">Delete profile</string>
     <string name="profile_delete_title">Delete profile</string>

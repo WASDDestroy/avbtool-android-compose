@@ -375,6 +375,7 @@
     <string name="profile_group_images">输入映像</string>
     <string name="profile_group_sign_options">签名选项</string>
     <string name="profile_image_not_selected">点按选择映像</string>
+    <string name="profile_image_output">签名时生成：%s</string>
     <string name="profile_empty">尚未导入任何配置。</string>
     <string name="profile_delete">删除配置</string>
     <string name="profile_delete_title">删除配置</string>

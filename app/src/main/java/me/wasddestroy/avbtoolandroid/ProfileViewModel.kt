@@ -347,9 +347,12 @@ class ProfileViewModel(
             return AddPartitionEvent.NameConflict
         }
 
-        // The image itself is registered like any per-partition pick so
-        // signing re-uses the existing scratch-copy pipeline.
-        setImageInternal(profileId, partitionName, uri)
+        // vbmeta images are generated at sign time — no input image to
+        // register. Footer images are registered like any per-partition
+        // pick so signing re-uses the existing scratch-copy pipeline.
+        if (inspection.descriptor != "vbmeta") {
+            setImageInternal(profileId, partitionName, uri)
+        }
 
         val ok = store.updateProfileJson(profileId) { obj ->
             obj.optJSONObject("partitions")?.put(
@@ -669,7 +672,10 @@ class ProfileViewModel(
             return failedOutcome(profile, R.string.profile_error_invalid_profile)
         }
 
-        val missing = spec.partitions.filter { getImage(it.partition) == null }
+        // vbmeta partitions generate their image at sign time; only footer
+        // partitions consume a picked input image.
+        val missing = spec.partitions
+            .filter { it.descriptor != "vbmeta" && getImage(it.partition) == null }
         if (missing.isNotEmpty()) {
             return failedOutcome(profile, R.string.profile_error_missing_images)
         }
@@ -693,7 +699,9 @@ class ProfileViewModel(
         try {
             // spec.partitions is already in dependency order (see parseProfile).
             for (p in spec.partitions) {
-                val srcUri = getImage(p.partition)!!
+                // vbmeta images are generated, not read: the picked-URI map
+                // has no entry for them (the UI no longer offers a picker).
+                val srcUri = if (p.descriptor != "vbmeta") getImage(p.partition)!! else null
                 val imageDir = File(scratch, p.partition)
                 imageDir.mkdirs()
                 val target = File(imageDir, p.image)
@@ -702,10 +710,10 @@ class ProfileViewModel(
                 // fd when the provider allows it; only then does the file fall
                 // back to a private copy whose export needs a save dialog.
                 // vbmeta images are generated from scratch either way.
-                val fd = if (p.descriptor != "vbmeta") bridge.openReadWrite(srcUri.toUri()) else null
+                val fd = srcUri?.let { bridge.openReadWrite(it.toUri()) }
                 val inPlace = fd != null
                 try {
-                    if (fd == null && p.descriptor != "vbmeta") {
+                    if (fd == null && srcUri != null) {
                         val copied = copyUriToFile(srcUri.toUri(), target)
                         if (!copied) {
                             log.appendLine("[${p.partition}] failed to read the selected image")
@@ -727,8 +735,9 @@ class ProfileViewModel(
                     when {
                         p.descriptor == "vbmeta" -> outputs += File(imageDir, p.image)
                         inPlace -> {
+                            val uri = srcUri!!
                             if (p.partition in includeSources) {
-                                copyUriToFile(srcUri.toUri(), target)
+                                copyUriToFile(uri.toUri(), target)
                             }
                         }
                         else -> outputs += target
