@@ -119,8 +119,13 @@ object InfoImageParser {
         }
 
         val firstFields = descs.firstOrNull()?.fields ?: emptyMap()
+        // Descriptor partition names carry no extension, so compare against
+        // the file name without its extension ("boot.img" -> "boot"); the
+        // raw name is accepted too for vbmeta files named without ".img".
+        val stem = imageFileName.substringBeforeLast('.')
         val isVbmetaImage = descs.isNotEmpty() &&
-            (descs.size != 1 || firstFields["Partition Name"] != imageFileName)
+            (descs.size != 1 || (firstFields["Partition Name"] != stem &&
+                firstFields["Partition Name"] != imageFileName))
         val partitionSize = header["Image size"]?.removeSuffix("bytes")?.trim()?.toLongOrNull()
 
         return if (isVbmetaImage) {
