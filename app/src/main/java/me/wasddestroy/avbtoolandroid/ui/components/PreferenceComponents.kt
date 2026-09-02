@@ -137,6 +137,31 @@ class PreferenceGroupScope(private val items: MutableList<@Composable () -> Unit
     }
 }
 
+/**
+ * Renders [rows] as one visually clustered paragraph (like a preference
+ * group's rows): first row gets the large top corners, last row the large
+ * bottom corners, middle rows small corners. Callers compose it with plain
+ * fields after it to keep non-text rows from interleaving with text rows.
+ */
+@Composable
+fun preferenceParagraph(
+    rows: List<@Composable () -> Unit>,
+    modifier: Modifier = Modifier,
+) {
+    Column(
+        modifier = modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(PreferenceSegmentedGap),
+    ) {
+        rows.forEachIndexed { index, row ->
+            CompositionLocalProvider(
+                LocalPreferenceRowPosition provides PreferenceRowPosition(index, rows.size),
+            ) {
+                row()
+            }
+        }
+    }
+}
+
 @Composable
 @OptIn(ExperimentalFoundationApi::class)
 fun PreferenceRow(
