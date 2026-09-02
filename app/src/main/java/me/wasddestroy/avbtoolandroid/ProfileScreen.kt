@@ -689,6 +689,7 @@ fun ProfileScreen(
             spec = spec,
             keyIds = uiState.keys.map { it.id },
             defaultKeyId = uiState.defaultKeyId,
+            allPartitions = uiState.activeSpecs.map { it.partition },
             saving = uiState.savingPartition,
             saveError = partitionSaveError,
             onDismiss = {
@@ -1769,6 +1770,7 @@ private fun PartitionEditDialog(
     spec: ProfilePartitionSpec,
     keyIds: List<String>,
     defaultKeyId: String?,
+    allPartitions: List<String>,
     saving: Boolean,
     saveError: PartitionSaveEvent.Failed?,
     onDismiss: () -> Unit,
@@ -1816,12 +1818,40 @@ private fun PartitionEditDialog(
     var paddingSize by remember(spec) {
         mutableStateOf(spec.paddingSize?.toString().orEmpty())
     }
+    var includedPartitions by remember(spec) {
+        mutableStateOf(spec.includedPartitions.toSet())
+    }
+    var chainPartitions by remember(spec) { mutableStateOf(spec.chainPartitions) }
+    var chainPartitionsDoNotUseAb by remember(spec) {
+        mutableStateOf(spec.chainPartitionsDoNotUseAb)
+    }
+    var includeDescriptorsFromImage by remember(spec) {
+        mutableStateOf(spec.includeDescriptorsFromImage)
+    }
+    var kernelCmdlines by remember(spec) { mutableStateOf(spec.kernelCmdlines) }
+    var outputVbmetaImage by remember(spec) { mutableStateOf(spec.outputVbmetaImage.orEmpty()) }
+    var signingHelper by remember(spec) { mutableStateOf(spec.signingHelper.orEmpty()) }
+    var signingHelperWithFiles by remember(spec) {
+        mutableStateOf(spec.signingHelperWithFiles.orEmpty())
+    }
+    var publicKeyMetadata by remember(spec) { mutableStateOf(spec.publicKeyMetadata.orEmpty()) }
+    var appendToReleaseString by remember(spec) {
+        mutableStateOf(spec.appendToReleaseString.orEmpty())
+    }
+    var setupRootfsFromKernel by remember(spec) {
+        mutableStateOf(spec.setupRootfsFromKernel.orEmpty())
+    }
 
     // ---- sub-dialogs ------------------------------------------------------
     var choosingAlgorithm by remember { mutableStateOf(false) }
     var choosingHashAlgorithm by remember { mutableStateOf(false) }
     var choosingFlags by remember { mutableStateOf(false) }
     var choosingKey by remember { mutableStateOf(false) }
+    var choosingIncluded by remember { mutableStateOf(false) }
+    var editingChains by remember { mutableStateOf(false) }
+    var editingChainsNoAb by remember { mutableStateOf(false) }
+    var editingIncludeImages by remember { mutableStateOf(false) }
+    var editingCmdlines by remember { mutableStateOf(false) }
 
     val hasImageWarning = imageTouched && image != spec.image && !isVbmeta
     val sizeLong = partitionSize.toLongOrNull()
@@ -1855,6 +1885,17 @@ private fun PartitionEditDialog(
         checkAtMostOnce = checkAtMostOnce,
         setupAsRootfsFromKernel = setupAsRootfsFromKernel,
         paddingSize = paddingSize.toLongOrNull()?.takeIf { it > 0 },
+        includedPartitions = includedPartitions.toList(),
+        chainPartitions = chainPartitions,
+        chainPartitionsDoNotUseAb = chainPartitionsDoNotUseAb,
+        includeDescriptorsFromImage = includeDescriptorsFromImage,
+        kernelCmdlines = kernelCmdlines,
+        outputVbmetaImage = outputVbmetaImage.trim().takeIf { it.isNotBlank() },
+        signingHelper = signingHelper.trim().takeIf { it.isNotBlank() },
+        signingHelperWithFiles = signingHelperWithFiles.trim().takeIf { it.isNotBlank() },
+        publicKeyMetadata = publicKeyMetadata.trim().takeIf { it.isNotBlank() },
+        appendToReleaseString = appendToReleaseString.trim().takeIf { it.isNotBlank() },
+        setupRootfsFromKernel = setupRootfsFromKernel.trim().takeIf { it.isNotBlank() },
     )
 
     AlertDialog(
@@ -2016,6 +2057,59 @@ private fun PartitionEditDialog(
                         enabled = !saving,
                         onCheckedChange = { setVerificationDisabledFlag = it },
                     )
+                    if (isVbmeta) {
+                        PreferenceRow(
+                            title = stringResource(R.string.profile_partition_edit_included),
+                            summary = if (includedPartitions.isEmpty()) {
+                                stringResource(R.string.profile_partition_edit_none_set)
+                            } else {
+                                includedPartitions.sorted().joinToString(", ")
+                            },
+                            onClick = { if (!saving) choosingIncluded = true },
+                        )
+                    }
+                    PreferenceRow(
+                        title = stringResource(R.string.profile_partition_edit_chain),
+                        summary = stringResource(
+                            R.plurals.profile_partition_edit_chain_summary,
+                            chainPartitions.size,
+                        ),
+                        onClick = { if (!saving) editingChains = true },
+                    )
+                    PreferenceRow(
+                        title = stringResource(R.string.profile_partition_edit_chain_no_ab),
+                        summary = stringResource(
+                            R.plurals.profile_partition_edit_chain_summary,
+                            chainPartitionsDoNotUseAb.size,
+                        ),
+                        onClick = { if (!saving) editingChainsNoAb = true },
+                    )
+                    PreferenceRow(
+                        title = stringResource(R.string.profile_partition_edit_include_images),
+                        summary = if (includeDescriptorsFromImage.isEmpty()) {
+                            stringResource(R.string.profile_partition_edit_none_set)
+                        } else {
+                            stringResource(
+                                R.plurals.profile_partition_edit_list_count,
+                                includeDescriptorsFromImage.size,
+                                includeDescriptorsFromImage.size,
+                            )
+                        },
+                        onClick = { if (!saving) editingIncludeImages = true },
+                    )
+                    PreferenceRow(
+                        title = stringResource(R.string.profile_partition_edit_cmdlines),
+                        summary = if (kernelCmdlines.isEmpty()) {
+                            stringResource(R.string.profile_partition_edit_none_set)
+                        } else {
+                            stringResource(
+                                R.plurals.profile_partition_edit_list_count,
+                                kernelCmdlines.size,
+                                kernelCmdlines.size,
+                            )
+                        },
+                        onClick = { if (!saving) editingCmdlines = true },
+                    )
                     if (isHashtree) {
                         OutlinedTextField(
                             value = blockSize,
@@ -2071,6 +2165,60 @@ private fun PartitionEditDialog(
                             enabled = !saving,
                         )
                     }
+                    OutlinedTextField(
+                        value = setupRootfsFromKernel,
+                        onValueChange = { setupRootfsFromKernel = it },
+                        label = {
+                            Text(stringResource(R.string.profile_partition_edit_setup_rootfs_image))
+                        },
+                        singleLine = true,
+                        enabled = !saving,
+                    )
+                    OutlinedTextField(
+                        value = outputVbmetaImage,
+                        onValueChange = { outputVbmetaImage = it },
+                        label = {
+                            Text(stringResource(R.string.profile_partition_edit_output_vbmeta))
+                        },
+                        singleLine = true,
+                        enabled = !saving,
+                    )
+                    OutlinedTextField(
+                        value = publicKeyMetadata,
+                        onValueChange = { publicKeyMetadata = it },
+                        label = {
+                            Text(stringResource(R.string.profile_partition_edit_pubkey_metadata))
+                        },
+                        singleLine = true,
+                        enabled = !saving,
+                    )
+                    OutlinedTextField(
+                        value = signingHelper,
+                        onValueChange = { signingHelper = it },
+                        label = {
+                            Text(stringResource(R.string.profile_partition_edit_signing_helper))
+                        },
+                        singleLine = true,
+                        enabled = !saving,
+                    )
+                    OutlinedTextField(
+                        value = signingHelperWithFiles,
+                        onValueChange = { signingHelperWithFiles = it },
+                        label = {
+                            Text(stringResource(R.string.profile_partition_edit_signing_helper_files))
+                        },
+                        singleLine = true,
+                        enabled = !saving,
+                    )
+                    OutlinedTextField(
+                        value = appendToReleaseString,
+                        onValueChange = { appendToReleaseString = it },
+                        label = {
+                            Text(stringResource(R.string.profile_partition_edit_append_release))
+                        },
+                        singleLine = true,
+                        enabled = !saving,
+                    )
                 }
 
                 saveError?.let { error ->
@@ -2226,6 +2374,191 @@ private fun PartitionEditDialog(
             },
         )
     }
+
+    if (choosingIncluded) {
+        MultiSelectPartitionsDialog(
+            titleRes = R.string.profile_partition_edit_included,
+            partitions = allPartitions,
+            selected = includedPartitions,
+            onDismiss = { choosingIncluded = false },
+            onConfirm = {
+                includedPartitions = it
+                choosingIncluded = false
+            },
+        )
+    }
+    if (editingChains || editingChainsNoAb) {
+        StringListEditDialog(
+            titleRes = if (editingChainsNoAb) {
+                R.string.profile_partition_edit_chain_no_ab
+            } else {
+                R.string.profile_partition_edit_chain
+            },
+            entries = if (editingChainsNoAb) chainPartitionsDoNotUseAb else chainPartitions,
+            formatHint = stringResource(R.string.profile_partition_edit_chain_hint),
+            validateEntry = { entry ->
+                val parts = entry.split(':')
+                parts.size == 3 && parts[1].toLongOrNull()?.let { slot -> slot >= 1 } == true
+            },
+            onDismiss = {
+                editingChains = false
+                editingChainsNoAb = false
+            },
+            onConfirm = {
+                if (editingChainsNoAb) {
+                    chainPartitionsDoNotUseAb = it
+                    editingChainsNoAb = false
+                } else {
+                    chainPartitions = it
+                    editingChains = false
+                }
+            },
+        )
+    }
+    if (editingIncludeImages) {
+        StringListEditDialog(
+            titleRes = R.string.profile_partition_edit_include_images,
+            entries = includeDescriptorsFromImage,
+            formatHint = stringResource(R.string.profile_partition_edit_include_hint),
+            validateEntry = { it.isNotBlank() },
+            onDismiss = { editingIncludeImages = false },
+            onConfirm = {
+                includeDescriptorsFromImage = it
+                editingIncludeImages = false
+            },
+        )
+    }
+    if (editingCmdlines) {
+        StringListEditDialog(
+            titleRes = R.string.profile_partition_edit_cmdlines,
+            entries = kernelCmdlines,
+            formatHint = stringResource(R.string.profile_partition_edit_cmdline_hint),
+            validateEntry = { it.isNotBlank() },
+            onDismiss = { editingCmdlines = false },
+            onConfirm = {
+                kernelCmdlines = it
+                editingCmdlines = false
+            },
+        )
+    }
+}
+
+/**
+ * Checkbox multi-select over the profile's partition names, used by the edit
+ * dialog for `included_partitions`. Confirming hands back the selection.
+ */
+@Composable
+private fun MultiSelectPartitionsDialog(
+    titleRes: Int,
+    partitions: List<String>,
+    selected: Set<String>,
+    onDismiss: () -> Unit,
+    onConfirm: (Set<String>) -> Unit,
+) {
+    var checked by remember { mutableStateOf(selected) }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(titleRes)) },
+        text = {
+            Column(
+                modifier = Modifier.verticalScroll(rememberScrollState()),
+            ) {
+                partitions.forEach { partition ->
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                checked = if (partition in checked) {
+                                    checked - partition
+                                } else {
+                                    checked + partition
+                                }
+                            }
+                            .padding(horizontal = 8.dp, vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        Checkbox(
+                            checked = partition in checked,
+                            onCheckedChange = null,
+                        )
+                        Text(text = partition, style = MaterialTheme.typography.bodyLarge)
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            DialogConfirmButton(onClick = { onConfirm(checked) }) {
+                Text(stringResource(android.R.string.ok))
+            }
+        },
+        dismissButton = {
+            DialogDismissButton(onClick = onDismiss) {
+                Text(stringResource(android.R.string.cancel))
+            }
+        },
+    )
+}
+
+/**
+ * Line-based string list editor (chain partitions, included image files,
+ * kernel cmdlines). One entry per line in the text area; [validateEntry]
+ * gates the confirm button per non-blank line. Kept text-area based instead
+ * of per-row dialogs because profile entries are plain strings — no file
+ * pickers or secrets involved (chain keys are key-store file names).
+ */
+@Composable
+private fun StringListEditDialog(
+    titleRes: Int,
+    entries: List<String>,
+    formatHint: String,
+    validateEntry: (String) -> Boolean,
+    onDismiss: () -> Unit,
+    onConfirm: (List<String>) -> Unit,
+) {
+    var text by remember { mutableStateOf(entries.joinToString("\n")) }
+    val parsed = text.lines().map { it.trim() }.filter { it.isNotBlank() }
+    val allValid = parsed.all { validateEntry(it) }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(titleRes)) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedTextField(
+                    value = text,
+                    onValueChange = { text = it },
+                    isError = !allValid,
+                    supportingText = {
+                        Column {
+                            Text(formatHint)
+                            if (!allValid) {
+                                Text(
+                                    text = stringResource(R.string.profile_partition_edit_list_invalid),
+                                    color = MaterialTheme.colorScheme.error,
+                                )
+                            }
+                        }
+                    },
+                    enabled = true,
+                    minLines = 3,
+                    maxLines = 8,
+                )
+            }
+        },
+        confirmButton = {
+            DialogConfirmButton(
+                onClick = { onConfirm(parsed) },
+                enabled = allValid,
+            ) {
+                Text(stringResource(android.R.string.ok))
+            }
+        },
+        dismissButton = {
+            DialogDismissButton(onClick = onDismiss) {
+                Text(stringResource(android.R.string.cancel))
+            }
+        },
+    )
 }
 
 @Composable

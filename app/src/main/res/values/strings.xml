@@ -525,4 +525,30 @@
     <string name="profile_partition_err_fec_roots">FEC number of roots must be between 1 and 254.</string>
     <string name="profile_partition_err_rollback_negative">Rollback index cannot be negative.</string>
     <string name="profile_partition_err_block_size">Block size must be a power of two of at least 512.</string>
+
+    <!-- Advanced fields of the partition edit dialog (stage 3). -->
+    <string name="profile_partition_edit_included">Included partitions</string>
+    <string name="profile_partition_edit_chain">Chain partitions</string>
+    <string name="profile_partition_edit_chain_no_ab">Chain partitions (do not use A/B)</string>
+    <string name="profile_partition_edit_chain_hint">One PART:SLOT:KEY per line; the key is a file name inside the profile\'s keys/ folder. The key file name may itself contain colons.</string>
+    <string name="profile_partition_edit_include_images">Include descriptors from images</string>
+    <string name="profile_partition_edit_include_hint">One image file name per line. Names matching another partition\'s image resolve to that partition\'s signed output.</string>
+    <string name="profile_partition_edit_cmdlines">Kernel command lines</string>
+    <string name="profile_partition_edit_cmdline_hint">One command line per line; repeated entries are passed with one --kernel_cmdline flag each.</string>
+    <string name="profile_partition_edit_none_set">Not configured</string>
+    <string name="profile_partition_edit_list_invalid">One or more entries are malformed.</string>
+    <string name="profile_partition_edit_setup_rootfs_image">Setup rootfs from kernel image (file name)</string>
+    <string name="profile_partition_edit_output_vbmeta">Also write vbmeta to file (file name)</string>
+    <string name="profile_partition_edit_pubkey_metadata">Public key metadata (file name)</string>
+    <string name="profile_partition_edit_signing_helper">Signing helper (program)</string>
+    <string name="profile_partition_edit_signing_helper_files">Signing helper with files (program)</string>
+    <string name="profile_partition_edit_append_release">Append to release string</string>
+    <plurals name="profile_partition_edit_chain_summary">
+        <item quantity="one">%1$d chain partition</item>
+        <item quantity="other">%1$d chain partitions</item>
+    </plurals>
+    <plurals name="profile_partition_edit_list_count">
+        <item quantity="one">%1$d entry</item>
+        <item quantity="other">%1$d entries</item>
+    </plurals>
 </resources>

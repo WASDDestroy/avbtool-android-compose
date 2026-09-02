@@ -522,4 +522,28 @@
     <string name="profile_partition_err_fec_roots">FEC 根数必须在 1 到 254 之间。</string>
     <string name="profile_partition_err_rollback_negative">防回滚指数不能为负数。</string>
     <string name="profile_partition_err_block_size">块大小必须是不小于 512 的 2 的幂。</string>
+
+    <!-- 分区编辑对话框的进阶字段（阶段 3）。 -->
+    <string name="profile_partition_edit_included">包含的分区</string>
+    <string name="profile_partition_edit_chain">链分区</string>
+    <string name="profile_partition_edit_chain_no_ab">链分区（不使用 A/B）</string>
+    <string name="profile_partition_edit_chain_hint">每行一条 PART:SLOT:KEY；密钥为 profile 的 keys/ 目录中的文件名，文件名本身可以包含冒号。</string>
+    <string name="profile_partition_edit_include_images">从镜像提取描述符</string>
+    <string name="profile_partition_edit_include_hint">每行一个镜像文件名。与其他分区的镜像同名的条目会解析为该分区的签名输出。</string>
+    <string name="profile_partition_edit_cmdlines">内核命令行</string>
+    <string name="profile_partition_edit_cmdline_hint">每行一条命令行；多条条目会以独立的 --kernel_cmdline 参数逐条传入。</string>
+    <string name="profile_partition_edit_none_set">未配置</string>
+    <string name="profile_partition_edit_list_invalid">存在格式不正确的条目。</string>
+    <string name="profile_partition_edit_setup_rootfs_image">由内核镜像设置根文件系统（文件名）</string>
+    <string name="profile_partition_edit_output_vbmeta">同时输出 vbmeta 到文件（文件名）</string>
+    <string name="profile_partition_edit_pubkey_metadata">公钥元数据（文件名）</string>
+    <string name="profile_partition_edit_signing_helper">签名辅助程序</string>
+    <string name="profile_partition_edit_signing_helper_files">基于文件的签名辅助程序</string>
+    <string name="profile_partition_edit_append_release">追加到 release 字符串</string>
+    <plurals name="profile_partition_edit_chain_summary">
+        <item quantity="other">%1$d 条链分区</item>
+    </plurals>
+    <plurals name="profile_partition_edit_list_count">
+        <item quantity="other">%1$d 条</item>
+    </plurals>
 </resources>
