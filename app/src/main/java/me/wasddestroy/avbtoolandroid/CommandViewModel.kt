@@ -52,8 +52,15 @@ class CommandViewModel(
         }
     }
 
+    /**
+     * Closes the "save output" dialog. The private output file was only ever
+     * staged for that dialog — whether the user saved it via SAF or gave up,
+     * it has no further purpose, so delete it.
+     */
     fun dismissOutputFile() {
+        val file = _uiState.value.outputFile
         _uiState.update { it.copy(outputFile = null) }
+        file?.delete()
     }
 
     /**
@@ -213,9 +220,17 @@ class CommandViewModel(
         }
 
         var outputFile: File? = null
-        if (firstInput != null && inputFd == null && !cmd.readOnly && imagePath != null) {
-            // Copy fallback: the private file was modified in place.
-            outputFile = File(imagePath)
+        // Copy fallback: the private copy was modified in place and doubles as
+        // the run's output. Commands that do not modify their input (readOnly)
+        // or whose result lands in a separate output file leave the copy as
+        // pure scratch — it is removed when the run ends.
+        var scratchInputCopy: File? = null
+        if (firstInput != null && inputFd == null && imagePath != null) {
+            if (!cmd.readOnly && cmd.outputs.isEmpty()) {
+                outputFile = File(imagePath)
+            } else {
+                scratchInputCopy = File(imagePath)
+            }
         }
         if (cmd.outputs.isNotEmpty()) {
             val firstOutput = cmd.outputs.first()
@@ -239,6 +254,7 @@ class CommandViewModel(
         } finally {
             if (closeInputFd && inputFd != null) bridge.closeFd(inputFd)
             extraFds.forEach { bridge.closeFd(it) }
+            scratchInputCopy?.delete()
         }
     }
 

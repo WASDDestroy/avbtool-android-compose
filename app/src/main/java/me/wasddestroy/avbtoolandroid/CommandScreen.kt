@@ -188,6 +188,8 @@ fun CommandScreen(
                 }
             }
         }
+        // Dismissal deletes the private output file whether the save happened
+        // or was canceled; nothing references it afterwards.
         viewModel.dismissOutputFile()
     }
 

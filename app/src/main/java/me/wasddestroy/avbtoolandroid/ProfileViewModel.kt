@@ -133,6 +133,16 @@ data class PendingKeyDelete(
     val referencedIds: Set<String>,
 )
 
+/**
+ * A signed output file awaiting "save via SAF". [profileId] locates the
+ * scratch dir the file lives in, so the whole staging area can be removed
+ * once every export is consumed or dismissed.
+ */
+data class PendingExport(
+    val profileId: String,
+    val file: File,
+)
+
 data class ProfileUiState(
     val profiles: List<ProfileStore.ProfileEntry> = emptyList(),
     val activeId: String? = null,
@@ -143,7 +153,7 @@ data class ProfileUiState(
     val exporting: Boolean = false,
     val result: ProfileSignResult? = null,
     /** Output files awaiting "save via SAF"; consumed by the CreateDocument launcher. */
-    val pendingExports: List<File> = emptyList(),
+    val pendingExports: List<PendingExport> = emptyList(),
     /** Zip bytes awaiting "save via SAF" after an export-profile action, one-shot. */
     val pendingProfileZip: Pair<String, ByteArray>? = null,
     /** Whether generated vbmeta images also get the profile's configured props. */
@@ -995,8 +1005,43 @@ class ProfileViewModel(
         _uiState.update { it.copy(addPropsToVbmeta = enabled) }
     }
 
+    /**
+     * Drops every pending export. The signed outputs are scratch copies whose
+     * only way out of private storage is the save dialog, so dismissing it
+     * makes the files unreachable — delete them and the empty staging area.
+     */
     fun dismissExports() {
+        val dropped = _uiState.value.pendingExports
         _uiState.update { it.copy(pendingExports = emptyList()) }
+        if (dropped.isNotEmpty()) {
+            deleteExportedFiles(dropped)
+        }
+    }
+
+    /**
+     * Consumes the first pending export after the SAF save finished. The
+     * scratch copy is deleted either way: saved bytes live in the user-chosen
+     * location now, and a canceled save leaves nothing behind.
+     */
+    fun consumeExport() {
+        val head = _uiState.value.pendingExports.firstOrNull() ?: return
+        _uiState.update { it.copy(pendingExports = it.pendingExports.drop(1)) }
+        deleteExportedFiles(listOf(head))
+    }
+
+    /** Deletes consumed export files, then the profile's scratch dir when empty. */
+    private fun deleteExportedFiles(exported: List<PendingExport>) {
+        val byProfile = exported.groupBy { it.profileId }
+        for ((profileId, entries) in byProfile) {
+            entries.forEach { it.file.delete() }
+            val scratch = File(appContext.filesDir, "profile_sign/$profileId")
+            // Remove the whole staging area once nothing remains in it. A
+            // non-empty dir means another export from the same run is still
+            // pending; leaving it alone keeps that export savable.
+            if (scratch.listFiles().isNullOrEmpty()) {
+                scratch.deleteRecursively()
+            }
+        }
     }
 
     fun dismissProfileZip() {
@@ -1048,10 +1093,6 @@ class ProfileViewModel(
                 "$partition/$fileName"
             }
             .toSet()
-    }
-
-    fun consumeExport() {
-        _uiState.update { it.copy(pendingExports = it.pendingExports.drop(1)) }
     }
 
     fun currentProfile(): ProfileStore.ProfileEntry? {
@@ -1149,7 +1190,7 @@ class ProfileViewModel(
 
     private data class SignOutcome(
         val result: ProfileSignResult?,
-        val exports: List<File>,
+        val exports: List<PendingExport>,
     )
 
     private suspend fun signProfile(profile: ProfileStore.ProfileEntry, scope: Set<String>): SignOutcome {
@@ -1187,7 +1228,6 @@ class ProfileViewModel(
         val log = StringBuilder()
         var ok = true
         val outputs = mutableListOf<File>()
-
         try {
             // planned keeps spec.partitions order, which is dependency order
             // (see parseProfile).
@@ -1235,6 +1275,13 @@ class ProfileViewModel(
                         }
                         else -> outputs += target
                     }
+                    // The vbmeta blob next to a signed footer is part of the
+                    // output too: expose it for export instead of leaving it
+                    // to be swept away with the scratch dir.
+                    p.outputVbmetaImage?.let {
+                        val vbmeta = File(imageDir, it)
+                        if (vbmeta.isFile) outputs += vbmeta
+                    }
                 } finally {
                     fd?.let { bridge.closeFd(it) }
                 }
@@ -1242,6 +1289,9 @@ class ProfileViewModel(
         } finally {
             if (!ok) {
                 outputs.clear()
+                // A failed run leaves nothing savable behind, so drop the
+                // whole staging area instead of keeping the copies on disk.
+                scratch.deleteRecursively()
             }
         }
 
@@ -1267,9 +1317,20 @@ class ProfileViewModel(
             profileName = profile.name,
             result = result,
         )
+        val exports = if (ok) {
+            outputs.map { PendingExport(profileId = profile.id, file = it) }
+        } else {
+            emptyList()
+        }
+        // A run whose outputs all went through in-place SAF fds produces no
+        // scratch exports; nothing references the staging area then, so it can
+        // go right away instead of waiting for the export dialogs.
+        if (ok && exports.isEmpty()) {
+            scratch.deleteRecursively()
+        }
         return SignOutcome(
             result = signResult,
-            exports = if (ok) outputs else emptyList(),
+            exports = exports,
         )
     }
 

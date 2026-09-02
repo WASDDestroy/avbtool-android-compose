@@ -206,14 +206,23 @@ fun ProfileScreen(
         ActivityResultContracts.CreateDocument("application/octet-stream"),
     ) { uri: Uri? ->
         val src = uiState.pendingExports.firstOrNull()
+        var saved = false
         if (uri != null && src != null) {
             runCatching {
                 context.contentResolver.openOutputStream(uri)?.use { out ->
-                    src.inputStream().use { it.copyTo(out) }
+                    src.file.inputStream().use { it.copyTo(out) }
                 }
+                saved = true
             }
         }
+        // The scratch copy is consumed by the ViewModel either way (saved or
+        // canceled), but only advance past a save that actually happened —
+        // otherwise the next file would silently replace this one in the
+        // dialog while its bytes never left private storage.
         viewModel.consumeExport()
+        if (!saved && uri != null) {
+            viewModel.dismissExports()
+        }
     }
 
     val exportProfileDocument = rememberLauncherForActivityResult(
@@ -248,7 +257,7 @@ fun ProfileScreen(
                     stringResource(
                         R.string.profile_sign_export_message,
                         exports.size,
-                        exports.joinToString("\n") { it.absolutePath },
+                        exports.joinToString("\n") { it.file.absolutePath },
                     ),
                 )
             },
@@ -256,7 +265,7 @@ fun ProfileScreen(
                 DialogConfirmButton(onClick = {
                     val src = exports.firstOrNull()
                     if (src != null) {
-                        createDocument.launch(src.name)
+                        createDocument.launch(src.file.name)
                     } else {
                         viewModel.dismissExports()
                     }

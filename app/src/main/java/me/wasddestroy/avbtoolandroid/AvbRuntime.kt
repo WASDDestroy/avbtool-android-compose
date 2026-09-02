@@ -26,6 +26,22 @@ object PythonRuntime {
             py.getModule("android_bridge").callAttr("init", nativeLibDir)
             started = true
         }
+        cleanupStaleScratch(context.applicationContext)
+    }
+
+    /**
+     * Removes leftover signing scratch areas and single-command scratch
+     * copies from an earlier process. The in-memory export/output lists that
+     * make those files reachable die with the process, so anything found on
+     * disk at startup can never be saved by the user again.
+     */
+    private fun cleanupStaleScratch(context: Context) {
+        Thread {
+            runCatching {
+                File(context.filesDir, "profile_sign").deleteRecursively()
+                File(context.filesDir, "avb/input").listFiles()?.forEach { it.delete() }
+            }
+        }.start()
     }
 
     @Suppress("unused")
