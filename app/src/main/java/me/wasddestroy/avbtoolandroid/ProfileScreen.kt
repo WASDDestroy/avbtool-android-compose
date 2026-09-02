@@ -59,6 +59,7 @@ import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontFamily
@@ -2070,16 +2071,18 @@ private fun PartitionEditDialog(
                     }
                     PreferenceRow(
                         title = stringResource(R.string.profile_partition_edit_chain),
-                        summary = stringResource(
+                        summary = pluralStringResource(
                             R.plurals.profile_partition_edit_chain_summary,
+                            chainPartitions.size,
                             chainPartitions.size,
                         ),
                         onClick = { if (!saving) editingChains = true },
                     )
                     PreferenceRow(
                         title = stringResource(R.string.profile_partition_edit_chain_no_ab),
-                        summary = stringResource(
+                        summary = pluralStringResource(
                             R.plurals.profile_partition_edit_chain_summary,
+                            chainPartitionsDoNotUseAb.size,
                             chainPartitionsDoNotUseAb.size,
                         ),
                         onClick = { if (!saving) editingChainsNoAb = true },
@@ -2089,7 +2092,7 @@ private fun PartitionEditDialog(
                         summary = if (includeDescriptorsFromImage.isEmpty()) {
                             stringResource(R.string.profile_partition_edit_none_set)
                         } else {
-                            stringResource(
+                            pluralStringResource(
                                 R.plurals.profile_partition_edit_list_count,
                                 includeDescriptorsFromImage.size,
                                 includeDescriptorsFromImage.size,
@@ -2102,7 +2105,7 @@ private fun PartitionEditDialog(
                         summary = if (kernelCmdlines.isEmpty()) {
                             stringResource(R.string.profile_partition_edit_none_set)
                         } else {
-                            stringResource(
+                            pluralStringResource(
                                 R.plurals.profile_partition_edit_list_count,
                                 kernelCmdlines.size,
                                 kernelCmdlines.size,
