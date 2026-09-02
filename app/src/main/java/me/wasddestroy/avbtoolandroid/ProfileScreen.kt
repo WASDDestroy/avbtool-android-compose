@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -63,6 +64,7 @@ import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -1025,6 +1027,24 @@ private fun ProfileRow(
 /** Sentinel image-partition key routing a launcher pick into the add-partition dialog. */
 private const val ADD_PARTITION_KEY = "\u0000add_partition"
 
+/** Identifiers of the single-field edit dialogs in PartitionEditDialog. */
+private const val FIELD_IMAGE = "image"
+private const val FIELD_PARTITION_NAME = "partition_name"
+private const val FIELD_PARTITION_SIZE = "partition_size"
+private const val FIELD_SALT = "salt"
+private const val FIELD_ROLLBACK_INDEX = "rollback_index"
+private const val FIELD_ROLLBACK_LOCATION = "rollback_location"
+private const val FIELD_PROPS = "props"
+private const val FIELD_BLOCK_SIZE = "block_size"
+private const val FIELD_FEC_ROOTS = "fec_roots"
+private const val FIELD_PADDING_SIZE = "padding_size"
+private const val FIELD_SETUP_ROOTFS_IMAGE = "setup_rootfs_image"
+private const val FIELD_OUTPUT_VBMETA = "output_vbmeta"
+private const val FIELD_PUBKEY_METADATA = "pubkey_metadata"
+private const val FIELD_SIGNING_HELPER = "signing_helper"
+private const val FIELD_SIGNING_HELPER_FILES = "signing_helper_files"
+private const val FIELD_APPEND_RELEASE = "append_release"
+
 /** MIME types offered to the SAF picker for key files (.pem). */
 private val KEY_FILE_MIME_TYPES = arrayOf(
     "application/x-pem-file",
@@ -1855,6 +1875,8 @@ private fun PartitionEditDialog(
     var editingChainsNoAb by remember { mutableStateOf(false) }
     var editingIncludeImages by remember { mutableStateOf(false) }
     var editingCmdlines by remember { mutableStateOf(false) }
+    /** Identifies the single-field edit dialog currently open, if any. */
+    var editingField by remember { mutableStateOf<String?>(null) }
 
     val hasImageWarning = imageTouched && image != spec.image && !isVbmeta
     val sizeLong = partitionSize.toLongOrNull()
@@ -1919,10 +1941,11 @@ private fun PartitionEditDialog(
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
-                // Basic section: the picker/switch rows form one clustered
-                // paragraph, the text fields follow below it.
-                PartitionRowsParagraph(
-                    rows = listOf<@Composable () -> Unit>(
+                // One clustered paragraph per section, exactly like the
+                // image-management list: pickers and switches first, then the
+                // text-style rows (each opens a single-field edit dialog).
+                preferenceParagraph(
+                    listOf<@Composable () -> Unit>(
                         // algorithm picker
                         {
                             PreferenceRow(
@@ -1942,9 +1965,8 @@ private fun PartitionEditDialog(
                                 onClick = { if (!saving) choosingKey = true },
                             )
                         },
-                    ) + if (!isVbmeta) {
+                    ) + (if (!isVbmeta) {
                         listOf<@Composable () -> Unit>(
-                            // hash-algorithm picker
                             {
                                 PreferenceRow(
                                     title = stringResource(
@@ -1954,7 +1976,7 @@ private fun PartitionEditDialog(
                                     onClick = { if (!saving) choosingHashAlgorithm = true },
                                 )
                             },
-                        ) + if (isHash) {
+                        ) + (if (isHash) {
                             listOf<@Composable () -> Unit>(
                                 {
                                     PreferenceSwitchRow(
@@ -1969,10 +1991,10 @@ private fun PartitionEditDialog(
                             )
                         } else {
                             emptyList()
-                        }
+                        })
                     } else {
                         emptyList()
-                    } + listOf<@Composable () -> Unit>(
+                    }) + listOf<@Composable () -> Unit>(
                         // flags picker
                         {
                             PreferenceRow(
@@ -1982,102 +2004,89 @@ private fun PartitionEditDialog(
                                 onClick = { if (!saving) choosingFlags = true },
                             )
                         },
-                    ),
-                    textFields = listOf<@Composable () -> Unit>(
+                        // image file name
                         {
-                            OutlinedTextField(
-                                value = image,
-                                onValueChange = {
-                                    image = it
-                                    imageTouched = true
+                            PreferenceRow(
+                                title = stringResource(R.string.profile_partition_edit_image),
+                                summary = image.ifBlank {
+                                    stringResource(R.string.profile_partition_edit_unset)
                                 },
-                                label = {
-                                    Text(stringResource(R.string.profile_partition_edit_image))
+                                summaryContent = if (hasImageWarning) {
+                                    {
+                                        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                                            Text(
+                                                text = image,
+                                                style = MaterialTheme.typography.bodyMedium,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            )
+                                            Text(
+                                                text = stringResource(
+                                                    R.string.profile_partition_edit_image_warning,
+                                                ),
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = MaterialTheme.colorScheme.error,
+                                            )
+                                        }
+                                    }
+                                } else {
+                                    null
                                 },
-                                singleLine = true,
-                                enabled = !saving,
+                                onClick = { if (!saving) editingField = FIELD_IMAGE },
                             )
                         },
-                    ) + if (hasImageWarning) {
-                        listOf<@Composable () -> Unit>({
-                            Text(
-                                text = stringResource(R.string.profile_partition_edit_image_warning),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.error,
-                            )
-                        })
-                    } else {
-                        emptyList()
-                    } + if (!isVbmeta) {
+                    ) + (if (!isVbmeta) {
                         listOf<@Composable () -> Unit>(
                             {
-                                OutlinedTextField(
-                                    value = partitionName,
-                                    onValueChange = { partitionName = it },
-                                    label = {
-                                        Text(
-                                            stringResource(
-                                                R.string.profile_partition_edit_partition_name,
-                                            )
-                                        )
+                                PreferenceRow(
+                                    title = stringResource(
+                                        R.string.profile_partition_edit_partition_name,
+                                    ),
+                                    summary = partitionName.ifBlank {
+                                        stringResource(R.string.profile_partition_edit_unset)
                                     },
-                                    singleLine = true,
-                                    enabled = !saving,
+                                    onClick = { if (!saving) editingField = FIELD_PARTITION_NAME },
                                 )
                             },
                             {
-                                OutlinedTextField(
-                                    value = partitionSize,
-                                    onValueChange = {
-                                        partitionSize = it.filter { c -> c.isDigit() }
-                                    },
-                                    label = {
-                                        Text(
-                                            stringResource(
-                                                R.string.profile_partition_edit_partition_size,
-                                            ) + if (isHashtree) {
-                                                " " + stringResource(
-                                                    R.string.profile_partition_edit_size_append_hint,
-                                                )
+                                PreferenceRow(
+                                    title = stringResource(
+                                        R.string.profile_partition_edit_partition_size,
+                                    ),
+                                    summary = partitionSize.ifBlank {
+                                        stringResource(
+                                            if (isHashtree) {
+                                                R.string.profile_partition_edit_size_append
                                             } else {
-                                                ""
+                                                R.string.profile_partition_edit_unset
                                             },
                                         )
                                     },
-                                    singleLine = true,
-                                    enabled = !saving && !(isHash && dynamicPartitionSize),
+                                    enabled = !(isHash && dynamicPartitionSize),
+                                    onClick = { if (!saving) editingField = FIELD_PARTITION_SIZE },
                                 )
                             },
                             {
-                                OutlinedTextField(
-                                    value = salt,
-                                    onValueChange = { salt = it },
-                                    label = {
-                                        Text(stringResource(R.string.profile_partition_edit_salt))
+                                PreferenceRow(
+                                    title = stringResource(R.string.profile_partition_edit_salt),
+                                    summary = salt.ifBlank {
+                                        stringResource(R.string.profile_partition_edit_salt_random)
                                     },
-                                    singleLine = true,
-                                    enabled = !saving,
+                                    onClick = { if (!saving) editingField = FIELD_SALT },
                                 )
                             },
                         )
                     } else {
                         emptyList()
-                    } + listOf<@Composable () -> Unit>(
+                    }) + listOf<@Composable () -> Unit>(
                         {
-                            OutlinedTextField(
-                                value = rollbackIndex,
-                                onValueChange = {
-                                    rollbackIndex = it.filter { c -> c.isDigit() || c == '-' }
+                            PreferenceRow(
+                                title = stringResource(
+                                    R.string.profile_partition_edit_rollback_index,
+                                ),
+                                summary = rollbackIndex.ifBlank {
+                                    stringResource(R.string.profile_partition_edit_omit)
                                 },
-                                label = {
-                                    Text(
-                                        stringResource(
-                                            R.string.profile_partition_edit_rollback_index,
-                                        )
-                                    )
-                                },
-                                singleLine = true,
-                                enabled = !saving,
+                                onClick = { if (!saving) editingField = FIELD_ROLLBACK_INDEX },
                             )
                         },
                     ),
@@ -2097,8 +2106,8 @@ private fun PartitionEditDialog(
                     expanded = showAdvanced,
                 )
                 if (showAdvanced) {
-                    PartitionRowsParagraph(
-                        rows = (if (isVbmeta) {
+                    preferenceParagraph(
+                        (if (isVbmeta) {
                             listOf<@Composable () -> Unit>(
                                 {
                                     PreferenceRow(
@@ -2116,7 +2125,7 @@ private fun PartitionEditDialog(
                             )
                         } else {
                             emptyList()
-                        }) + listOf(
+                        }) + listOf<@Composable () -> Unit>(
                             {
                                 PreferenceSwitchRow(
                                     title = stringResource(
@@ -2242,78 +2251,55 @@ private fun PartitionEditDialog(
                             )
                         } else {
                             emptyList()
-                        }),
-                        textFields = listOf<@Composable () -> Unit>(
+                        }) + listOf<@Composable () -> Unit>(
+                            // text-style rows, each opening an edit dialog
                             {
-                                OutlinedTextField(
-                                    value = rollbackIndexLocation,
-                                    onValueChange = {
-                                        rollbackIndexLocation = it.filter { c -> c.isDigit() }
+                                PreferenceRow(
+                                    title = stringResource(
+                                        R.string.profile_partition_edit_rollback_location,
+                                    ),
+                                    summary = rollbackIndexLocation.ifBlank {
+                                        stringResource(R.string.profile_partition_edit_omit)
                                     },
-                                    label = {
-                                        Text(
-                                            stringResource(
-                                                R.string.profile_partition_edit_rollback_location,
-                                            )
-                                        )
+                                    onClick = {
+                                        if (!saving) editingField = FIELD_ROLLBACK_LOCATION
                                     },
-                                    singleLine = true,
-                                    enabled = !saving,
                                 )
                             },
                             {
-                                OutlinedTextField(
-                                    value = propsText,
-                                    onValueChange = { propsText = it },
-                                    label = {
-                                        Text(stringResource(R.string.profile_partition_edit_props))
-                                    },
-                                    supportingText = {
-                                        Text(
-                                            stringResource(
-                                                R.string.profile_partition_edit_props_hint,
-                                            )
+                                PreferenceRow(
+                                    title = stringResource(R.string.profile_partition_edit_props),
+                                    summary = if (propsText.isBlank()) {
+                                        stringResource(R.string.profile_partition_edit_none_set)
+                                    } else {
+                                        pluralStringResource(
+                                            R.plurals.profile_partition_edit_list_count,
+                                            propsText.lines().count { it.isNotBlank() },
+                                            propsText.lines().count { it.isNotBlank() },
                                         )
                                     },
-                                    enabled = !saving,
-                                    minLines = 1,
-                                    maxLines = 4,
+                                    onClick = { if (!saving) editingField = FIELD_PROPS },
                                 )
                             },
                         ) + (if (isHashtree) {
                             listOf<@Composable () -> Unit>(
                                 {
-                                    OutlinedTextField(
-                                        value = blockSize,
-                                        onValueChange = {
-                                            blockSize = it.filter { c -> c.isDigit() }
-                                        },
-                                        label = {
-                                            Text(
-                                                stringResource(
-                                                    R.string.profile_partition_edit_block_size,
-                                                )
-                                            )
-                                        },
-                                        singleLine = true,
-                                        enabled = !saving,
+                                    PreferenceRow(
+                                        title = stringResource(
+                                            R.string.profile_partition_edit_block_size,
+                                        ),
+                                        summary = blockSize,
+                                        onClick = { if (!saving) editingField = FIELD_BLOCK_SIZE },
                                     )
                                 },
                                 {
-                                    OutlinedTextField(
-                                        value = fecNumRoots,
-                                        onValueChange = {
-                                            fecNumRoots = it.filter { c -> c.isDigit() }
-                                        },
-                                        label = {
-                                            Text(
-                                                stringResource(
-                                                    R.string.profile_partition_edit_fec_num_roots,
-                                                )
-                                            )
-                                        },
-                                        singleLine = true,
-                                        enabled = !saving && !doNotGenerateFec,
+                                    PreferenceRow(
+                                        title = stringResource(
+                                            R.string.profile_partition_edit_fec_num_roots,
+                                        ),
+                                        summary = fecNumRoots,
+                                        enabled = !doNotGenerateFec,
+                                        onClick = { if (!saving) editingField = FIELD_FEC_ROOTS },
                                     )
                                 },
                             )
@@ -2322,20 +2308,14 @@ private fun PartitionEditDialog(
                         }) + (if (isVbmeta) {
                             listOf<@Composable () -> Unit>(
                                 {
-                                    OutlinedTextField(
-                                        value = paddingSize,
-                                        onValueChange = {
-                                            paddingSize = it.filter { c -> c.isDigit() }
+                                    PreferenceRow(
+                                        title = stringResource(
+                                            R.string.profile_partition_edit_padding_size,
+                                        ),
+                                        summary = paddingSize.ifBlank {
+                                            stringResource(R.string.profile_partition_edit_omit)
                                         },
-                                        label = {
-                                            Text(
-                                                stringResource(
-                                                    R.string.profile_partition_edit_padding_size,
-                                                )
-                                            )
-                                        },
-                                        singleLine = true,
-                                        enabled = !saving,
+                                        onClick = { if (!saving) editingField = FIELD_PADDING_SIZE },
                                     )
                                 },
                             )
@@ -2343,93 +2323,81 @@ private fun PartitionEditDialog(
                             emptyList()
                         }) + listOf<@Composable () -> Unit>(
                             {
-                                OutlinedTextField(
-                                    value = setupRootfsFromKernel,
-                                    onValueChange = { setupRootfsFromKernel = it },
-                                    label = {
-                                        Text(
-                                            stringResource(
-                                                R.string.profile_partition_edit_setup_rootfs_image,
-                                            )
-                                        )
+                                PreferenceRow(
+                                    title = stringResource(
+                                        R.string.profile_partition_edit_setup_rootfs_image,
+                                    ),
+                                    summary = setupRootfsFromKernel.ifBlank {
+                                        stringResource(R.string.profile_partition_edit_unset)
                                     },
-                                    singleLine = true,
-                                    enabled = !saving,
+                                    onClick = {
+                                        if (!saving) editingField = FIELD_SETUP_ROOTFS_IMAGE
+                                    },
                                 )
                             },
                             {
-                                OutlinedTextField(
-                                    value = outputVbmetaImage,
-                                    onValueChange = { outputVbmetaImage = it },
-                                    label = {
-                                        Text(
-                                            stringResource(
-                                                R.string.profile_partition_edit_output_vbmeta,
-                                            )
-                                        )
+                                PreferenceRow(
+                                    title = stringResource(
+                                        R.string.profile_partition_edit_output_vbmeta,
+                                    ),
+                                    summary = outputVbmetaImage.ifBlank {
+                                        stringResource(R.string.profile_partition_edit_unset)
                                     },
-                                    singleLine = true,
-                                    enabled = !saving,
+                                    onClick = {
+                                        if (!saving) editingField = FIELD_OUTPUT_VBMETA
+                                    },
                                 )
                             },
                             {
-                                OutlinedTextField(
-                                    value = publicKeyMetadata,
-                                    onValueChange = { publicKeyMetadata = it },
-                                    label = {
-                                        Text(
-                                            stringResource(
-                                                R.string.profile_partition_edit_pubkey_metadata,
-                                            )
-                                        )
+                                PreferenceRow(
+                                    title = stringResource(
+                                        R.string.profile_partition_edit_pubkey_metadata,
+                                    ),
+                                    summary = publicKeyMetadata.ifBlank {
+                                        stringResource(R.string.profile_partition_edit_unset)
                                     },
-                                    singleLine = true,
-                                    enabled = !saving,
+                                    onClick = {
+                                        if (!saving) editingField = FIELD_PUBKEY_METADATA
+                                    },
                                 )
                             },
                             {
-                                OutlinedTextField(
-                                    value = signingHelper,
-                                    onValueChange = { signingHelper = it },
-                                    label = {
-                                        Text(
-                                            stringResource(
-                                                R.string.profile_partition_edit_signing_helper,
-                                            )
-                                        )
+                                PreferenceRow(
+                                    title = stringResource(
+                                        R.string.profile_partition_edit_signing_helper,
+                                    ),
+                                    summary = signingHelper.ifBlank {
+                                        stringResource(R.string.profile_partition_edit_unset)
                                     },
-                                    singleLine = true,
-                                    enabled = !saving,
+                                    onClick = {
+                                        if (!saving) editingField = FIELD_SIGNING_HELPER
+                                    },
                                 )
                             },
                             {
-                                OutlinedTextField(
-                                    value = signingHelperWithFiles,
-                                    onValueChange = { signingHelperWithFiles = it },
-                                    label = {
-                                        Text(
-                                            stringResource(
-                                                R.string.profile_partition_edit_signing_helper_files,
-                                            )
-                                        )
+                                PreferenceRow(
+                                    title = stringResource(
+                                        R.string.profile_partition_edit_signing_helper_files,
+                                    ),
+                                    summary = signingHelperWithFiles.ifBlank {
+                                        stringResource(R.string.profile_partition_edit_unset)
                                     },
-                                    singleLine = true,
-                                    enabled = !saving,
+                                    onClick = {
+                                        if (!saving) editingField = FIELD_SIGNING_HELPER_FILES
+                                    },
                                 )
                             },
                             {
-                                OutlinedTextField(
-                                    value = appendToReleaseString,
-                                    onValueChange = { appendToReleaseString = it },
-                                    label = {
-                                        Text(
-                                            stringResource(
-                                                R.string.profile_partition_edit_append_release,
-                                            )
-                                        )
+                                PreferenceRow(
+                                    title = stringResource(
+                                        R.string.profile_partition_edit_append_release,
+                                    ),
+                                    summary = appendToReleaseString.ifBlank {
+                                        stringResource(R.string.profile_partition_edit_unset)
                                     },
-                                    singleLine = true,
-                                    enabled = !saving,
+                                    onClick = {
+                                        if (!saving) editingField = FIELD_APPEND_RELEASE
+                                    },
                                 )
                             },
                         ),
@@ -2656,26 +2624,222 @@ private fun PartitionEditDialog(
             },
         )
     }
+
+    when (editingField) {
+        FIELD_IMAGE -> PartitionTextFieldDialog(
+            title = stringResource(R.string.profile_partition_edit_image),
+            initialValue = image,
+            onDismiss = { editingField = null },
+            onConfirm = {
+                image = it
+                imageTouched = true
+                editingField = null
+            },
+        )
+        FIELD_PARTITION_NAME -> PartitionTextFieldDialog(
+            title = stringResource(R.string.profile_partition_edit_partition_name),
+            initialValue = partitionName,
+            onDismiss = { editingField = null },
+            onConfirm = {
+                partitionName = it
+                editingField = null
+            },
+        )
+        FIELD_PARTITION_SIZE -> PartitionTextFieldDialog(
+            title = stringResource(R.string.profile_partition_edit_partition_size),
+            initialValue = partitionSize,
+            numeric = true,
+            supportingText = if (isHashtree) {
+                stringResource(R.string.profile_partition_edit_size_append)
+            } else {
+                null
+            },
+            onDismiss = { editingField = null },
+            onConfirm = {
+                partitionSize = it
+                editingField = null
+            },
+        )
+        FIELD_SALT -> PartitionTextFieldDialog(
+            title = stringResource(R.string.profile_partition_edit_salt),
+            initialValue = salt,
+            supportingText = stringResource(R.string.profile_partition_edit_salt_random),
+            onDismiss = { editingField = null },
+            onConfirm = {
+                salt = it
+                editingField = null
+            },
+        )
+        FIELD_ROLLBACK_INDEX -> PartitionTextFieldDialog(
+            title = stringResource(R.string.profile_partition_edit_rollback_index),
+            initialValue = rollbackIndex,
+            numeric = true,
+            filterInput = { value -> value.filter { c -> c.isDigit() || c == '-' } },
+            supportingText = stringResource(R.string.profile_partition_edit_omit),
+            onDismiss = { editingField = null },
+            onConfirm = {
+                rollbackIndex = it
+                editingField = null
+            },
+        )
+        FIELD_ROLLBACK_LOCATION -> PartitionTextFieldDialog(
+            title = stringResource(R.string.profile_partition_edit_rollback_location),
+            initialValue = rollbackIndexLocation,
+            numeric = true,
+            filterInput = { value -> value.filter { c -> c.isDigit() } },
+            supportingText = stringResource(R.string.profile_partition_edit_omit),
+            onDismiss = { editingField = null },
+            onConfirm = {
+                rollbackIndexLocation = it
+                editingField = null
+            },
+        )
+        FIELD_PROPS -> PartitionTextFieldDialog(
+            title = stringResource(R.string.profile_partition_edit_props),
+            initialValue = propsText,
+            singleLine = false,
+            supportingText = stringResource(R.string.profile_partition_edit_props_hint),
+            onDismiss = { editingField = null },
+            onConfirm = {
+                propsText = it
+                editingField = null
+            },
+        )
+        FIELD_BLOCK_SIZE -> PartitionTextFieldDialog(
+            title = stringResource(R.string.profile_partition_edit_block_size),
+            initialValue = blockSize,
+            numeric = true,
+            onDismiss = { editingField = null },
+            onConfirm = {
+                blockSize = it
+                editingField = null
+            },
+        )
+        FIELD_FEC_ROOTS -> PartitionTextFieldDialog(
+            title = stringResource(R.string.profile_partition_edit_fec_num_roots),
+            initialValue = fecNumRoots,
+            numeric = true,
+            onDismiss = { editingField = null },
+            onConfirm = {
+                fecNumRoots = it
+                editingField = null
+            },
+        )
+        FIELD_PADDING_SIZE -> PartitionTextFieldDialog(
+            title = stringResource(R.string.profile_partition_edit_padding_size),
+            initialValue = paddingSize,
+            numeric = true,
+            supportingText = stringResource(R.string.profile_partition_edit_omit),
+            onDismiss = { editingField = null },
+            onConfirm = {
+                paddingSize = it
+                editingField = null
+            },
+        )
+        FIELD_SETUP_ROOTFS_IMAGE -> PartitionTextFieldDialog(
+            title = stringResource(R.string.profile_partition_edit_setup_rootfs_image),
+            initialValue = setupRootfsFromKernel,
+            onDismiss = { editingField = null },
+            onConfirm = {
+                setupRootfsFromKernel = it
+                editingField = null
+            },
+        )
+        FIELD_OUTPUT_VBMETA -> PartitionTextFieldDialog(
+            title = stringResource(R.string.profile_partition_edit_output_vbmeta),
+            initialValue = outputVbmetaImage,
+            onDismiss = { editingField = null },
+            onConfirm = {
+                outputVbmetaImage = it
+                editingField = null
+            },
+        )
+        FIELD_PUBKEY_METADATA -> PartitionTextFieldDialog(
+            title = stringResource(R.string.profile_partition_edit_pubkey_metadata),
+            initialValue = publicKeyMetadata,
+            onDismiss = { editingField = null },
+            onConfirm = {
+                publicKeyMetadata = it
+                editingField = null
+            },
+        )
+        FIELD_SIGNING_HELPER -> PartitionTextFieldDialog(
+            title = stringResource(R.string.profile_partition_edit_signing_helper),
+            initialValue = signingHelper,
+            onDismiss = { editingField = null },
+            onConfirm = {
+                signingHelper = it
+                editingField = null
+            },
+        )
+        FIELD_SIGNING_HELPER_FILES -> PartitionTextFieldDialog(
+            title = stringResource(R.string.profile_partition_edit_signing_helper_files),
+            initialValue = signingHelperWithFiles,
+            onDismiss = { editingField = null },
+            onConfirm = {
+                signingHelperWithFiles = it
+                editingField = null
+            },
+        )
+        FIELD_APPEND_RELEASE -> PartitionTextFieldDialog(
+            title = stringResource(R.string.profile_partition_edit_append_release),
+            initialValue = appendToReleaseString,
+            onDismiss = { editingField = null },
+            onConfirm = {
+                appendToReleaseString = it
+                editingField = null
+            },
+        )
+    }
 }
 
 /**
- * Section inside the partition edit dialog mirroring the image-management
- * look: the non-text rows (pickers / switches / sub-dialog entries) form one
- * visually clustered paragraph — first row gets the large top corners, last
- * row the large bottom corners, middle rows small corners (2dp gaps come
- * from the parent column) — followed by the plain text fields, which stay
- * unclustered. Keeps non-text and text rows from interleaving.
+ * Single-field edit dialog opened from a partition edit row (mirrors
+ * CommandScreen's CommandTextEditDialog): one text field, OK/cancel.
+ * [filterInput] sanitizes while typing (e.g. digits-only for numeric fields).
  */
 @Composable
-private fun PartitionRowsParagraph(
-    rows: List<@Composable () -> Unit>,
-    textFields: List<@Composable () -> Unit>,
-    modifier: Modifier = Modifier,
+private fun PartitionTextFieldDialog(
+    title: String,
+    initialValue: String,
+    singleLine: Boolean = true,
+    numeric: Boolean = false,
+    filterInput: (String) -> String = { it },
+    supportingText: String? = null,
+    onDismiss: () -> Unit,
+    onConfirm: (String) -> Unit,
 ) {
-    Column(modifier = modifier) {
-        preferenceParagraph(rows)
-        textFields.forEach { it() }
-    }
+    var draft by remember { mutableStateOf(initialValue) }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(title) },
+        text = {
+            OutlinedTextField(
+                value = draft,
+                onValueChange = { draft = filterInput(it) },
+                modifier = Modifier.fillMaxWidth(),
+                supportingText = supportingText?.let { hint -> { Text(hint) } },
+                singleLine = singleLine,
+                minLines = if (singleLine) 1 else 2,
+                maxLines = if (singleLine) 1 else 6,
+                keyboardOptions = if (numeric) {
+                    KeyboardOptions(keyboardType = KeyboardType.Number)
+                } else {
+                    KeyboardOptions.Default
+                },
+            )
+        },
+        confirmButton = {
+            DialogConfirmButton(onClick = { onConfirm(draft.trim()) }) {
+                Text(stringResource(android.R.string.ok))
+            }
+        },
+        dismissButton = {
+            DialogDismissButton(onClick = onDismiss) {
+                Text(stringResource(android.R.string.cancel))
+            }
+        },
+    )
 }
 
 /**

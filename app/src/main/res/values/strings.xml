@@ -491,9 +491,12 @@
     <string name="profile_partition_edit_key">Signing key</string>
     <string name="profile_partition_edit_key_none">(no key)</string>
     <string name="profile_partition_edit_partition_size">Partition size (bytes)</string>
-    <string name="profile_partition_edit_size_append_hint">(empty = append to end)</string>
+    <string name="profile_partition_edit_size_append">Empty = append to end of image</string>
     <string name="profile_partition_edit_dynamic_size">Derive size from image</string>
-    <string name="profile_partition_edit_salt">Salt (hex; empty = random)</string>
+    <string name="profile_partition_edit_salt">Salt</string>
+    <string name="profile_partition_edit_salt_random">Empty = random; hexadecimal when set</string>
+    <string name="profile_partition_edit_unset">Not set</string>
+    <string name="profile_partition_edit_omit">Empty = omit from config</string>
     <string name="profile_partition_edit_flags">VBMeta flags</string>
     <string name="profile_partition_edit_rollback_index">Rollback index (empty = omit)</string>
     <string name="profile_partition_edit_advanced">Advanced configuration</string>

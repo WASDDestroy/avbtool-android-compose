@@ -488,9 +488,12 @@
     <string name="profile_partition_edit_key">签名密钥</string>
     <string name="profile_partition_edit_key_none">（无密钥）</string>
     <string name="profile_partition_edit_partition_size">分区大小（字节）</string>
-    <string name="profile_partition_edit_size_append_hint">（留空 = 追加到镜像末尾）</string>
+    <string name="profile_partition_edit_size_append">留空 = 追加到镜像末尾</string>
     <string name="profile_partition_edit_dynamic_size">由镜像推算大小</string>
-    <string name="profile_partition_edit_salt">盐（十六进制；留空 = 随机）</string>
+    <string name="profile_partition_edit_salt">盐</string>
+    <string name="profile_partition_edit_salt_random">留空 = 随机；填写时须为十六进制</string>
+    <string name="profile_partition_edit_unset">未设置</string>
+    <string name="profile_partition_edit_omit">留空 = 不写入配置</string>
     <string name="profile_partition_edit_flags">VBMeta 标志位</string>
     <string name="profile_partition_edit_rollback_index">防回滚指数（留空 = 不写入）</string>
     <string name="profile_partition_edit_advanced">高级配置</string>
