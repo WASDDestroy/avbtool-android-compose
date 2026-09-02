@@ -19,6 +19,8 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LocalContentColor
@@ -176,6 +178,12 @@ fun PreferenceRow(
     trailing: (@Composable () -> Unit)? = null,
     onClick: (() -> Unit)? = null,
     onLongClick: (() -> Unit)? = null,
+    /**
+     * Non-null marks the row as an expand/collapse toggle: the trailing
+     * chevron points down while collapsed and up while expanded, replacing
+     * the default forward arrow.
+     */
+    expanded: Boolean? = null,
 ) {
     val shape = preferenceRowShape(LocalPreferenceRowPosition.current)
     val content: @Composable () -> Unit = {
@@ -223,7 +231,18 @@ fun PreferenceRow(
                 summaryBlock?.invoke()
             }
             trailing?.invoke()
-            if (trailing == null && onClick != null) {
+            if (trailing == null && expanded != null) {
+                Icon(
+                    imageVector = if (expanded) {
+                        Icons.Filled.KeyboardArrowUp
+                    } else {
+                        Icons.Filled.KeyboardArrowDown
+                    },
+                    contentDescription = null,
+                    modifier = Modifier.size(24.dp),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            } else if (trailing == null && onClick != null) {
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
                     contentDescription = null,

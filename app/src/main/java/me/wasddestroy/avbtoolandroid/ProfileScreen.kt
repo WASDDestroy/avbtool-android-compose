@@ -1598,6 +1598,7 @@ private fun ProfileResultView(result: ProfileSignResult) {
                         else R.string.command_raw_output_expand,
                     ),
                     onClick = { rawExpanded = !rawExpanded },
+                    expanded = rawExpanded,
                 )
             }
             if (rawExpanded) {
@@ -2093,6 +2094,7 @@ private fun PartitionEditDialog(
                         },
                     ),
                     onClick = { showAdvanced = !showAdvanced },
+                    expanded = showAdvanced,
                 )
                 if (showAdvanced) {
                     PartitionRowsParagraph(
