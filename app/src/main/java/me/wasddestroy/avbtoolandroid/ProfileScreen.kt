@@ -103,6 +103,9 @@ fun ProfileScreen(
     var keyMenuTarget by remember { mutableStateOf<ProfileKeyUi?>(null) }
     var pendingKeyFile by remember { mutableStateOf<Uri?>(null) }
     var pendingKeyFileName by remember { mutableStateOf<String?>(null) }
+    // Full spec copy for the partition edit dialog; null while closed.
+    var editingPartition by remember { mutableStateOf<ProfilePartitionSpec?>(null) }
+    var partitionSaveError by remember { mutableStateOf<PartitionSaveEvent.Failed?>(null) }
 
     val addPartitionEvent = uiState.addPartitionEvent
     LaunchedEffect(addPartitionEvent) {
@@ -123,6 +126,32 @@ fun ProfileScreen(
             // InvalidImage / NoImage keep the dialog open; the warning dialog
             // rendered from uiState offers discard / default descriptor.
             AddPartitionEvent.InvalidImage, AddPartitionEvent.NoImage -> Unit
+        }
+    }
+
+    val partitionSaveEvent = uiState.partitionSaveEvent
+    LaunchedEffect(partitionSaveEvent) {
+        when (partitionSaveEvent) {
+            PartitionSaveEvent.Success -> {
+                partitionSaveError = null
+                editingPartition = null
+                viewModel.consumePartitionSaveEvent()
+            }
+            is PartitionSaveEvent.Failed -> {
+                // Inline reasons while the dialog is alive; if rotation closed
+                // it, fall back to the toast channel so the failure is not lost.
+                if (editingPartition != null) {
+                    partitionSaveError = partitionSaveEvent
+                } else {
+                    Toast.makeText(
+                        context,
+                        context.getString(R.string.profile_partition_save_failed),
+                        Toast.LENGTH_SHORT,
+                    ).show()
+                }
+                viewModel.consumePartitionSaveEvent()
+            }
+            null -> Unit
         }
     }
 
@@ -429,6 +458,7 @@ fun ProfileScreen(
                                                 modifier = Modifier.size(24.dp),
                                             )
                                         },
+                                        onLongClick = { editingPartition = spec },
                                     )
                                 } else {
                                     PreferenceRow(
@@ -446,6 +476,7 @@ fun ProfileScreen(
                                             pendingImagePartition = spec.partition
                                             imageLauncher.launch(arrayOf("*/*"))
                                         },
+                                        onLongClick = { editingPartition = spec },
                                     )
                                 }
                             }
@@ -649,6 +680,26 @@ fun ProfileScreen(
             onConfirm = { selected ->
                 showDeletePartitionsDialog = false
                 pendingDeletePartitions = selected
+            },
+        )
+    }
+
+    editingPartition?.let { spec ->
+        PartitionEditDialog(
+            spec = spec,
+            keyIds = uiState.keys.map { it.id },
+            defaultKeyId = uiState.defaultKeyId,
+            saving = uiState.savingPartition,
+            saveError = partitionSaveError,
+            onDismiss = {
+                if (!uiState.savingPartition) {
+                    editingPartition = null
+                    partitionSaveError = null
+                }
+            },
+            onSave = { edited ->
+                partitionSaveError = null
+                viewModel.updatePartition(edited)
             },
         )
     }
@@ -1703,4 +1754,538 @@ private fun SignScopeDialog(
             }
         },
     )
+}
+
+
+/**
+ * Long-press edit dialog for one profile partition. The dialog always works
+ * on a full [ProfilePartitionSpec] copy — every field is edited in place and
+ * the whole spec is handed back to [ProfileViewModel.updatePartition], so
+ * fields not shown here survive the write. Validation runs in the ViewModel;
+ * [saveError] carries the reasons to show inline, keeping the dialog open.
+ */
+@Composable
+private fun PartitionEditDialog(
+    spec: ProfilePartitionSpec,
+    keyIds: List<String>,
+    defaultKeyId: String?,
+    saving: Boolean,
+    saveError: PartitionSaveEvent.Failed?,
+    onDismiss: () -> Unit,
+    onSave: (ProfilePartitionSpec) -> Unit,
+) {
+    val isVbmeta = spec.descriptor == "vbmeta"
+    val isHash = spec.descriptor == "hash"
+    val isHashtree = spec.descriptor == "hashtree"
+
+    // ---- editable copies (basic) -----------------------------------------
+    var image by remember(spec) { mutableStateOf(spec.image) }
+    var imageTouched by remember(spec) { mutableStateOf(false) }
+    var partitionName by remember(spec) { mutableStateOf(spec.partitionName) }
+    var algorithm by remember(spec) { mutableStateOf(spec.algorithm) }
+    var keyId by remember(spec) { mutableStateOf(spec.keyId) }
+    var partitionSize by remember(spec) {
+        mutableStateOf(spec.partitionSize?.toString().orEmpty())
+    }
+    var dynamicPartitionSize by remember(spec) { mutableStateOf(spec.dynamicPartitionSize) }
+    var rollbackIndex by remember(spec) {
+        mutableStateOf(spec.rollbackIndex?.toString().orEmpty())
+    }
+    var hashAlgorithm by remember(spec) { mutableStateOf(spec.hashAlgorithm) }
+    var salt by remember(spec) { mutableStateOf(spec.salt.orEmpty()) }
+    var flags by remember(spec) { mutableStateOf(spec.flags?.toString() ?: "0") }
+
+    // ---- editable copies (advanced) --------------------------------------
+    var showAdvanced by remember(spec) { mutableStateOf(false) }
+    var rollbackIndexLocation by remember(spec) {
+        mutableStateOf(spec.rollbackIndexLocation?.toString().orEmpty())
+    }
+    var propsText by remember(spec) {
+        mutableStateOf(spec.props.joinToString("\n") { "${it.first}:${it.second}" })
+    }
+    var setHashtreeDisabledFlag by remember(spec) { mutableStateOf(spec.setHashtreeDisabledFlag) }
+    var setVerificationDisabledFlag by remember(spec) {
+        mutableStateOf(spec.setVerificationDisabledFlag)
+    }
+    var blockSize by remember(spec) { mutableStateOf(spec.blockSize.toString()) }
+    var doNotGenerateFec by remember(spec) { mutableStateOf(spec.doNotGenerateFec) }
+    var fecNumRoots by remember(spec) { mutableStateOf(spec.fecNumRoots.toString()) }
+    var noHashtree by remember(spec) { mutableStateOf(spec.noHashtree) }
+    var checkAtMostOnce by remember(spec) { mutableStateOf(spec.checkAtMostOnce) }
+    var setupAsRootfsFromKernel by remember(spec) { mutableStateOf(spec.setupAsRootfsFromKernel) }
+    var paddingSize by remember(spec) {
+        mutableStateOf(spec.paddingSize?.toString().orEmpty())
+    }
+
+    // ---- sub-dialogs ------------------------------------------------------
+    var choosingAlgorithm by remember { mutableStateOf(false) }
+    var choosingHashAlgorithm by remember { mutableStateOf(false) }
+    var choosingFlags by remember { mutableStateOf(false) }
+    var choosingKey by remember { mutableStateOf(false) }
+
+    val hasImageWarning = imageTouched && image != spec.image && !isVbmeta
+    val sizeLong = partitionSize.toLongOrNull()
+
+    fun buildSpec(): ProfilePartitionSpec = spec.copy(
+        image = image.trim(),
+        partitionName = if (isVbmeta) {
+            spec.partitionName
+        } else {
+            partitionName.trim().ifBlank { spec.partition }
+        },
+        algorithm = algorithm,
+        keyId = keyId?.takeIf { it.isNotBlank() },
+        partitionSize = sizeLong?.takeIf { it > 0 },
+        dynamicPartitionSize = dynamicPartitionSize,
+        rollbackIndex = rollbackIndex.toLongOrNull(),
+        hashAlgorithm = hashAlgorithm,
+        salt = salt.trim().takeIf { it.isNotBlank() },
+        flags = flags.toLongOrNull(),
+        rollbackIndexLocation = rollbackIndexLocation.toLongOrNull(),
+        props = propsText.lines().mapNotNull { line ->
+            val idx = line.indexOf(':')
+            if (idx <= 0) null else line.substring(0, idx).trim() to line.substring(idx + 1).trim()
+        }.filter { (k, _) -> k.isNotBlank() },
+        setHashtreeDisabledFlag = setHashtreeDisabledFlag,
+        setVerificationDisabledFlag = setVerificationDisabledFlag,
+        blockSize = blockSize.toLongOrNull() ?: 4096L,
+        doNotGenerateFec = doNotGenerateFec,
+        fecNumRoots = fecNumRoots.toLongOrNull() ?: 2L,
+        noHashtree = noHashtree,
+        checkAtMostOnce = checkAtMostOnce,
+        setupAsRootfsFromKernel = setupAsRootfsFromKernel,
+        paddingSize = paddingSize.toLongOrNull()?.takeIf { it > 0 },
+    )
+
+    AlertDialog(
+        onDismissRequest = { if (!saving) onDismiss() },
+        title = {
+            Text(stringResource(R.string.profile_partition_edit_title, spec.partition))
+        },
+        text = {
+            Column(
+                modifier = Modifier.verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                Text(
+                    text = stringResource(
+                        R.string.profile_partition_edit_descriptor,
+                        spec.descriptor,
+                    ),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                OutlinedTextField(
+                    value = image,
+                    onValueChange = {
+                        image = it
+                        imageTouched = true
+                    },
+                    label = { Text(stringResource(R.string.profile_partition_edit_image)) },
+                    singleLine = true,
+                    enabled = !saving,
+                )
+                if (hasImageWarning) {
+                    Text(
+                        text = stringResource(R.string.profile_partition_edit_image_warning),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error,
+                    )
+                }
+                if (!isVbmeta) {
+                    OutlinedTextField(
+                        value = partitionName,
+                        onValueChange = { partitionName = it },
+                        label = {
+                            Text(stringResource(R.string.profile_partition_edit_partition_name))
+                        },
+                        singleLine = true,
+                        enabled = !saving,
+                    )
+                }
+                PreferenceRow(
+                    title = stringResource(R.string.arg_add_hash_footer_algorithm_label),
+                    summary = algorithm,
+                    onClick = { if (!saving) choosingAlgorithm = true },
+                )
+                PreferenceRow(
+                    title = stringResource(R.string.profile_partition_edit_key),
+                    summary = keyId ?: stringResource(R.string.profile_partition_edit_key_none),
+                    onClick = { if (!saving) choosingKey = true },
+                )
+                if (!isVbmeta) {
+                    OutlinedTextField(
+                        value = partitionSize,
+                        onValueChange = { partitionSize = it.filter { c -> c.isDigit() } },
+                        label = {
+                            Text(
+                                stringResource(R.string.profile_partition_edit_partition_size) +
+                                    if (isHashtree) {
+                                        " " + stringResource(
+                                            R.string.profile_partition_edit_size_append_hint,
+                                        )
+                                    } else {
+                                        ""
+                                    },
+                            )
+                        },
+                        singleLine = true,
+                        enabled = !saving && !(isHash && dynamicPartitionSize),
+                    )
+                    if (isHash) {
+                        PreferenceSwitchRow(
+                            title = stringResource(R.string.profile_partition_edit_dynamic_size),
+                            checked = dynamicPartitionSize,
+                            enabled = !saving,
+                            onCheckedChange = { dynamicPartitionSize = it },
+                        )
+                    }
+                    PreferenceRow(
+                        title = stringResource(R.string.arg_add_hash_footer_hash_algorithm_label),
+                        summary = hashAlgorithm,
+                        onClick = { if (!saving) choosingHashAlgorithm = true },
+                    )
+                    OutlinedTextField(
+                        value = salt,
+                        onValueChange = { salt = it },
+                        label = { Text(stringResource(R.string.profile_partition_edit_salt)) },
+                        singleLine = true,
+                        enabled = !saving,
+                    )
+                }
+                PreferenceRow(
+                    title = stringResource(R.string.profile_partition_edit_flags),
+                    summary = FLAGS_OPTIONS.firstOrNull { it.value == flags }
+                        ?.let { stringResource(it.labelRes) } ?: flags,
+                    onClick = { if (!saving) choosingFlags = true },
+                )
+                OutlinedTextField(
+                    value = rollbackIndex,
+                    onValueChange = {
+                        rollbackIndex = it.filter { c -> c.isDigit() || c == '-' }
+                    },
+                    label = { Text(stringResource(R.string.profile_partition_edit_rollback_index)) },
+                    singleLine = true,
+                    enabled = !saving,
+                )
+
+                // ---- advanced section -----------------------------------
+                PreferenceRow(
+                    title = stringResource(R.string.profile_partition_edit_advanced),
+                    summary = stringResource(
+                        if (showAdvanced) {
+                            R.string.profile_partition_edit_advanced_hide
+                        } else {
+                            R.string.profile_partition_edit_advanced_show
+                        },
+                    ),
+                    onClick = { showAdvanced = !showAdvanced },
+                )
+                if (showAdvanced) {
+                    OutlinedTextField(
+                        value = rollbackIndexLocation,
+                        onValueChange = {
+                            rollbackIndexLocation = it.filter { c -> c.isDigit() }
+                        },
+                        label = {
+                            Text(stringResource(R.string.profile_partition_edit_rollback_location))
+                        },
+                        singleLine = true,
+                        enabled = !saving,
+                    )
+                    OutlinedTextField(
+                        value = propsText,
+                        onValueChange = { propsText = it },
+                        label = { Text(stringResource(R.string.profile_partition_edit_props)) },
+                        supportingText = {
+                            Text(stringResource(R.string.profile_partition_edit_props_hint))
+                        },
+                        enabled = !saving,
+                        minLines = 1,
+                        maxLines = 4,
+                    )
+                    PreferenceSwitchRow(
+                        title = stringResource(R.string.profile_partition_edit_hashtree_disabled),
+                        checked = setHashtreeDisabledFlag,
+                        enabled = !saving,
+                        onCheckedChange = { setHashtreeDisabledFlag = it },
+                    )
+                    PreferenceSwitchRow(
+                        title = stringResource(R.string.profile_partition_edit_verification_disabled),
+                        checked = setVerificationDisabledFlag,
+                        enabled = !saving,
+                        onCheckedChange = { setVerificationDisabledFlag = it },
+                    )
+                    if (isHashtree) {
+                        OutlinedTextField(
+                            value = blockSize,
+                            onValueChange = { blockSize = it.filter { c -> c.isDigit() } },
+                            label = {
+                                Text(stringResource(R.string.profile_partition_edit_block_size))
+                            },
+                            singleLine = true,
+                            enabled = !saving,
+                        )
+                        PreferenceSwitchRow(
+                            title = stringResource(R.string.profile_partition_edit_no_fec),
+                            checked = doNotGenerateFec,
+                            enabled = !saving,
+                            onCheckedChange = { doNotGenerateFec = it },
+                        )
+                        OutlinedTextField(
+                            value = fecNumRoots,
+                            onValueChange = { fecNumRoots = it.filter { c -> c.isDigit() } },
+                            label = {
+                                Text(stringResource(R.string.profile_partition_edit_fec_num_roots))
+                            },
+                            singleLine = true,
+                            enabled = !saving && !doNotGenerateFec,
+                        )
+                        PreferenceSwitchRow(
+                            title = stringResource(R.string.profile_partition_edit_no_hashtree),
+                            checked = noHashtree,
+                            enabled = !saving,
+                            onCheckedChange = { noHashtree = it },
+                        )
+                        PreferenceSwitchRow(
+                            title = stringResource(R.string.profile_partition_edit_check_at_most_once),
+                            checked = checkAtMostOnce,
+                            enabled = !saving,
+                            onCheckedChange = { checkAtMostOnce = it },
+                        )
+                        PreferenceSwitchRow(
+                            title = stringResource(R.string.profile_partition_edit_setup_rootfs),
+                            checked = setupAsRootfsFromKernel,
+                            enabled = !saving,
+                            onCheckedChange = { setupAsRootfsFromKernel = it },
+                        )
+                    }
+                    if (isVbmeta) {
+                        OutlinedTextField(
+                            value = paddingSize,
+                            onValueChange = { paddingSize = it.filter { c -> c.isDigit() } },
+                            label = {
+                                Text(stringResource(R.string.profile_partition_edit_padding_size))
+                            },
+                            singleLine = true,
+                            enabled = !saving,
+                        )
+                    }
+                }
+
+                saveError?.let { error ->
+                    Column {
+                        if (error.problems.isEmpty()) {
+                            Text(
+                                text = stringResource(R.string.profile_partition_save_failed),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.error,
+                            )
+                        } else {
+                            error.problems.forEach { problem ->
+                                Text(
+                                    text = stringResource(validationMessageRes(problem)),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.error,
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            DialogConfirmButton(
+                onClick = { onSave(buildSpec()) },
+                enabled = !saving,
+            ) {
+                Text(stringResource(R.string.profile_partition_edit_save))
+            }
+        },
+        dismissButton = {
+            DialogDismissButton(onClick = { if (!saving) onDismiss() }) {
+                Text(stringResource(R.string.command_cancel))
+            }
+        },
+    )
+
+    if (choosingAlgorithm) {
+        SimpleChoiceDialog(
+            titleRes = R.string.arg_add_hash_footer_algorithm_label,
+            options = SIGNING_ALGORITHMS,
+            selected = algorithm,
+            onDismiss = { choosingAlgorithm = false },
+            onSelect = {
+                algorithm = it
+                choosingAlgorithm = false
+            },
+        )
+    }
+    if (choosingHashAlgorithm) {
+        SimpleChoiceDialog(
+            titleRes = R.string.arg_add_hash_footer_hash_algorithm_label,
+            options = HASH_ALGORITHMS,
+            selected = hashAlgorithm,
+            onDismiss = { choosingHashAlgorithm = false },
+            onSelect = {
+                hashAlgorithm = it
+                choosingHashAlgorithm = false
+            },
+        )
+    }
+    if (choosingFlags) {
+        AlertDialog(
+            onDismissRequest = { choosingFlags = false },
+            title = { Text(stringResource(R.string.profile_partition_edit_flags)) },
+            text = {
+                Column(
+                    modifier = Modifier.verticalScroll(rememberScrollState()),
+                ) {
+                    FLAGS_OPTIONS.forEach { option ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    flags = option.value
+                                    choosingFlags = false
+                                }
+                                .padding(horizontal = 8.dp, vertical = 10.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        ) {
+                            RadioButton(selected = option.value == flags, onClick = null)
+                            Text(
+                                text = stringResource(option.labelRes),
+                                style = MaterialTheme.typography.bodyLarge,
+                            )
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                DialogDismissButton(onClick = { choosingFlags = false }) {
+                    Text(stringResource(android.R.string.cancel))
+                }
+            },
+        )
+    }
+    if (choosingKey) {
+        AlertDialog(
+            onDismissRequest = { choosingKey = false },
+            title = { Text(stringResource(R.string.profile_partition_edit_key)) },
+            text = {
+                Column(
+                    modifier = Modifier.verticalScroll(rememberScrollState()),
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                keyId = null
+                                choosingKey = false
+                            }
+                            .padding(horizontal = 8.dp, vertical = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        RadioButton(selected = keyId == null, onClick = null)
+                        Text(
+                            text = stringResource(R.string.profile_partition_edit_key_none),
+                            style = MaterialTheme.typography.bodyLarge,
+                        )
+                    }
+                    keyIds.forEach { id ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    keyId = id
+                                    choosingKey = false
+                                }
+                                .padding(horizontal = 8.dp, vertical = 10.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        ) {
+                            RadioButton(selected = keyId == id, onClick = null)
+                            Text(
+                                text = if (id == defaultKeyId) {
+                                    stringResource(R.string.profile_key_default_badge) + " $id"
+                                } else {
+                                    id
+                                },
+                                style = MaterialTheme.typography.bodyLarge,
+                            )
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                DialogDismissButton(onClick = { choosingKey = false }) {
+                    Text(stringResource(android.R.string.cancel))
+                }
+            },
+        )
+    }
+}
+
+@Composable
+private fun SimpleChoiceDialog(
+    titleRes: Int,
+    options: List<String>,
+    selected: String,
+    onDismiss: () -> Unit,
+    onSelect: (String) -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(titleRes)) },
+        text = {
+            Column(
+                modifier = Modifier.verticalScroll(rememberScrollState()),
+            ) {
+                options.forEach { option ->
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { onSelect(option) }
+                            .padding(horizontal = 8.dp, vertical = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        RadioButton(selected = option == selected, onClick = null)
+                        Text(text = option, style = MaterialTheme.typography.bodyLarge)
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            DialogDismissButton(onClick = onDismiss) {
+                Text(stringResource(android.R.string.cancel))
+            }
+        },
+    )
+}
+
+/** Maps a codec validation code to its user-facing message. */
+private fun validationMessageRes(code: ProfilePartitionCodec.ValidationCode): Int = when (code) {
+    ProfilePartitionCodec.ValidationCode.MISSING_PARTITION_SIZE ->
+        R.string.profile_partition_err_missing_size
+    ProfilePartitionCodec.ValidationCode.PARTITION_SIZE_NOT_MULTIPLE ->
+        R.string.profile_partition_err_size_multiple
+    ProfilePartitionCodec.ValidationCode.MALFORMED_CHAIN_PARTITION ->
+        R.string.profile_partition_err_chain_malformed
+    ProfilePartitionCodec.ValidationCode.CHAIN_SLOT_CONFLICT ->
+        R.string.profile_partition_err_chain_conflict
+    ProfilePartitionCodec.ValidationCode.KEY_REQUIRED ->
+        R.string.profile_partition_err_key_required
+    ProfilePartitionCodec.ValidationCode.INVALID_SALT ->
+        R.string.profile_partition_err_salt
+    ProfilePartitionCodec.ValidationCode.MALFORMED_PROP ->
+        R.string.profile_partition_err_prop
+    ProfilePartitionCodec.ValidationCode.FEC_NUM_ROOTS_OUT_OF_RANGE ->
+        R.string.profile_partition_err_fec_roots
+    ProfilePartitionCodec.ValidationCode.NEGATIVE_ROLLBACK_INDEX ->
+        R.string.profile_partition_err_rollback_negative
+    ProfilePartitionCodec.ValidationCode.INVALID_BLOCK_SIZE ->
+        R.string.profile_partition_err_block_size
 }

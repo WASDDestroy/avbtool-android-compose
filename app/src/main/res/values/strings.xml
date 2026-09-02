@@ -481,4 +481,48 @@
          scrolls to the detailed result sections at the bottom of the page. -->
     <string name="result_popup_close">Close</string>
     <string name="result_popup_view_details">View details</string>
+
+    <!-- Long-press partition config edit dialog in the profile image list. -->
+    <string name="profile_partition_edit_title">Edit %1$s configuration</string>
+    <string name="profile_partition_edit_descriptor">Descriptor type: %1$s</string>
+    <string name="profile_partition_edit_image">Image file name</string>
+    <string name="profile_partition_edit_image_warning">Other partitions that include this image by file name will lose the reference.</string>
+    <string name="profile_partition_edit_partition_name">Partition name (descriptor)</string>
+    <string name="profile_partition_edit_key">Signing key</string>
+    <string name="profile_partition_edit_key_none">(no key)</string>
+    <string name="profile_partition_edit_partition_size">Partition size (bytes)</string>
+    <string name="profile_partition_edit_size_append_hint">(empty = append to end)</string>
+    <string name="profile_partition_edit_dynamic_size">Derive size from image</string>
+    <string name="profile_partition_edit_salt">Salt (hex; empty = random)</string>
+    <string name="profile_partition_edit_flags">VBMeta flags</string>
+    <string name="profile_partition_edit_rollback_index">Rollback index (empty = omit)</string>
+    <string name="profile_partition_edit_advanced">Advanced configuration</string>
+    <string name="profile_partition_edit_advanced_show">Show advanced configuration</string>
+    <string name="profile_partition_edit_advanced_hide">Hide advanced configuration</string>
+    <string name="profile_partition_edit_rollback_location">Rollback index location (empty = omit)</string>
+    <string name="profile_partition_edit_props">Properties (one KEY:VALUE per line)</string>
+    <string name="profile_partition_edit_props_hint">Split at the first colon; the value may contain colons.</string>
+    <string name="profile_partition_edit_hashtree_disabled">Set HASHTREE_DISABLED flag</string>
+    <string name="profile_partition_edit_verification_disabled">Set VERIFICATION_DISABLED flag</string>
+    <string name="profile_partition_edit_block_size">Block size</string>
+    <string name="profile_partition_edit_no_fec">Do not generate FEC</string>
+    <string name="profile_partition_edit_fec_num_roots">FEC number of roots</string>
+    <string name="profile_partition_edit_no_hashtree">Do not append hashtree</string>
+    <string name="profile_partition_edit_check_at_most_once">Check at most once</string>
+    <string name="profile_partition_edit_setup_rootfs">Set up as rootfs from kernel</string>
+    <string name="profile_partition_edit_padding_size">Padding size (empty = omit)</string>
+    <string name="profile_partition_edit_save">Save</string>
+    <string name="profile_partition_save_failed">Could not save the configuration.</string>
+
+    <!-- Save-time validation messages (mirrors vendored avbtool hard errors). -->
+    <string name="profile_partition_err_missing_size">Hash partitions need a partition size, or enable "Derive size from image".</string>
+    <string name="profile_partition_err_size_multiple">Partition size must be a multiple of 4096.</string>
+    <string name="profile_partition_err_chain_malformed">Chain partitions must be PART:SLOT:KEY with an integer slot of at least 1.</string>
+    <string name="profile_partition_err_chain_conflict">Chain partition rollback slots must be unique and differ from this partition\'s own rollback index location.</string>
+    <string name="profile_partition_err_key_required">The selected algorithm requires a signing key.</string>
+    <string name="profile_partition_err_salt">Salt must be a valid hexadecimal string of even length.</string>
+    <string name="profile_partition_err_prop">Each property must contain a colon (KEY:VALUE).</string>
+    <string name="profile_partition_err_fec_roots">FEC number of roots must be between 1 and 254.</string>
+    <string name="profile_partition_err_rollback_negative">Rollback index cannot be negative.</string>
+    <string name="profile_partition_err_block_size">Block size must be a power of two of at least 512.</string>
 </resources>

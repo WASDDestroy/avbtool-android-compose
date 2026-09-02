@@ -134,6 +134,20 @@ data class PendingKeyDelete(
 )
 
 /**
+ * Outcome of one partition-config save ([ProfileViewModel.updatePartition]).
+ * [Failed] keeps the edit dialog open so the reasons can be shown inline; if
+ * the dialog is gone by the time the event is consumed (rotation), the screen
+ * falls back to the toast channel.
+ */
+sealed class PartitionSaveEvent {
+    /** profile.json was updated; the screen closes the dialog. */
+    data object Success : PartitionSaveEvent()
+
+    /** Validation or the JSON write failed; [problems] is empty for write errors. */
+    data class Failed(val problems: List<ProfilePartitionCodec.ValidationCode>) : PartitionSaveEvent()
+}
+
+/**
  * A signed output file awaiting "save via SAF". [profileId] locates the
  * scratch dir the file lives in, so the whole staging area can be removed
  * once every export is consumed or dismissed.
@@ -187,6 +201,10 @@ data class ProfileUiState(
     val keyImportEvent: KeyImportEvent? = null,
     /** Non-null shows the delete-keys confirmation dialog. */
     val pendingKeyDelete: PendingKeyDelete? = null,
+    /** Set while a partition-config save is in flight; disables the dialog buttons. */
+    val savingPartition: Boolean = false,
+    /** One-shot outcome of a partition-config save; consumed by the screen. */
+    val partitionSaveEvent: PartitionSaveEvent? = null,
 )
 
 /**
@@ -670,6 +688,52 @@ class ProfileViewModel(
     fun setImage(partition: String, uri: Uri?) {
         val profileId = _uiState.value.activeId ?: return
         setImageInternal(profileId, partition, uri)
+    }
+
+    /**
+     * Validates and writes an edited partition config back into the active
+     * profile's profile.json. The dialog carries a full [ProfilePartitionSpec]
+     * copy, so encoding rewrites the whole entry — fields the form does not
+     * show survive untouched. Emits [PartitionSaveEvent] when done; the entry
+     * must still exist (deleting a partition while the edit dialog is open is
+     * reported as a failure instead of resurrecting it).
+     */
+    fun updatePartition(spec: ProfilePartitionSpec) {
+        val profileId = _uiState.value.activeId ?: return
+        if (_uiState.value.savingPartition) return
+        val problems = ProfilePartitionCodec.validate(spec)
+        if (problems.isNotEmpty()) {
+            _uiState.update {
+                it.copy(partitionSaveEvent = PartitionSaveEvent.Failed(problems))
+            }
+            return
+        }
+        viewModelScope.launch {
+            _uiState.update { it.copy(savingPartition = true, partitionSaveEvent = null) }
+            val event = withContext(Dispatchers.IO) {
+                val ok = store.updateProfileJson(profileId) { obj ->
+                    val partitions = obj.optJSONObject("partitions")
+                        ?: throw IllegalStateException("profile.json has no partitions object")
+                    // Guard against resurrecting a partition deleted while
+                    // the edit dialog was open.
+                    if (!partitions.has(spec.partition)) {
+                        throw IllegalStateException("partition '${spec.partition}' no longer exists")
+                    }
+                    partitions.put(spec.partition, ProfilePartitionCodec.encode(spec))
+                }
+                if (ok) {
+                    PartitionSaveEvent.Success
+                } else {
+                    PartitionSaveEvent.Failed(emptyList())
+                }
+            }
+            if (event == PartitionSaveEvent.Success) refresh()
+            _uiState.update { it.copy(savingPartition = false, partitionSaveEvent = event) }
+        }
+    }
+
+    fun consumePartitionSaveEvent() {
+        _uiState.update { it.copy(partitionSaveEvent = null) }
     }
 
     // ---- Key store management -------------------------------------------
@@ -1575,79 +1639,9 @@ class ProfileViewModel(
         val partitionsJson = raw.getJSONObject("partitions")
         val specs = mutableListOf<ProfilePartitionSpec>()
         for (name in partitionsJson.keys()) {
-            val obj = partitionsJson.getJSONObject(name)
-            specs += ProfilePartitionSpec(
-                partition = name,
-                image = obj.getString("image"),
-                descriptor = obj.getString("descriptor"),
-                algorithm = obj.getString("algorithm"),
-                keyId = obj.optString("key_id").takeIf { it.isNotBlank() },
-                partitionName = obj.optString("partition_name", name),
-                partitionSize = obj.optLong("partition_size").takeIf { it > 0 },
-                rollbackIndex = obj.optLong("rollback_index").takeIf { obj.has("rollback_index") },
-                salt = obj.optString("salt").takeIf { it.isNotBlank() },
-                flags = obj.optLong("flags").takeIf { obj.has("flags") },
-                props = parsePairs(obj.opt("props")),                setHashtreeDisabledFlag = obj.optBoolean("set_hashtree_disabled_flag", false),
-                includedPartitions = obj.optStringList("included_partitions"),
-                chainPartitions = obj.optStringList("chain_partitions"),
-                dynamicPartitionSize = obj.optBoolean("dynamic_partition_size", false),
-                rollbackIndexLocation = obj.optLong("rollback_index_location").takeIf { obj.has("rollback_index_location") },
-                hashAlgorithm = obj.optString("hash_algorithm", "sha256").ifBlank { "sha256" },
-                propFromFile = parsePairs(obj.opt("prop_from_file")),
-                setVerificationDisabledFlag = obj.optBoolean("set_verification_disabled_flag", false),
-                blockSize = obj.optLong("block_size", 4096),
-                doNotGenerateFec = obj.optBoolean("do_not_generate_fec", false),
-                fecNumRoots = obj.optLong("fec_num_roots", 2),
-                noHashtree = obj.optBoolean("no_hashtree", false),
-                checkAtMostOnce = obj.optBoolean("check_at_most_once", false),
-                setupAsRootfsFromKernel = obj.optBoolean("setup_as_rootfs_from_kernel", false),
-                includeDescriptorsFromImage = obj.optStringList("include_descriptors_from_image"),
-                chainPartitionsDoNotUseAb = obj.optStringList("chain_partitions_do_not_use_ab"),
-                kernelCmdlines = obj.optStringList("kernel_cmdlines"),
-                setupRootfsFromKernel = obj.optString("setup_rootfs_from_kernel").takeIf { it.isNotBlank() },
-                paddingSize = obj.optLong("padding_size").takeIf { it > 0 },
-                outputVbmetaImage = obj.optString("output_vbmeta_image").takeIf { it.isNotBlank() },
-                calcMaxImageSize = obj.optBoolean("calc_max_image_size", false),
-                doNotAppendVbmetaImage = obj.optBoolean("do_not_append_vbmeta_image", false),
-                printRequiredLibavbVersion = obj.optBoolean("print_required_libavb_version", false),
-                usePersistentDigest = obj.optBoolean("use_persistent_digest", false),
-                doNotUseAb = obj.optBoolean("do_not_use_ab", false),
-                signingHelper = obj.optString("signing_helper").takeIf { it.isNotBlank() },
-                signingHelperWithFiles = obj.optString("signing_helper_with_files").takeIf { it.isNotBlank() },
-                publicKeyMetadata = obj.optString("public_key_metadata").takeIf { it.isNotBlank() },
-                appendToReleaseString = obj.optString("append_to_release_string").takeIf { it.isNotBlank() },
-            )
+            specs += ProfilePartitionCodec.parse(name, partitionsJson.getJSONObject(name))
         }
         return ProfileSpec(keyStorePath = raw.optString("key_store_path", "keys"), partitions = orderPartitions(specs))
-    }
-
-    /**
-     * Parses props/prop_from_file. Accepts the canonical [[k, v], ...] form,
-     * a flat [k, v] pair, or a {k: v} object (all three are produced by the
-     * config generator or its legacy codecs).
-     */
-    private fun parsePairs(value: Any?): List<Pair<String, String>> {
-        return when (value) {
-            is JSONObject -> value.keys().asSequence().map { k -> k to value.optString(k) }.toList()
-            is JSONArray -> {
-                // A flat pair has two scalar elements, no nested array.
-                if (value.length() == 2 && value.optJSONArray(0) == null) {
-                    listOf(value.optString(0) to value.optString(1))
-                } else {
-                    (0 until value.length()).mapNotNull { i ->
-                        val pair = value.optJSONArray(i) ?: return@mapNotNull null
-                        if (pair.length() >= 2) pair.optString(0) to pair.optString(1) else null
-                    }
-                }
-            }
-            else -> emptyList()
-        }
-    }
-
-    private fun JSONObject.optStringList(name: String): List<String> {
-        return optJSONArray(name)?.let { arr ->
-            (0 until arr.length()).map { arr.optString(it) }
-        } ?: emptyList()
     }
 
     private fun resolveKeyPath(profile: ProfileStore.ProfileEntry, keyId: String): String? {

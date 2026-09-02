@@ -1,0 +1,248 @@
+{
+  "schema_version": 3,
+  "profile": {
+    "id": "tb710fu-495-no-ubl",
+    "name": "TB710FU ZUXOS 1.5.04.495 NO UBL"
+  },
+  "key_store_path": "keys",
+  "partitions": {
+    "boot": {
+      "image": "boot.img",
+      "descriptor": "hash",
+      "algorithm": "SHA256_RSA4096",
+      "key_id": "testkey_rsa4096",
+      "partition_name": "boot",
+      "partition_size": 100663296,
+      "rollback_index": 1736035200,
+      "salt": "b344ddc133e77cb2924a5bdfac268509d542168c546b05c4443a23cceeea1a73",
+      "props": [
+        [
+          "com.android.build.boot.os_version",
+          "14"
+        ],
+        [
+          "com.android.build.boot.fingerprint",
+          "Lenovo/TB710FU_PRC/TB710FU:15/AQ3A.250129.001/ZUXOS_1.5.04.495_260728_PRC:user/release-keys"
+        ],
+        [
+          "com.android.build.boot.security_patch",
+          "2025-01-05"
+        ],
+        [
+          "com.android.build.boot.security_patch",
+          "2025-01-05"
+        ]
+      ]
+    },
+    "dtbo": {
+      "image": "dtbo.img",
+      "descriptor": "hash",
+      "algorithm": "NONE",
+      "key_id": "testkey_rsa4096",
+      "partition_name": "dtbo",
+      "partition_size": 25165824,
+      "salt": "b77d02cf0ba04e12dc054ae7e4cf6c765d3ab6959987fe060ca50b164385bc75",
+      "props": [
+        [
+          "com.android.build.dtbo.fingerprint",
+          "Lenovo/TB710FU_PRC/TB710FU:15/AQ3A.250129.001/ZUXOS_1.5.04.495_260728_PRC:user/release-keys"
+        ]
+      ]
+    },
+    "init_boot": {
+      "image": "init_boot.img",
+      "descriptor": "hash",
+      "algorithm": "NONE",
+      "key_id": "testkey_rsa4096",
+      "partition_name": "init_boot",
+      "partition_size": 8388608,
+      "salt": "095d9b39abd8e1aa91dbcbafeb0dea04c85bbfd5ba8e2027c2fdd77b718021b0",
+      "props": [
+        [
+          "com.android.build.init_boot.os_version",
+          "14"
+        ],
+        [
+          "com.android.build.init_boot.fingerprint",
+          "Lenovo/TB710FU_PRC/TB710FU:15/AQ3A.250129.001/ZUXOS_1.5.04.495_260728_PRC:user/release-keys"
+        ],
+        [
+          "com.android.build.init_boot.security_patch",
+          "2025-01-05"
+        ]
+      ]
+    },
+    "pvmfw": {
+      "image": "pvmfw.img",
+      "descriptor": "hash",
+      "algorithm": "NONE",
+      "key_id": "testkey_rsa4096",
+      "partition_name": "pvmfw",
+      "partition_size": 1048576,
+      "salt": "b77d02cf0ba04e12dc054ae7e4cf6c765d3ab6959987fe060ca50b164385bc75",
+      "props": [
+        [
+          "com.android.build.pvmfw.fingerprint",
+          "Lenovo/TB710FU/TB710FU:16/BP2A.250605.031.A3/ZUXOS_1.5.04.495_260728_PRC:user/release-keys"
+        ]
+      ]
+    },
+    "recovery": {
+      "image": "recovery.img",
+      "descriptor": "hash",
+      "algorithm": "SHA256_RSA4096",
+      "key_id": "testkey_rsa4096",
+      "partition_name": "recovery",
+      "partition_size": 104857600,
+      "rollback_index": 1,
+      "salt": "b77d02cf0ba04e12dc054ae7e4cf6c765d3ab6959987fe060ca50b164385bc75",
+      "props": [
+        [
+          "com.android.build.recovery.fingerprint",
+          "Lenovo/TB710FU_PRC/TB710FU:15/AQ3A.250129.001/ZUXOS_1.5.04.495_260728_PRC:user/release-keys"
+        ]
+      ]
+    },
+    "vbmeta": {
+      "image": "vbmeta.img",
+      "descriptor": "vbmeta",
+      "algorithm": "SHA256_RSA4096",
+      "key_id": "testkey_rsa4096",
+      "partition_name": "vbmeta",
+      "flags": 1,
+      "props": [
+        [
+          "com.android.build.dtbo.fingerprint",
+          "Lenovo/TB710FU_PRC/TB710FU:15/AQ3A.250129.001/ZUXOS_1.5.04.495_260728_PRC:user/release-keys"
+        ],
+        [
+          "com.android.build.init_boot.os_version",
+          "14"
+        ],
+        [
+          "com.android.build.init_boot.fingerprint",
+          "Lenovo/TB710FU_PRC/TB710FU:15/AQ3A.250129.001/ZUXOS_1.5.04.495_260728_PRC:user/release-keys"
+        ],
+        [
+          "com.android.build.init_boot.security_patch",
+          "2025-01-05"
+        ],
+        [
+          "com.android.build.odm.os_version",
+          "14"
+        ],
+        [
+          "com.android.build.odm.fingerprint",
+          "Lenovo/TB710FU_PRC/TB710FU:15/AQ3A.250129.001/ZUXOS_1.5.04.495_260728_PRC:user/release-keys"
+        ],
+        [
+          "com.android.build.vendor.os_version",
+          "14"
+        ],
+        [
+          "com.android.build.vendor.fingerprint",
+          "Lenovo/TB710FU_PRC/TB710FU:15/AQ3A.250129.001/ZUXOS_1.5.04.495_260728_PRC:user/release-keys"
+        ],
+        [
+          "com.android.build.vendor.security_patch",
+          "2025-01-05"
+        ],
+        [
+          "com.android.build.vendor.security_patch",
+          "2025-01-05"
+        ],
+        [
+          "com.android.build.vendor_boot.fingerprint",
+          "Lenovo/TB710FU_PRC/TB710FU:15/AQ3A.250129.001/ZUXOS_1.5.04.495_260728_PRC:user/release-keys"
+        ],
+        [
+          "com.android.build.vendor_dlkm.os_version",
+          "14"
+        ],
+        [
+          "com.android.build.vendor_dlkm.fingerprint",
+          "Lenovo/TB710FU_PRC/TB710FU:15/AQ3A.250129.001/ZUXOS_1.5.04.495_260728_PRC:user/release-keys"
+        ]
+      ],
+      "set_hashtree_disabled_flag": true,
+      "included_partitions": [
+        "dtbo",
+        "init_boot",
+        "vendor_boot"
+      ],
+      "chain_partitions": [
+        "boot:3:testkey_rsa4096.pem.bin",
+        "recovery:1:testkey_rsa4096.pem.bin",
+        "vbmeta_system:2:testkey_rsa2048.pem.bin"
+      ]
+    },
+    "vbmeta_system": {
+      "image": "vbmeta_system.img",
+      "descriptor": "vbmeta",
+      "algorithm": "SHA256_RSA2048",
+      "key_id": "testkey_rsa2048",
+      "partition_name": "vbmeta_system",
+      "rollback_index": 1783209600,
+      "props": [
+        [
+          "com.android.build.product.os_version",
+          "16"
+        ],
+        [
+          "com.android.build.product.fingerprint",
+          "Lenovo/TB710FU/TB710FU:16/BP2A.250605.031.A3/ZUXOS_1.5.04.495_260728_PRC:user/release-keys"
+        ],
+        [
+          "com.android.build.product.security_patch",
+          "2026-07-05"
+        ],
+        [
+          "com.android.build.pvmfw.fingerprint",
+          "Lenovo/TB710FU/TB710FU:16/BP2A.250605.031.A3/ZUXOS_1.5.04.495_260728_PRC:user/release-keys"
+        ],
+        [
+          "com.android.build.system.os_version",
+          "16"
+        ],
+        [
+          "com.android.build.system.fingerprint",
+          "Lenovo/TB710FU/TB710FU:16/BP2A.250605.031.A3/ZUXOS_1.5.04.495_260728_PRC:user/release-keys"
+        ],
+        [
+          "com.android.build.system.security_patch",
+          "2026-07-05"
+        ],
+        [
+          "com.android.build.system_ext.os_version",
+          "16"
+        ],
+        [
+          "com.android.build.system_ext.fingerprint",
+          "Lenovo/TB710FU/TB710FU:16/BP2A.250605.031.A3/ZUXOS_1.5.04.495_260728_PRC:user/release-keys"
+        ],
+        [
+          "com.android.build.system_ext.security_patch",
+          "2026-07-05"
+        ]
+      ],
+      "included_partitions": [
+        "pvmfw"
+      ]
+    },
+    "vendor_boot": {
+      "image": "vendor_boot.img",
+      "descriptor": "hash",
+      "algorithm": "NONE",
+      "key_id": "testkey_rsa4096",
+      "partition_name": "vendor_boot",
+      "partition_size": 100663296,
+      "salt": "b77d02cf0ba04e12dc054ae7e4cf6c765d3ab6959987fe060ca50b164385bc75",
+      "props": [
+        [
+          "com.android.build.vendor_boot.fingerprint",
+          "Lenovo/TB710FU_PRC/TB710FU:15/AQ3A.250129.001/ZUXOS_1.5.04.495_260728_PRC:user/release-keys"
+        ]
+      ]
+    }
+  }
+}

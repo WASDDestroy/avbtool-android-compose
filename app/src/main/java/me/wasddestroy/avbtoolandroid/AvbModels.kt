@@ -5,6 +5,30 @@ import androidx.annotation.StringRes
 
 enum class ArgType { IMAGE, TEXT, INT, BOOL, FILE, ALGORITHM, CHAIN_PARTITION, SIZE, HASH_ALGORITHM, FLAGS }
 
+/** Signing algorithms offered by the ALGORITHM dropdowns (command + profile partition forms). */
+val SIGNING_ALGORITHMS = listOf(
+    "NONE",
+    "SHA256_RSA2048",
+    "SHA256_RSA4096",
+    "SHA256_RSA8192",
+    "SHA512_RSA2048",
+    "SHA512_RSA4096",
+    "SHA512_RSA8192",
+)
+
+/** Hash algorithms offered by the HASH_ALGORITHM dropdowns. */
+val HASH_ALGORITHMS = listOf("sha256", "sha512", "sha1", "blake2b-256")
+
+data class FlagOption(val value: String, @param:StringRes val labelRes: Int)
+
+/** VBMeta flags values offered by the FLAGS dropdowns; other stored values fall back to raw display. */
+val FLAGS_OPTIONS = listOf(
+    FlagOption("0", R.string.flags_0),
+    FlagOption("1", R.string.flags_1),
+    FlagOption("2", R.string.flags_2),
+    FlagOption("3", R.string.flags_3),
+)
+
 data class AvbArg(
     val key: String,
     @param:StringRes val labelRes: Int,

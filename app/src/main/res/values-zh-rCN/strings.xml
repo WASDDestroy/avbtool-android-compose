@@ -478,4 +478,48 @@
     <!-- 命令结束时的应用内顶部结果横幅。点按可滚动到页面底部的详细结果区。 -->
     <string name="result_popup_close">关闭</string>
     <string name="result_popup_view_details">查看详情</string>
+
+    <!-- 镜像列表中长按分区行弹出的配置编辑对话框。 -->
+    <string name="profile_partition_edit_title">编辑 %1$s 配置</string>
+    <string name="profile_partition_edit_descriptor">描述符类型：%1$s</string>
+    <string name="profile_partition_edit_image">镜像文件名</string>
+    <string name="profile_partition_edit_image_warning">其他分区若按文件名引用此镜像，改名后将失去该引用。</string>
+    <string name="profile_partition_edit_partition_name">分区名（描述符内）</string>
+    <string name="profile_partition_edit_key">签名密钥</string>
+    <string name="profile_partition_edit_key_none">（无密钥）</string>
+    <string name="profile_partition_edit_partition_size">分区大小（字节）</string>
+    <string name="profile_partition_edit_size_append_hint">（留空 = 追加到镜像末尾）</string>
+    <string name="profile_partition_edit_dynamic_size">由镜像推算大小</string>
+    <string name="profile_partition_edit_salt">盐（十六进制；留空 = 随机）</string>
+    <string name="profile_partition_edit_flags">VBMeta 标志位</string>
+    <string name="profile_partition_edit_rollback_index">防回滚指数（留空 = 不写入）</string>
+    <string name="profile_partition_edit_advanced">高级配置</string>
+    <string name="profile_partition_edit_advanced_show">展开高级配置</string>
+    <string name="profile_partition_edit_advanced_hide">收起高级配置</string>
+    <string name="profile_partition_edit_rollback_location">防回滚指数位置（留空 = 不写入）</string>
+    <string name="profile_partition_edit_props">属性（每行一条 KEY:VALUE）</string>
+    <string name="profile_partition_edit_props_hint">按第一个冒号拆分；值中可以包含冒号。</string>
+    <string name="profile_partition_edit_hashtree_disabled">设置 HASHTREE_DISABLED 标志位</string>
+    <string name="profile_partition_edit_verification_disabled">设置 VERIFICATION_DISABLED 标志位</string>
+    <string name="profile_partition_edit_block_size">块大小</string>
+    <string name="profile_partition_edit_no_fec">不生成 FEC</string>
+    <string name="profile_partition_edit_fec_num_roots">FEC 根数</string>
+    <string name="profile_partition_edit_no_hashtree">不追加哈希树</string>
+    <string name="profile_partition_edit_check_at_most_once">最多校验一次</string>
+    <string name="profile_partition_edit_setup_rootfs">由内核设置根文件系统</string>
+    <string name="profile_partition_edit_padding_size">填充大小（留空 = 不写入）</string>
+    <string name="profile_partition_edit_save">保存</string>
+    <string name="profile_partition_save_failed">无法保存配置。</string>
+
+    <!-- 保存时校验消息（与 vendored avbtool 的硬错误对应）。 -->
+    <string name="profile_partition_err_missing_size">hash 分区需要填写分区大小，或开启"由镜像推算大小"。</string>
+    <string name="profile_partition_err_size_multiple">分区大小必须是 4096 的倍数。</string>
+    <string name="profile_partition_err_chain_malformed">链分区必须为 PART:SLOT:KEY 格式，槽位为不小于 1 的整数。</string>
+    <string name="profile_partition_err_chain_conflict">链分区的防回滚槽位不得重复，且不得与本分区自身的防回滚指数位置相同。</string>
+    <string name="profile_partition_err_key_required">所选签名算法需要指定密钥。</string>
+    <string name="profile_partition_err_salt">盐必须是偶数长度的合法十六进制字符串。</string>
+    <string name="profile_partition_err_prop">每条属性都必须包含冒号（KEY:VALUE）。</string>
+    <string name="profile_partition_err_fec_roots">FEC 根数必须在 1 到 254 之间。</string>
+    <string name="profile_partition_err_rollback_negative">防回滚指数不能为负数。</string>
+    <string name="profile_partition_err_block_size">块大小必须是不小于 512 的 2 的幂。</string>
 </resources>

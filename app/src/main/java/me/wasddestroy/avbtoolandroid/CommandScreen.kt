@@ -98,26 +98,6 @@ import androidx.core.net.toUri
 
 private const val IMAGE_STORAGE_KEY = "__image__"
 
-private val ALGORITHMS = listOf(
-    "NONE",
-    "SHA256_RSA2048",
-    "SHA256_RSA4096",
-    "SHA256_RSA8192",
-    "SHA512_RSA2048",
-    "SHA512_RSA4096",
-    "SHA512_RSA8192",
-)
-
-private val HASH_ALGORITHMS = listOf("sha256", "sha512", "sha1", "blake2b-256")
-
-private data class FlagOption(val value: String, @param:StringRes val labelRes: Int)
-private val FLAGS_OPTIONS = listOf(
-    FlagOption("0", R.string.flags_0),
-    FlagOption("1", R.string.flags_1),
-    FlagOption("2", R.string.flags_2),
-    FlagOption("3", R.string.flags_3),
-)
-
 private fun storageKey(arg: AvbArg): String = if (arg.type == ArgType.IMAGE) IMAGE_STORAGE_KEY else arg.key
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -1240,7 +1220,7 @@ private fun AlgorithmChoiceDialog(
                     .fillMaxWidth()
                     .verticalScroll(rememberScrollState()),
             ) {
-                ALGORITHMS.forEach { algorithm ->
+                SIGNING_ALGORITHMS.forEach { algorithm ->
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
