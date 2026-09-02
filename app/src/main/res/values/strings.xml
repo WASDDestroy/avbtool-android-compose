@@ -1,11 +1,11 @@
 <resources>
-    <string name="app_name">AVBDroid</string>
+    <string name="app_name" translatable="false">AVBDroid</string>
     <string name="nav_home">Home</string>
     <string name="nav_console">Console</string>
-    <string name="home_avbdroid_title">AVBDroid</string>
+    <string name="home_avbdroid_title" translatable="false">AVBDroid</string>
     <string name="home_empty">No commands available.</string>
     <string name="home_segment_image_tools">Image</string>
-    <string name="home_segment_vbmeta">VBMeta</string>
+    <string name="home_segment_vbmeta" translatable="false">VBMeta</string>
     <string name="home_segment_others">Other</string>
     <string name="command_back">Back</string>
     <string name="command_run">Run</string>
@@ -35,7 +35,7 @@
     <string name="command_add_file">Add file</string>
     <string name="command_remove_file">Remove</string>
     <string name="command_image_file">Image file</string>
-    <string name="command_required"> *</string>
+    <string name="command_required" translatable="false"> *</string>
     <string name="command_validation_required">Required</string>
     <string name="command_choose_image_error">Please choose an image file.</string>
     <string name="command_modify_title">Modify file</string>
@@ -231,34 +231,34 @@
     <string name="settings_predictive_back">Predictive back gesture</string>
     <string name="settings_predictive_back_summary">Enable system predictive back animations</string>
     <string name="settings_color_spec">Color palette</string>
-    <string name="settings_color_spec_2021">SPEC_2021</string>
-    <string name="settings_color_spec_2025">SPEC_2025</string>
+    <string name="settings_color_spec_2021" translatable="false">SPEC_2021</string>
+    <string name="settings_color_spec_2025" translatable="false">SPEC_2025</string>
     <string name="settings_color_spec_dialog_title">Color palette</string>
     <string name="settings_color_variant">Color variant</string>
-    <string name="settings_color_variant_tonal_spot">TONAL_SPOT</string>
-    <string name="settings_color_variant_expressive">EXPRESSIVE</string>
-    <string name="settings_color_variant_vibrant">VIBRANT</string>
-    <string name="settings_color_variant_content">CONTENT</string>
-    <string name="settings_color_variant_fidelity">FIDELITY</string>
-    <string name="settings_color_variant_rainbow">RAINBOW</string>
-    <string name="settings_color_variant_fruit_salad">FRUIT_SALAD</string>
-    <string name="settings_color_variant_neutral">NEUTRAL</string>
-    <string name="settings_color_variant_monochrome">MONOCHROME</string>
+    <string name="settings_color_variant_tonal_spot" translatable="false">TONAL_SPOT</string>
+    <string name="settings_color_variant_expressive" translatable="false">EXPRESSIVE</string>
+    <string name="settings_color_variant_vibrant" translatable="false">VIBRANT</string>
+    <string name="settings_color_variant_content" translatable="false">CONTENT</string>
+    <string name="settings_color_variant_fidelity" translatable="false">FIDELITY</string>
+    <string name="settings_color_variant_rainbow" translatable="false">RAINBOW</string>
+    <string name="settings_color_variant_fruit_salad" translatable="false">FRUIT_SALAD</string>
+    <string name="settings_color_variant_neutral" translatable="false">NEUTRAL</string>
+    <string name="settings_color_variant_monochrome" translatable="false">MONOCHROME</string>
     <string name="settings_color_variant_dialog_title">Color variant</string>
     <string name="settings_function_keyboard">Function keyboard</string>
     <string name="settings_function_keyboard_summary">Show Esc, Tab, arrow keys and other function keys in Console</string>
     <string name="settings_language">Language</string>
     <string name="settings_language_follow_system">Follow System</string>
-    <string name="settings_language_english">English</string>
-    <string name="settings_language_chinese">简体中文</string>
+    <string name="settings_language_english" translatable="false">English</string>
+    <string name="settings_language_chinese" translatable="false">简体中文</string>
     <string name="settings_language_dialog_title">Language</string>
     <string name="settings_language_placeholder">Placeholder</string>
     <string name="settings_about">About</string>
-    <string name="settings_about_dialog_title">AVBDroid</string>
+    <string name="settings_about_dialog_title" translatable="false">AVBDroid</string>
     <string name="settings_about_dialog_message">Version %1$s (%2$s) Author: WASDDestroy, DeepSeek V4 Pro 0813, MiMo 2.5 Pro, ChatGPT 5.6 Sol and GLM 5.3 Flash</string>
     <string name="settings_about_license_notice">This app includes open source software. Reed-Solomon codec (Copyright 2002-2004 Phil Karn, KA9Q) is licensed under LGPL 2.1. Source: app/src/main/cpp/fec_rs. See assets/open_source_licenses.txt and assets/LGPL-2.1.txt shipped with this app.</string>
-    <string name="settings_about_github">GitHub</string>
-    <string name="settings_about_github_url">https://github.com/WASDDestroy/avbtool-android-compose</string>
+    <string name="settings_about_github" translatable="false">GitHub</string>
+    <string name="settings_about_github_url" translatable="false">https://github.com/WASDDestroy/avbtool-android-compose</string>
     <string name="settings_ok">OK</string>
     <string name="settings_about_version_unknown">Unknown</string>
     <!-- info_image localized keys -->

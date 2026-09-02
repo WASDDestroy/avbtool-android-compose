@@ -1,11 +1,11 @@
 <resources>
-    <string name="app_name">AVBDroid</string>
+
     <string name="nav_home">首页</string>
     <string name="nav_console">控制台</string>
-    <string name="home_avbdroid_title">AVBDroid</string>
+
     <string name="home_empty">没有可用命令。</string>
     <string name="home_segment_image_tools">映像</string>
-    <string name="home_segment_vbmeta">VBMeta</string>
+
     <string name="home_segment_others">其他</string>
     <string name="command_back">返回</string>
     <string name="command_run">运行</string>
@@ -35,7 +35,7 @@
     <string name="command_add_file">添加文件</string>
     <string name="command_remove_file">移除</string>
     <string name="command_image_file">映像文件</string>
-    <string name="command_required"> *</string>
+
     <string name="command_validation_required">必填</string>
     <string name="command_choose_image_error">请选择一个映像文件。</string>
     <string name="command_modify_title">修改文件</string>
@@ -230,34 +230,34 @@
     <string name="settings_predictive_back">预测性返回手势</string>
     <string name="settings_predictive_back_summary">启用系统预测性返回动画</string>
     <string name="settings_color_spec">调色板标准</string>
-    <string name="settings_color_spec_2021">SPEC_2021</string>
-    <string name="settings_color_spec_2025">SPEC_2025</string>
+
+
     <string name="settings_color_spec_dialog_title">调色板标准</string>
     <string name="settings_color_variant">色彩方案</string>
-    <string name="settings_color_variant_tonal_spot">TONAL_SPOT</string>
-    <string name="settings_color_variant_expressive">EXPRESSIVE</string>
-    <string name="settings_color_variant_vibrant">VIBRANT</string>
-    <string name="settings_color_variant_content">CONTENT</string>
-    <string name="settings_color_variant_fidelity">FIDELITY</string>
-    <string name="settings_color_variant_rainbow">RAINBOW</string>
-    <string name="settings_color_variant_fruit_salad">FRUIT_SALAD</string>
-    <string name="settings_color_variant_neutral">NEUTRAL</string>
-    <string name="settings_color_variant_monochrome">MONOCHROME</string>
+
+
+
+
+
+
+
+
+
     <string name="settings_color_variant_dialog_title">色彩方案</string>
     <string name="settings_function_keyboard">功能键盘</string>
     <string name="settings_function_keyboard_summary">在控制台中显示 Esc、Tab、方向键等功能按键</string>
     <string name="settings_language">语言</string>
     <string name="settings_language_follow_system">跟随系统</string>
     <string name="settings_language_english">English</string>
-    <string name="settings_language_chinese">简体中文</string>
+
     <string name="settings_language_dialog_title">语言</string>
     <string name="settings_language_placeholder">占位符</string>
     <string name="settings_about">关于</string>
-    <string name="settings_about_dialog_title">AVBDroid</string>
+
     <string name="settings_about_dialog_message">版本 %1$s (%2$s)\n作者：WASDDestroy，以及DeepSeek V4 Pro 0813，MiMo 2.5 Pro，ChatGPT 5.6 Sol 和 GLM 5.3 Flash</string>
     <string name="settings_about_license_notice">本应用包含开源软件。其中 Reed-Solomon 编解码器（Copyright (C) 2002-2004 Phil Karn, KA9Q）根据 LGPL 2.1 版本许可证进行分发。源代码位于 app/src/main/cpp/fec_rs。有关完整许可证信息，请参阅本应用内附的 assets/open_source_licenses.txt 及 assets/LGPL-2.1.txt 文件。</string>
-    <string name="settings_about_github">GitHub</string>
-    <string name="settings_about_github_url">https://github.com/WASDDestroy/avbtool-android-compose</string>
+
+
     <string name="settings_ok">确定</string>
     <string name="settings_about_version_unknown">未知</string>
     <!-- info_image 本地化键 -->
