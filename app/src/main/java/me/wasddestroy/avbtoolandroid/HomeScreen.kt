@@ -1,6 +1,8 @@
 package me.wasddestroy.avbtoolandroid
 
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.NoteAdd
@@ -23,6 +25,7 @@ import androidx.compose.material.icons.filled.Unarchive
 import androidx.compose.material.icons.filled.Verified
 import androidx.compose.material.icons.filled.VerifiedUser
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -42,6 +45,14 @@ fun HomeScreen(
         modifier = modifier,
         contentPadding = PaddingValues(vertical = 8.dp),
     ) {
+        item("header") {
+            Column(Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
+                Text(
+                    text = stringResource(R.string.app_name),
+                    style = MaterialTheme.typography.headlineSmall,
+                )
+            }
+        }
         HomeSegment.entries.forEach { segment ->
             val commands = AvbCommands.all.filter { it.group == segment }
             if (commands.isNotEmpty()) {
