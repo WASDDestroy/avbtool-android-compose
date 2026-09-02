@@ -149,9 +149,9 @@ View 引用**，否则会造成内存泄漏（ViewModel 的生命周期比 Activ
 
 ### 设计取舍导致留下
 
-- **导航状态**（`commandId`、`commandBackProgress`、`PredictiveBackHandler` 逻辑）——
+- **导航状态**（`commandId`、`consoleOpen`、`commandBackProgress`、`PredictiveBackHandler` 逻辑）——
   项目刻意不使用 Navigation 库，导航保持简单，全部留在 `AVBToolAndroidApp` /
-  `RootScreen`。
+  `RootScreen`。控制台不是底部导航的 tab，而是从设置屏幕进入的全屏覆盖层。
 - **`CommandScreen` 的 `values` 表单字段** —— 它承载参数编辑的全部交互（文件选择器
   追加行、chain partition 编辑器等），迁入 ViewModel 会把大量 UI 逻辑一并拖进去。
   注意它用的是 `remember(command.id)` 而非 `rememberSaveable`，旋转屏幕即重置——这是

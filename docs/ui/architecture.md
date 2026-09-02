@@ -62,21 +62,53 @@ All navigation is kept in `MainActivity.kt`.
 
 ### Root destinations
 
-`AppDestinations` contains the three tab destinations:
+`AppDestinations` contains the three tab destinations shown in the
+navigation bar:
 
 - `HOME` (`Icons.Filled.Home`)
-- `CONSOLE` (`Icons.Filled.Terminal`)
+- `PROFILE` (`Icons.Filled.FolderOpen`)
 - `SETTINGS` (`Icons.Filled.Settings`)
+
+The console is **not** a tab: it is reached from an entry row in
+`SettingsScreen`.
 
 `RootScreen` renders:
 
 - `NavigationSuiteScaffold` for the bottom navigation bar.
-- A `HorizontalPager` that hosts `HomeScreen` and `ConsoleScreen`.
-- A `PredictiveBackHandler` that drives the pager from the Console-to-Home
-  predictive back gesture. The handler:
+- A `HorizontalPager` that hosts the three tab screens above.
+- A `PredictiveBackHandler` that drives the pager toward Home when back is
+  pressed on Profile or Settings. The handler:
   - scrolls the pager while the user drags,
   - animates to Home on commit,
-  - animates back to Console on cancel.
+  - animates back to the starting page on cancel.
+
+### Console destination
+
+The console is a full-screen overlay, entered from `SettingsScreen`.
+
+In `AVBToolAndroidApp`:
+
+```kotlin
+var consoleOpen by rememberSaveable { mutableStateOf(false) }
+```
+
+- `consoleOpen == false` means the root pager destination is visible.
+- `consoleOpen == true` means `ConsoleScreen` is visible on top of the root
+  pager. The root stays composed behind it so predictive back can reveal it.
+
+`ConsoleScreen` has a `TopAppBar` whose back icon exits the console (after
+leaving terminal selection mode, if active). It is translated by the shared
+`Animatable<Float>`:
+
+```kotlin
+translationX = commandBackProgress.value * size.width
+```
+
+A `PredictiveBackHandler` updates that progress during the gesture. On commit
+it closes the console; on cancel it animates it back to `0f`. Because the
+console is no longer a pager page, the pager's `userScrollEnabled` restriction
+for the terminal is gone — the overlay fully covers the pager while open, and
+the system back handlers are disabled on the root while `consoleOpen` is true.
 
 ### Command destination
 
@@ -107,9 +139,10 @@ cancel it animates it back to `0f`.
 
 | Gesture | Handler | Behaviour |
 |---|---|---|
-| Console → Home predictive back | `RootScreen` | Pager is dragged; commit/cancel animates to the target page. |
-| Command → Home predictive back | `AVBToolAndroidApp` | Command screen slides right; root is revealed behind. |
-| System back with Command open | `BackHandler` | Animates command screen out and clears `commandId`. |
+| Console → Settings predictive back | `AVBToolAndroidApp` | Console screen slides right; root is revealed behind. |
+| Profile/Settings → Home predictive back | `RootScreen` | Pager is dragged; commit/cancel animates to the target page. |
+| Command → root predictive back | `AVBToolAndroidApp` | Command screen slides right; root is revealed behind. |
+| System back with Command or Console open | `BackHandler` | Animates the overlay out and clears its state. |
 
 ## 4. Screen inventory
 
@@ -125,7 +158,9 @@ cancel it animates it back to `0f`.
 
 ### `ConsoleScreen`
 
-- Renders the terminal emulator via `AndroidView`.
+- Full-screen overlay destination entered from `SettingsScreen` (see section 3).
+- Renders the terminal emulator via `AndroidView` inside a `Scaffold` with a
+  `TopAppBar`; the back icon exits selection mode first if it is active.
 - Shows a storage-permission card when storage is not granted.
 - Uses `surfaceContainer` for the card background.
 
@@ -176,9 +211,9 @@ State is exposed as `StateFlow<UiState>` and collected with
 
 ### What deliberately stays in composables
 
-- **Navigation state** — `commandId`, `commandBackProgress`, and the
-  `PredictiveBackHandler` logic stay in `AVBToolAndroidApp` / `RootScreen`.
-  Navigation is intentionally small (see section 3).
+- **Navigation state** — `commandId`, `consoleOpen`, `commandBackProgress`,
+  and the `PredictiveBackHandler` logic stay in `AVBToolAndroidApp` /
+  `RootScreen`. Navigation is intentionally small (see section 3).
 - **`CommandScreen` form values** — `values` remains a `remember(command.id)`
   map. It drives argument editing (file-picker line appends, chain editor),
   and moving it would pull that UI logic into the ViewModel.
@@ -198,7 +233,8 @@ State is exposed as `StateFlow<UiState>` and collected with
 ### Consequences of ViewModel lifetimes
 
 - A command's result survives leaving and re-entering that command's screen.
-- The console session survives configuration changes and tab switches;
+- The console session survives configuration changes and the console opening
+  and closing (`ConsoleViewModel` is Activity-scoped);
   `session.finish()` runs from `ConsoleViewModel.onCleared()`.
 
 ## 7. Data layer for UI

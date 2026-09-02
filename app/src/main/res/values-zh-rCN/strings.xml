@@ -217,6 +217,7 @@
     </plurals>
     <string name="nav_settings">设置</string>
     <string name="settings_title">设置</string>
+    <string name="settings_console_summary">打开 avbtool 终端控制台</string>
     <string name="settings_dynamic_theme_color">动态主题颜色</string>
     <string name="settings_dynamic_theme_color_summary">使用 Material You 调色板</string>
     <string name="settings_theme_mode">主题模式</string>

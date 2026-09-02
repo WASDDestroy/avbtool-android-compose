@@ -151,7 +151,9 @@ preferenceGroup(titleRes = R.string.command_section_my_section) {
 
 ## 4. Add a new root tab
 
-Root tabs live in `AppDestinations` in `MainActivity.kt`.
+Root tabs live in `AppDestinations` in `MainActivity.kt`. Note that the
+console is not a tab — it is a full-screen overlay entered from
+`SettingsScreen` (see `docs/ui/architecture.md` §3).
 
 1. Add an enum entry with a `@StringRes` label and an `ImageVector` icon.
 2. Add the screen to the `HorizontalPager` `when` branch.

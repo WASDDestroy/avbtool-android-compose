@@ -16,6 +16,7 @@ import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Style
+import androidx.compose.material.icons.filled.Terminal
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.AlertDialog
@@ -51,6 +52,7 @@ import me.wasddestroy.avbtoolandroid.ui.theme.ThemeMode
 fun SettingsScreen(
     modifier: Modifier = Modifier,
     viewModel: SettingsViewModel,
+    onOpenConsole: () -> Unit = {},
 ) {
     val settings by viewModel.uiState.collectAsStateWithLifecycle()
     var showThemeModeDialog by rememberSaveable { mutableStateOf(false) }
@@ -72,6 +74,14 @@ fun SettingsScreen(
             }
         }
         preferenceGroup {
+            row("console") {
+                PreferenceRow(
+                    title = stringResource(R.string.nav_console),
+                    summary = stringResource(R.string.settings_console_summary),
+                    iconContent = { SettingsIcon(Icons.Filled.Terminal) },
+                    onClick = onOpenConsole,
+                )
+            }
             row("dynamic_theme_color") {
                 PreferenceSwitchRow(
                     checked = settings.dynamicThemeColor,

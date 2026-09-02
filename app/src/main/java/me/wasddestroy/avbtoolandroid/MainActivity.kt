@@ -24,7 +24,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.FolderOpen
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.filled.Terminal
 import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteScaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -69,7 +68,6 @@ enum class AppDestinations(
 ) {
     HOME(R.string.nav_home, Icons.Filled.Home),
     PROFILE(R.string.nav_profile, Icons.Filled.FolderOpen),
-    CONSOLE(R.string.nav_console, Icons.Filled.Terminal),
     SETTINGS(R.string.nav_settings, Icons.Filled.Settings),
 }
 
@@ -100,6 +98,7 @@ fun AVBToolAndroidApp() {
     }
 
     var commandId by rememberSaveable { mutableStateOf<String?>(null) }
+    var consoleOpen by rememberSaveable { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
     val commandBackProgress = remember { Animatable(0f) }
 
@@ -112,16 +111,16 @@ fun AVBToolAndroidApp() {
         }
     }
 
-    BackHandler(enabled = commandId != null) {
-        closeCommand()
+    BackHandler(enabled = commandId != null || consoleOpen) {
+        if (commandId != null) closeCommand() else consoleOpen = false
     }
 
-    PredictiveBackHandler(enabled = commandId != null && settings.predictiveBackGesture) { progress ->
+    PredictiveBackHandler(enabled = commandId == null && consoleOpen && settings.predictiveBackGesture) { progress ->
         try {
             progress.collect { event ->
                 commandBackProgress.snapTo(event.progress)
             }
-            closeCommand()
+            consoleOpen = false
         } catch (e: CancellationException) {
             scope.launch {
                 commandBackProgress.animateTo(0f, tween(200))
@@ -130,8 +129,8 @@ fun AVBToolAndroidApp() {
         }
     }
 
-    LaunchedEffect(commandId) {
-        if (commandId != null) {
+    LaunchedEffect(commandId, consoleOpen) {
+        if (commandId != null || consoleOpen) {
             commandBackProgress.snapTo(1f)
             commandBackProgress.animateTo(0f, tween(300))
         } else {
@@ -148,8 +147,9 @@ fun AVBToolAndroidApp() {
     ) {
         Box(Modifier.fillMaxSize()) {
             RootScreen(
-                isTopDestination = commandId == null,
+                isTopDestination = commandId == null && !consoleOpen,
                 onOpenCommand = { id -> commandId = id },
+                onOpenConsole = { consoleOpen = true },
                 predictiveBackGesture = settings.predictiveBackGesture,
                 settingsViewModel = settingsViewModel,
             )
@@ -167,6 +167,15 @@ fun AVBToolAndroidApp() {
                 )
             } else if (commandId != null) {
                 LaunchedEffect(Unit) { commandId = null }
+            } else if (consoleOpen) {
+                ConsoleScreen(
+                    onBack = { consoleOpen = false },
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .graphicsLayer {
+                            translationX = commandBackProgress.value * size.width
+                        },
+                )
             }
         }
     }
@@ -177,21 +186,21 @@ fun AVBToolAndroidApp() {
 private fun RootScreen(
     isTopDestination: Boolean,
     onOpenCommand: (String) -> Unit,
+    onOpenConsole: () -> Unit,
     predictiveBackGesture: Boolean,
     settingsViewModel: SettingsViewModel,
 ) {
     var currentDestination by rememberSaveable { mutableStateOf(AppDestinations.HOME) }
     val pagerState = rememberPagerState(pageCount = { AppDestinations.entries.size })
-    var terminalSelecting by remember { mutableStateOf(false) }
     val rootScope = rememberCoroutineScope()
     var rootBackGestureInProgress by remember { mutableStateOf(false) }
     val profileViewModel: ProfileViewModel = viewModel(factory = ProfileViewModel.factory)
 
-    // Predictive back from Console or Settings returns to Home instead of exiting the app.
-    // Drive the pager directly from the gesture so Home is revealed during the
-    // swipe, not only after it completes. The enabled flag is scoped to the
-    // root destination so the command-screen pop gesture is not intercepted by
-    // this handler.
+    // Predictive back from Profile or Settings returns to Home instead of exiting
+    // the app. Drive the pager directly from the gesture so Home is revealed
+    // during the swipe, not only after it completes. The enabled flag is scoped
+    // to the root destination so the command/console-screen pop gesture is not
+    // intercepted by this handler.
     BackHandler(
         enabled = !predictiveBackGesture && isTopDestination && currentDestination != AppDestinations.HOME,
     ) {
@@ -271,7 +280,6 @@ private fun RootScreen(
         Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
             HorizontalPager(
                 state = pagerState,
-                userScrollEnabled = currentDestination != AppDestinations.CONSOLE && !terminalSelecting,
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(innerPadding),
@@ -285,14 +293,10 @@ private fun RootScreen(
                         modifier = Modifier.fillMaxSize(),
                         viewModel = profileViewModel,
                     )
-                    AppDestinations.CONSOLE -> ConsoleScreen(
-                        modifier = Modifier.fillMaxSize(),
-                        isActive = currentDestination == AppDestinations.CONSOLE,
-                        onSelectionModeChanged = { terminalSelecting = it },
-                    )
                     AppDestinations.SETTINGS -> SettingsScreen(
                         modifier = Modifier.fillMaxSize(),
                         viewModel = settingsViewModel,
+                        onOpenConsole = onOpenConsole,
                     )
                 }
             }

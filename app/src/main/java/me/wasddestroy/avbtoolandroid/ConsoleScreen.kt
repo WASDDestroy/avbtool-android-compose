@@ -24,15 +24,21 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -68,11 +74,11 @@ private fun storagePermissionIntent(context: Context): Intent {
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ConsoleScreen(
+    onBack: () -> Unit = {},
     modifier: Modifier = Modifier,
-    isActive: Boolean = true,
-    onSelectionModeChanged: (Boolean) -> Unit = {}
 ) {
     val context = LocalContext.current
     val viewModel: ConsoleViewModel = viewModel(factory = ConsoleViewModel.factory(context))
@@ -95,13 +101,6 @@ fun ConsoleScreen(
         view.clearFocus()
     }
 
-    LaunchedEffect(isActive, terminalView) {
-        val view = terminalView ?: return@LaunchedEffect
-        if (!isActive) {
-            hideIme(view)
-        }
-    }
-
     val storageGranted by viewModel.storageGranted.collectAsStateWithLifecycle()
     val permissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) {
         viewModel.refreshStoragePermission(context)
@@ -117,92 +116,117 @@ fun ConsoleScreen(
         }
     }
 
-    val density = LocalDensity.current
-    val imeBottom = WindowInsets.ime.getBottom(density)
-    val navBottom = WindowInsets.navigationBars.getBottom(density)
-    val imeOnlyBottom = (imeBottom - navBottom).coerceAtLeast(0)
-    Column(
-        modifier = modifier
-            .fillMaxSize()
-            .padding(bottom = with(density) { imeOnlyBottom.toDp() }),
-    ) {
-        if (!storageGranted) {
-            Card(
-                modifier = Modifier.fillMaxWidth().padding(8.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
-            ) {
-                Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text(
-                        text = stringResource(R.string.console_storage_banner),
-                        style = MaterialTheme.typography.bodySmall
-                    )
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Button(onClick = {
-                            if (Build.VERSION.SDK_INT >= 30) {
-                                manageLauncher.launch(storagePermissionIntent(context))
-                            } else {
-                                permissionLauncher.launch(
-                                    arrayOf(
-                                        Manifest.permission.READ_EXTERNAL_STORAGE,
-                                        Manifest.permission.WRITE_EXTERNAL_STORAGE
-                                    )
-                                )
+    Scaffold(
+        modifier = modifier,
+        topBar = {
+            TopAppBar(
+                title = { Text(stringResource(R.string.nav_console)) },
+                navigationIcon = {
+                    IconButton(onClick = {
+                        terminalView?.let { view ->
+                            if (view.selectingText) {
+                                view.toggleSelectingText()
                             }
-                        }) { Text(stringResource(R.string.console_grant_storage)) }
-                        TextButton(onClick = { openDocument.launch(arrayOf("*/*")) }) { Text(stringResource(R.string.console_use_saf)) }
+                            hideIme(view)
+                        }
+                        onBack()
+                    }) {
+                        Icon(
+                            Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = stringResource(R.string.command_back),
+                        )
+                    }
+                },
+            )
+        },
+    ) { contentPadding ->
+        val density = LocalDensity.current
+        val imeBottom = WindowInsets.ime.getBottom(density)
+        val navBottom = WindowInsets.navigationBars.getBottom(density)
+        val imeOnlyBottom = (imeBottom - navBottom).coerceAtLeast(0)
+        Column(
+            modifier = Modifier
+                .padding(contentPadding)
+                .fillMaxSize()
+                .padding(bottom = with(density) { imeOnlyBottom.toDp() }),
+        ) {
+            if (!storageGranted) {
+                Card(
+                    modifier = Modifier.fillMaxWidth().padding(8.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
+                ) {
+                    Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text(
+                            text = stringResource(R.string.console_storage_banner),
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Button(onClick = {
+                                if (Build.VERSION.SDK_INT >= 30) {
+                                    manageLauncher.launch(storagePermissionIntent(context))
+                                } else {
+                                    permissionLauncher.launch(
+                                        arrayOf(
+                                            Manifest.permission.READ_EXTERNAL_STORAGE,
+                                            Manifest.permission.WRITE_EXTERNAL_STORAGE
+                                        )
+                                    )
+                                }
+                            }) { Text(stringResource(R.string.console_grant_storage)) }
+                            TextButton(onClick = { openDocument.launch(arrayOf("*/*")) }) { Text(stringResource(R.string.console_use_saf)) }
+                        }
                     }
                 }
             }
-        }
 
-        AndroidView(
-            factory = { viewContext ->
-                CopyableEmulatorView(viewContext, session, viewContext.resources.displayMetrics).apply {
-                    setTextSize(12)
-                    setBackKeyCharacter(0x7f)
-                    this.onSelectionModeChanged = onSelectionModeChanged
-                    terminalView = this
-                    val touchSlop = ViewConfiguration.get(viewContext).scaledTouchSlop
-                    var downX = 0f
-                    var downY = 0f
-                    var moved = false
-                    setOnTouchListener { v, event ->
-                        when (event.actionMasked) {
-                            MotionEvent.ACTION_DOWN -> {
-                                downX = event.x
-                                downY = event.y
-                                moved = false
-                            }
-                            MotionEvent.ACTION_MOVE -> {
-                                if (kotlin.math.abs(event.x - downX) > touchSlop ||
-                                    kotlin.math.abs(event.y - downY) > touchSlop
-                                ) {
-                                    moved = true
+            AndroidView(
+                factory = { viewContext ->
+                    CopyableEmulatorView(viewContext, session, viewContext.resources.displayMetrics).apply {
+                        setTextSize(12)
+                        setBackKeyCharacter(0x7f)
+                        terminalView = this
+                        val touchSlop = ViewConfiguration.get(viewContext).scaledTouchSlop
+                        var downX = 0f
+                        var downY = 0f
+                        var moved = false
+                        setOnTouchListener { v, event ->
+                            when (event.actionMasked) {
+                                MotionEvent.ACTION_DOWN -> {
+                                    downX = event.x
+                                    downY = event.y
+                                    moved = false
+                                }
+                                MotionEvent.ACTION_MOVE -> {
+                                    if (kotlin.math.abs(event.x - downX) > touchSlop ||
+                                        kotlin.math.abs(event.y - downY) > touchSlop
+                                    ) {
+                                        moved = true
+                                    }
+                                }
+                                MotionEvent.ACTION_UP -> {
+                                    if (!moved && !(v as CopyableEmulatorView).selectingText) {
+                                        v.performClick()
+                                        showIme(v)
+                                    }
                                 }
                             }
-                            MotionEvent.ACTION_UP -> {
-                                if (!moved && !(v as CopyableEmulatorView).selectingText) {
-                                    v.performClick()
-                                    showIme(v)
-                                }
-                            }
+                            false
                         }
-                        false
                     }
-                }
-            },
-            update = { view ->
-                if (view.termSession !== session) {
-                    view.attachSession(view.context, session)
-                }
-            },
-            modifier = Modifier
-                .fillMaxWidth()
-                .weight(1f)
-        )
+                },
+                update = { view ->
+                    if (view.termSession !== session) {
+                        view.attachSession(view.context, session)
+                    }
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f)
+            )
 
-        if (settings.showFunctionKeyboard) {
-            SoftKeyBar(session = session)
+            if (settings.showFunctionKeyboard) {
+                SoftKeyBar(session = session)
+            }
         }
     }
 }

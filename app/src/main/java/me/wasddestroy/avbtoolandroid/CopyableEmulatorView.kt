@@ -22,13 +22,6 @@ class CopyableEmulatorView(
     metrics: DisplayMetrics
 ) : EmulatorView(context, session, metrics) {
 
-    var onSelectionModeChanged: ((Boolean) -> Unit)? = null
-
-    override fun toggleSelectingText() {
-        super.toggleSelectingText()
-        onSelectionModeChanged?.invoke(selectingText)
-    }
-
     override fun onLongPress(e: MotionEvent) {
         if (!selectingText) {
             toggleSelectingText()
