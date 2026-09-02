@@ -25,23 +25,26 @@ object PythonRuntime {
             val nativeLibDir = context.applicationContext.applicationInfo.nativeLibraryDir
             py.getModule("android_bridge").callAttr("init", nativeLibDir)
             started = true
+            // Exactly once per process: AvbTaskRunner.run calls start() before
+            // every avbtool invocation, and a cleanup running mid-sign would
+            // delete the scratch dirs the running sign pipeline is writing to.
+            cleanupStaleScratch(context.applicationContext)
         }
-        cleanupStaleScratch(context.applicationContext)
     }
 
     /**
      * Removes leftover signing scratch areas and single-command scratch
      * copies from an earlier process. The in-memory export/output lists that
      * make those files reachable die with the process, so anything found on
-     * disk at startup can never be saved by the user again.
+     * disk at startup can never be saved by the user again. Runs inline on
+     * the first start (app launch, long before any signing) so it cannot
+     * race a sign run recreating its scratch dir.
      */
     private fun cleanupStaleScratch(context: Context) {
-        Thread {
-            runCatching {
-                File(context.filesDir, "profile_sign").deleteRecursively()
-                File(context.filesDir, "avb/input").listFiles()?.forEach { it.delete() }
-            }
-        }.start()
+        runCatching {
+            File(context.filesDir, "profile_sign").deleteRecursively()
+            File(context.filesDir, "avb/input").listFiles()?.forEach { it.delete() }
+        }
     }
 
     @Suppress("unused")
