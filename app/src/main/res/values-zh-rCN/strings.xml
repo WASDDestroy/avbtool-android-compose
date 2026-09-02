@@ -474,4 +474,8 @@
          以便导入手动修复过（例如修复防回滚指数）的配置包。 -->
     <string name="settings_skip_profile_verification">导入配置时不校验配置文件</string>
     <string name="settings_skip_profile_verification_summary">危险：导入配置时不再校验 manifest 清单校验和，被篡改的配置包将无法被察觉。仅建议在测试或自行修复配置时临时开启。</string>
+
+    <!-- 命令结束时的应用内顶部结果横幅。点按可滚动到页面底部的详细结果区。 -->
+    <string name="result_popup_close">关闭</string>
+    <string name="result_popup_view_details">查看详情</string>
 </resources>

@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
@@ -90,6 +91,7 @@ import me.wasddestroy.avbtoolandroid.ui.components.PreferenceGroup
 import me.wasddestroy.avbtoolandroid.ui.components.PreferenceRow
 import me.wasddestroy.avbtoolandroid.ui.components.PreferenceSwitchRow
 import me.wasddestroy.avbtoolandroid.ui.components.PreferenceValueRow
+import me.wasddestroy.avbtoolandroid.ui.components.ResultPopupHost
 import me.wasddestroy.avbtoolandroid.ui.components.SettingsList
 import me.wasddestroy.avbtoolandroid.ui.components.preferenceGroup
 import androidx.core.net.toUri
@@ -286,10 +288,12 @@ fun CommandScreen(
         @Suppress("DEPRECATION")
         val clipboard = LocalClipboardManager.current
         val previewText = remember(values) { formatArgv(buildArgv(command, values)) }
-        SettingsList(
-            modifier = Modifier.padding(contentPadding),
-            contentPadding = PaddingValues(vertical = 8.dp),
-        ) {
+        val listState = rememberLazyListState()
+        Box(modifier = Modifier.padding(contentPadding)) {
+            SettingsList(
+                contentPadding = PaddingValues(vertical = 8.dp),
+                state = listState,
+            ) {
             if (command.id == "make_certificate") {
                 item {
                     Text(
@@ -499,6 +503,20 @@ fun CommandScreen(
                 item("result") {
                     ResultView(result = currentResult)
                 }
+            }
+            }
+            val popupResult = uiState.result
+            if (!uiState.running && popupResult != null) {
+                ResultPopupHost(
+                    result = popupResult,
+                    onDismiss = { },
+                    onClick = {
+                        coroutineScope.launch {
+                            listState.animateScrollToItem(listState.layoutInfo.totalItemsCount - 1)
+                        }
+                    },
+                    modifier = Modifier.align(Alignment.TopCenter),
+                )
             }
         }
     }

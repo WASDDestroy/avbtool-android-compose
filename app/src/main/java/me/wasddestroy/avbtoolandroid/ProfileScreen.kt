@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.selection.SelectionContainer
@@ -50,6 +51,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -72,8 +74,10 @@ import me.wasddestroy.avbtoolandroid.ui.components.DialogDismissButton
 import me.wasddestroy.avbtoolandroid.ui.components.PreferenceGroup
 import me.wasddestroy.avbtoolandroid.ui.components.PreferenceRow
 import me.wasddestroy.avbtoolandroid.ui.components.PreferenceSwitchRow
+import me.wasddestroy.avbtoolandroid.ui.components.ResultPopupHost
 import me.wasddestroy.avbtoolandroid.ui.components.SettingsList
 import me.wasddestroy.avbtoolandroid.ui.components.preferenceGroup
+import kotlinx.coroutines.launch
 
 @Composable
 fun ProfileScreen(
@@ -314,10 +318,13 @@ fun ProfileScreen(
     }
 
     Column(modifier = modifier.fillMaxSize()) {
-        SettingsList(
-            modifier = Modifier.weight(1f),
-            contentPadding = PaddingValues(vertical = 8.dp),
-        ) {
+        val listState = rememberLazyListState()
+        val coroutineScope = rememberCoroutineScope()
+        Box(modifier = Modifier.weight(1f)) {
+            SettingsList(
+                contentPadding = PaddingValues(vertical = 8.dp),
+                state = listState,
+            ) {
             item("header") {
                 Column(Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
                     Text(
@@ -475,6 +482,19 @@ fun ProfileScreen(
                         ProfileResultView(result)
                     }
                 }
+            }
+            }
+            if (!uiState.signing) {
+                ResultPopupHost(
+                    result = uiState.result?.result,
+                    onDismiss = { },
+                    onClick = {
+                        coroutineScope.launch {
+                            listState.animateScrollToItem(listState.layoutInfo.totalItemsCount - 1)
+                        }
+                    },
+                    modifier = Modifier.align(Alignment.TopCenter),
+                )
             }
         }
 

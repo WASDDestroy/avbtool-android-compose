@@ -476,4 +476,9 @@
          hand-edited archives (e.g. repaired rollback indexes) can be imported. -->
     <string name="settings_skip_profile_verification">Skip profile archive verification</string>
     <string name="settings_skip_profile_verification_summary">Dangerous: profile archives are imported without verifying manifest checksums, so tampered archives cannot be detected. Only enable this temporarily for testing or repairing your own configs.</string>
+
+    <!-- In-app top result banner shown when a command finishes. Tapping it
+         scrolls to the detailed result sections at the bottom of the page. -->
+    <string name="result_popup_close">Close</string>
+    <string name="result_popup_view_details">View details</string>
 </resources>
