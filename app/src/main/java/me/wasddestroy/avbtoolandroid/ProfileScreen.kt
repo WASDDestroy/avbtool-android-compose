@@ -56,6 +56,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalClipboardManager
@@ -968,6 +969,9 @@ private fun ActionHalfSurface(
         color = MaterialTheme.colorScheme.surfaceContainer,
         modifier = modifier
             .heightIn(min = 56.dp)
+            // Clip before clickable so the ripple stays inside the segment's
+            // corners (Surface clips after the caller's modifier).
+            .clip(shape)
             .clickable(enabled = enabled, onClick = onClick),
     ) {
         Row(

@@ -32,6 +32,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
@@ -140,7 +141,16 @@ private fun ResultPopupCard(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 8.dp)
-            .let { if (onClick != null) it.combinedClickable(onClick = onClick) else it },
+            .let {
+                if (onClick != null) {
+                    // Clip before clickable so the ripple stays inside the
+                    // banner's corners (Surface clips after the caller's
+                    // modifier).
+                    it.clip(MaterialTheme.shapes.large).combinedClickable(onClick = onClick)
+                } else {
+                    it
+                }
+            },
     ) {
         Row(
             modifier = Modifier.padding(start = 16.dp, top = 6.dp, bottom = 6.dp, end = 4.dp),

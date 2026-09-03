@@ -40,6 +40,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.res.painterResource
@@ -258,6 +259,10 @@ fun PreferenceRow(
             color = MaterialTheme.colorScheme.surfaceContainer,
             modifier = modifier
                 .fillMaxWidth()
+                // M3 Surface applies clip(shape) after the caller's modifier,
+                // so without this clip the ripple bleeds past the row's
+                // rounded corners.
+                .clip(shape)
                 .combinedClickable(
                     onClick = onClick ?: {},
                     onLongClick = onLongClick,
