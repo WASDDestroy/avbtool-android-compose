@@ -403,6 +403,8 @@
     <string name="profile_key_referenced_warning">这些密钥仍被分区条目引用：%s。签名这些分区时将省略 --key 参数。</string>
     <string name="profile_image_not_selected">点按选择映像</string>
     <string name="profile_image_output">签名时生成：%s</string>
+    <string name="profile_image_menu_edit">更改镜像配置</string>
+    <string name="profile_image_menu_clear">不选择这个镜像文件</string>
     <string name="profile_sign_probing">正在检查…</string>
 
     <string name="profile_sign_scope_title">选择本次要签名的分区</string>

@@ -404,6 +404,8 @@
     <string name="profile_key_referenced_warning">These keys are still referenced by partition entries: %s. Signing those partitions will omit the --key argument.</string>
     <string name="profile_image_not_selected">Tap to select image</string>
     <string name="profile_image_output">Generated at sign time: %s</string>
+    <string name="profile_image_menu_edit">Change image config</string>
+    <string name="profile_image_menu_clear">Unselect this image file</string>
     <string name="profile_sign_probing">Checking…</string>
 
     <string name="profile_sign_scope_title">Select partitions to sign</string>

@@ -27,8 +27,10 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Album
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.FileDownload
 import androidx.compose.material.icons.filled.FileUpload
 import androidx.compose.material.icons.filled.Key
@@ -106,6 +108,8 @@ fun ProfileScreen(
     var showAddKeyDialog by remember { mutableStateOf(false) }
     var showDeleteKeysDialog by remember { mutableStateOf(false) }
     var keyMenuTarget by remember { mutableStateOf<ProfileKeyUi?>(null) }
+    // Full spec copy for the image long-press sheet; null while closed.
+    var imageMenuTarget by remember { mutableStateOf<ProfilePartitionSpec?>(null) }
     var pendingKeyFile by remember { mutableStateOf<Uri?>(null) }
     var pendingKeyFileName by remember { mutableStateOf<String?>(null) }
     // Full spec copy for the partition edit dialog; null while closed.
@@ -463,7 +467,7 @@ fun ProfileScreen(
                                                 modifier = Modifier.size(24.dp),
                                             )
                                         },
-                                        onLongClick = { editingPartition = spec },
+                                        onLongClick = { imageMenuTarget = spec },
                                     )
                                 } else {
                                     PreferenceRow(
@@ -481,7 +485,7 @@ fun ProfileScreen(
                                             pendingImagePartition = spec.partition
                                             imageLauncher.launch(arrayOf("*/*"))
                                         },
-                                        onLongClick = { editingPartition = spec },
+                                        onLongClick = { imageMenuTarget = spec },
                                     )
                                 }
                             }
@@ -756,6 +760,21 @@ fun ProfileScreen(
             onActivate = {
                 viewModel.activateKey(key.id)
                 keyMenuTarget = null
+            },
+        )
+    }
+
+    imageMenuTarget?.let { spec ->
+        ImageMenuSheet(
+            hasImageSelection = uiState.imageSummaries.containsKey(spec.partition),
+            onDismiss = { imageMenuTarget = null },
+            onEditConfig = {
+                imageMenuTarget = null
+                editingPartition = spec
+            },
+            onClearImage = {
+                imageMenuTarget = null
+                viewModel.setImage(spec.partition, null)
             },
         )
     }
@@ -1149,6 +1168,36 @@ private fun KeyMenuSheet(
                 icon = Icons.Filled.Star,
                 enabled = !isActive,
                 onClick = onActivate,
+            )
+        }
+    }
+}
+
+/**
+ * Long-press action sheet for an image partition row. "Unselect" is enabled
+ * only while the partition actually holds an image pick (the vbmeta output
+ * rows never do), mirroring the disabled-activate pattern of [KeyMenuSheet].
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ImageMenuSheet(
+    hasImageSelection: Boolean,
+    onDismiss: () -> Unit,
+    onEditConfig: () -> Unit,
+    onClearImage: () -> Unit,
+) {
+    ModalBottomSheet(onDismissRequest = onDismiss) {
+        Column(Modifier.padding(bottom = 24.dp)) {
+            SheetActionRow(
+                label = stringResource(R.string.profile_image_menu_edit),
+                icon = Icons.Filled.Edit,
+                onClick = onEditConfig,
+            )
+            SheetActionRow(
+                label = stringResource(R.string.profile_image_menu_clear),
+                icon = Icons.Filled.Close,
+                enabled = hasImageSelection,
+                onClick = onClearImage,
             )
         }
     }
