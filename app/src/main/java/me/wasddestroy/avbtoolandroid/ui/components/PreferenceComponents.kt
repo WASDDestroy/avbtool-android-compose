@@ -267,8 +267,8 @@ fun PreferenceRow(
                 // rounded corners.
                 .clip(shape)
                 .combinedClickable(
-                    onClick = onClick ?: {},
-                    onLongClick = onLongClick,
+                    onClick = onClick?.takeIf { enabled } ?: {},
+                    onLongClick = onLongClick?.takeIf { enabled },
                     role = role,
                 ),
             content = { content() },

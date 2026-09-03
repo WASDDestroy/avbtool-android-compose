@@ -1259,6 +1259,7 @@ private fun AddKeyDialog(
 ) {
     var useFileName by remember { mutableStateOf(true) }
     var id by remember { mutableStateOf("") }
+    var editingId by remember { mutableStateOf(false) }
 
     val effectiveId = if (useFileName) {
         pickedFileName?.substringBeforeLast('.')?.trim().orEmpty()
@@ -1278,21 +1279,20 @@ private fun AddKeyDialog(
         title = { Text(stringResource(R.string.profile_key_add_title)) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                OutlinedTextField(
-                    value = id,
-                    onValueChange = { id = it },
-                    label = { Text(stringResource(R.string.profile_key_id_label)) },
-                    singleLine = true,
-                    enabled = !useFileName && !adding,
-                    isError = idError != null,
-                    supportingText = if (idError != null) {
-                        { Text(idError) }
-                    } else {
-                        null
-                    },
-                )
                 preferenceParagraph(
                     listOf<@Composable () -> Unit>(
+                        // Typed key id, opened in a second-level dialog;
+                        // disabled while the file name supplies it.
+                        {
+                            PreferenceRow(
+                                title = stringResource(R.string.profile_key_id_label),
+                                summary = effectiveId.ifBlank {
+                                    stringResource(R.string.profile_partition_edit_unset)
+                                },
+                                enabled = !useFileName && !adding,
+                                onClick = { editingId = true },
+                            )
+                        },
                         // The toggle and the picker share one segmented block:
                         // they describe the same choice (id from file name vs.
                         // typed, file picked below it).
@@ -1331,6 +1331,23 @@ private fun AddKeyDialog(
             }
         },
     )
+
+    if (editingId) {
+        PartitionTextFieldDialog(
+            title = stringResource(R.string.profile_key_id_label),
+            initialValue = id,
+            // Error strings are resolved up here: validation runs outside
+            // composition on every keystroke.
+            asciiErrorText = stringResource(R.string.profile_key_id_error),
+            takenErrorText = stringResource(R.string.profile_key_id_taken),
+            takenValues = existingIds,
+            onDismiss = { editingId = false },
+            onConfirm = {
+                id = it
+                editingId = false
+            },
+        )
+    }
 }
 
 /** Multi-select dialog over the active profile's key store entries. */
@@ -1466,7 +1483,7 @@ private fun AddPartitionDialog(
 ) {
     var name by remember { mutableStateOf("") }
     var useImageFileName by remember { mutableStateOf(false) }
-    var nameTouched by remember { mutableStateOf(false) }
+    var editingName by remember { mutableStateOf(false) }
 
     val nameError = when {
         !name.all { it.code in 0..127 } -> stringResource(R.string.profile_partition_name_error)
@@ -1480,24 +1497,20 @@ private fun AddPartitionDialog(
         title = { Text(stringResource(R.string.profile_partition_add_title)) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                OutlinedTextField(
-                    value = name,
-                    onValueChange = {
-                        name = it
-                        nameTouched = true
-                    },
-                    label = { Text(stringResource(R.string.profile_partition_name_label)) },
-                    singleLine = true,
-                    enabled = !useImageFileName && !adding,
-                    isError = nameTouched && nameError != null,
-                    supportingText = if (nameTouched && nameError != null) {
-                        { Text(nameError) }
-                    } else {
-                        null
-                    },
-                )
                 preferenceParagraph(
                     listOf<@Composable () -> Unit>(
+                        // Typed partition name, opened in a second-level
+                        // dialog; disabled while the file name supplies it.
+                        {
+                            PreferenceRow(
+                                title = stringResource(R.string.profile_partition_name_label),
+                                summary = name.ifBlank {
+                                    stringResource(R.string.profile_partition_edit_unset)
+                                },
+                                enabled = !useImageFileName && !adding,
+                                onClick = { editingName = true },
+                            )
+                        },
                         // The toggle and the picker share one segmented block:
                         // they describe the same choice (name from file vs.
                         // typed, file picked below it).
@@ -1539,6 +1552,24 @@ private fun AddPartitionDialog(
             }
         },
     )
+
+    if (editingName) {
+        PartitionTextFieldDialog(
+            title = stringResource(R.string.profile_partition_name_label),
+            initialValue = name,
+            supportingText = stringResource(R.string.profile_partition_edit_partition_name_hint),
+            // Error strings are resolved up here: validation runs outside
+            // composition on every keystroke.
+            asciiErrorText = stringResource(R.string.profile_partition_name_error),
+            takenErrorText = stringResource(R.string.profile_partition_add_conflict),
+            takenValues = existingPartitions,
+            onDismiss = { editingName = false },
+            onConfirm = {
+                name = it
+                editingName = false
+            },
+        )
+    }
 
     if (warningEvent is AddPartitionEvent.InvalidImage ||
         warningEvent is AddPartitionEvent.NoImage
@@ -2897,6 +2928,9 @@ private fun PartitionEditDialog(
  * Single-field edit dialog opened from a partition edit row (mirrors
  * CommandScreen's CommandTextEditDialog): one text field, OK/cancel.
  * [filterInput] sanitizes while typing (e.g. digits-only for numeric fields).
+ * When [asciiErrorText]/[takenErrorText] are set they validate the trimmed
+ * draft live: non-ASCII shows [asciiErrorText], a draft in [takenValues]
+ * shows [takenErrorText]; any error disables confirm.
  */
 @Composable
 private fun PartitionTextFieldDialog(
@@ -2906,10 +2940,25 @@ private fun PartitionTextFieldDialog(
     numeric: Boolean = false,
     filterInput: (String) -> String = { it },
     supportingText: String? = null,
+    asciiErrorText: String? = null,
+    takenErrorText: String? = null,
+    takenValues: Set<String> = emptySet(),
     onDismiss: () -> Unit,
     onConfirm: (String) -> Unit,
 ) {
     var draft by remember { mutableStateOf(initialValue) }
+    val trimmed = draft.trim()
+    val error = when {
+        asciiErrorText != null && trimmed.isNotEmpty() &&
+            !trimmed.all { it.code in 0..127 } -> asciiErrorText
+        takenErrorText != null && trimmed in takenValues -> takenErrorText
+        else -> null
+    }
+    val supporting: (@Composable () -> Unit)? = when {
+        error != null -> ({ Text(error) })
+        supportingText != null -> ({ Text(supportingText) })
+        else -> null
+    }
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(title) },
@@ -2918,7 +2967,8 @@ private fun PartitionTextFieldDialog(
                 value = draft,
                 onValueChange = { draft = filterInput(it) },
                 modifier = Modifier.fillMaxWidth(),
-                supportingText = supportingText?.let { hint -> { Text(hint) } },
+                isError = error != null,
+                supportingText = supporting,
                 singleLine = singleLine,
                 minLines = if (singleLine) 1 else 2,
                 maxLines = if (singleLine) 1 else 6,
@@ -2930,7 +2980,10 @@ private fun PartitionTextFieldDialog(
             )
         },
         confirmButton = {
-            DialogConfirmButton(onClick = { onConfirm(draft.trim()) }) {
+            DialogConfirmButton(
+                onClick = { onConfirm(draft.trim()) },
+                enabled = error == null,
+            ) {
                 Text(stringResource(android.R.string.ok))
             }
         },
