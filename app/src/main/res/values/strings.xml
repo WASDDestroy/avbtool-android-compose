@@ -537,6 +537,7 @@
 
     <!-- Advanced fields of the partition edit dialog (stage 3). -->
     <string name="profile_partition_edit_included">Included partitions</string>
+    <string name="profile_partition_edit_included_not_in_profile">%1$s (not in profile)</string>
     <string name="profile_partition_edit_chain">Chain partitions</string>
     <string name="profile_partition_edit_chain_no_ab">Chain partitions (do not use A/B)</string>
     <string name="profile_partition_edit_chain_hint">One PART:SLOT:KEY per line; the key is a file name inside the profile\'s keys/ folder. The key file name may itself contain colons.</string>

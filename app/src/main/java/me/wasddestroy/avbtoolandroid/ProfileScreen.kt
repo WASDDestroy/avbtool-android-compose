@@ -2626,9 +2626,16 @@ private fun PartitionEditDialog(
     }
 
     if (choosingIncluded) {
+        // Union of the profile's partitions and the stored selection: entries
+        // that exist only in the stored selection ("ghost" partitions left
+        // over from an imported image) stay visible so they can be unchecked,
+        // which removes them from the persisted config on save.
+        val candidates = (allPartitions + includedPartitions).distinct()
+        val notInProfile = includedPartitions - allPartitions.toSet()
         MultiSelectPartitionsDialog(
             titleRes = R.string.profile_partition_edit_included,
-            partitions = allPartitions,
+            partitions = candidates,
+            notInProfile = notInProfile,
             selected = includedPartitions,
             onDismiss = { choosingIncluded = false },
             onConfirm = {
@@ -2914,13 +2921,20 @@ private fun PartitionTextFieldDialog(
 }
 
 /**
- * Checkbox multi-select over the profile's partition names, used by the edit
- * dialog for `included_partitions`. Confirming hands back the selection.
+ * Checkbox multi-select over [partitions], used by the edit dialog for
+ * `included_partitions`. [partitions] is the union of the profile's
+ * partitions and the currently stored selection, so entries left over from
+ * an imported image ("ghost" partitions with no profile row) stay visible
+ * and can be unchecked — confirming drops them from the selection.
+ * [notInProfile] holds the names that exist only in the stored selection;
+ * those rows carry a suffix marking them. Confirming hands back the
+ * selection.
  */
 @Composable
 private fun MultiSelectPartitionsDialog(
     titleRes: Int,
     partitions: List<String>,
+    notInProfile: Set<String>,
     selected: Set<String>,
     onDismiss: () -> Unit,
     onConfirm: (Set<String>) -> Unit,
@@ -2952,7 +2966,17 @@ private fun MultiSelectPartitionsDialog(
                             checked = partition in checked,
                             onCheckedChange = null,
                         )
-                        Text(text = partition, style = MaterialTheme.typography.bodyLarge)
+                        Text(
+                            text = if (partition in notInProfile) {
+                                stringResource(
+                                    R.string.profile_partition_edit_included_not_in_profile,
+                                    partition,
+                                )
+                            } else {
+                                partition
+                            },
+                            style = MaterialTheme.typography.bodyLarge,
+                        )
                     }
                 }
             }

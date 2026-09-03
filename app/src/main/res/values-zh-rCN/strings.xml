@@ -534,6 +534,7 @@
 
     <!-- 分区编辑对话框的进阶字段（阶段 3）。 -->
     <string name="profile_partition_edit_included">包含的分区</string>
+    <string name="profile_partition_edit_included_not_in_profile">%1$s（未在配置中）</string>
     <string name="profile_partition_edit_chain">链分区</string>
     <string name="profile_partition_edit_chain_no_ab">链分区（不使用 A/B）</string>
     <string name="profile_partition_edit_chain_hint">每行一条 PART:SLOT:KEY；密钥为 profile 的 keys/ 目录中的文件名，文件名本身可以包含冒号。</string>
