@@ -92,6 +92,10 @@ fun PreferenceSwitchRow(
 )
 ```
 
+The whole row consumes the click (with `Role.Switch` semantics) and calls
+`onCheckedChange(!checked)`; the trailing `Switch` is display-only
+(`onCheckedChange = null`) so a tap toggles the state exactly once.
+
 ### Dialog buttons
 
 | Component | Material role |

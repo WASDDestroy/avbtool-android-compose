@@ -43,6 +43,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
@@ -179,6 +180,8 @@ fun PreferenceRow(
     trailing: (@Composable () -> Unit)? = null,
     onClick: (() -> Unit)? = null,
     onLongClick: (() -> Unit)? = null,
+    /** Semantics role for the row click, e.g. [androidx.compose.ui.semantics.Role.Switch]. */
+    role: Role? = null,
     /**
      * Non-null marks the row as an expand/collapse toggle: the trailing
      * chevron points down while collapsed and up while expanded, replacing
@@ -266,6 +269,7 @@ fun PreferenceRow(
                 .combinedClickable(
                     onClick = onClick ?: {},
                     onLongClick = onLongClick,
+                    role = role,
                 ),
             content = { content() },
         )
@@ -297,10 +301,19 @@ fun PreferenceSwitchRow(
         iconContent = iconContent,
         summary = summary,
         enabled = enabled,
+        // The whole row consumes the click and drives the checked state; the
+        // Switch is display-only (onCheckedChange = null) so taps anywhere on
+        // the row toggle it exactly once.
+        onClick = if (enabled) {
+            { onCheckedChange(!checked) }
+        } else {
+            null
+        },
+        role = Role.Switch,
         trailing = {
             Switch(
                 checked = checked,
-                onCheckedChange = onCheckedChange,
+                onCheckedChange = null,
                 enabled = enabled,
             )
         },
