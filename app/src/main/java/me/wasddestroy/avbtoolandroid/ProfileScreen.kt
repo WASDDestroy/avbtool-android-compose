@@ -28,13 +28,16 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Album
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Fingerprint
 import androidx.compose.material.icons.filled.FileDownload
 import androidx.compose.material.icons.filled.FileUpload
 import androidx.compose.material.icons.filled.Key
 import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.Tag
+import androidx.compose.material.icons.filled.VpnKey
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
@@ -1169,23 +1172,23 @@ private fun KeyMenuSheet(
         Column(Modifier.padding(bottom = 24.dp)) {
             SheetActionRow(
                 label = stringResource(R.string.profile_key_menu_copy_id),
-                icon = Icons.Filled.ContentCopy,
+                icon = Icons.Filled.Tag,
                 onClick = onCopyId,
             )
             SheetActionRow(
                 label = stringResource(R.string.profile_key_menu_copy_file),
-                icon = Icons.Filled.ContentCopy,
+                icon = Icons.Filled.Description,
                 onClick = onCopyFile,
             )
             SheetActionRow(
                 label = stringResource(R.string.profile_key_menu_copy_sha1),
-                icon = Icons.Filled.ContentCopy,
+                icon = Icons.Filled.Fingerprint,
                 enabled = key.sha1 != null,
                 onClick = onCopySha1,
             )
             SheetActionRow(
                 label = stringResource(R.string.profile_key_menu_copy_public_key),
-                icon = Icons.Filled.ContentCopy,
+                icon = Icons.Filled.VpnKey,
                 enabled = key.publicKeyFile != null,
                 onClick = onCopyPublicKey,
             )
