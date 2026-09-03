@@ -757,6 +757,16 @@ fun ProfileScreen(
                 Toast.makeText(context, copiedMessage, Toast.LENGTH_SHORT).show()
                 keyMenuTarget = null
             },
+            onCopySha1 = {
+                key.sha1?.let { clipboard.setText(AnnotatedString(it)) }
+                Toast.makeText(context, copiedMessage, Toast.LENGTH_SHORT).show()
+                keyMenuTarget = null
+            },
+            onCopyPublicKey = {
+                key.publicKeyFile?.let { clipboard.setText(AnnotatedString(it)) }
+                Toast.makeText(context, copiedMessage, Toast.LENGTH_SHORT).show()
+                keyMenuTarget = null
+            },
             onActivate = {
                 viewModel.activateKey(key.id)
                 keyMenuTarget = null
@@ -1139,7 +1149,9 @@ private fun KeyRow(
 
 /**
  * Long-press action sheet for a key entry. The "activate" item turns into a
- * disabled row while the key is already the profile's default.
+ * disabled row while the key is already the profile's default; the SHA1 and
+ * public-key (.bin) copy items stay disabled while that data is unavailable
+ * (digest still computing / failed, or no extracted public key stored).
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -1149,6 +1161,8 @@ private fun KeyMenuSheet(
     onDismiss: () -> Unit,
     onCopyId: () -> Unit,
     onCopyFile: () -> Unit,
+    onCopySha1: () -> Unit,
+    onCopyPublicKey: () -> Unit,
     onActivate: () -> Unit,
 ) {
     ModalBottomSheet(onDismissRequest = onDismiss) {
@@ -1162,6 +1176,18 @@ private fun KeyMenuSheet(
                 label = stringResource(R.string.profile_key_menu_copy_file),
                 icon = Icons.Filled.ContentCopy,
                 onClick = onCopyFile,
+            )
+            SheetActionRow(
+                label = stringResource(R.string.profile_key_menu_copy_sha1),
+                icon = Icons.Filled.ContentCopy,
+                enabled = key.sha1 != null,
+                onClick = onCopySha1,
+            )
+            SheetActionRow(
+                label = stringResource(R.string.profile_key_menu_copy_public_key),
+                icon = Icons.Filled.ContentCopy,
+                enabled = key.publicKeyFile != null,
+                onClick = onCopyPublicKey,
             )
             SheetActionRow(
                 label = stringResource(R.string.profile_key_menu_activate),

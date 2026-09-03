@@ -398,6 +398,8 @@
     <string name="profile_key_default_badge">Default</string>
     <string name="profile_key_menu_copy_id">Copy key ID</string>
     <string name="profile_key_menu_copy_file">Copy key file name</string>
+    <string name="profile_key_menu_copy_sha1">Copy public key SHA1</string>
+    <string name="profile_key_menu_copy_public_key">Copy public key file name (.bin)</string>
     <string name="profile_key_menu_activate">Activate key</string>
     <string name="profile_key_delete_title">Delete keys</string>
     <string name="profile_key_delete_message">Delete these keys: %s? The stored key files will be removed as well.</string>

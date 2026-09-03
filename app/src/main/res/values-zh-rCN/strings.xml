@@ -397,6 +397,8 @@
     <string name="profile_key_default_badge">默认</string>
     <string name="profile_key_menu_copy_id">复制密钥 ID</string>
     <string name="profile_key_menu_copy_file">复制密钥文件名</string>
+    <string name="profile_key_menu_copy_sha1">复制公钥 SHA1</string>
+    <string name="profile_key_menu_copy_public_key">复制公钥文件名（.bin）</string>
     <string name="profile_key_menu_activate">激活密钥</string>
     <string name="profile_key_delete_title">移除密钥</string>
     <string name="profile_key_delete_message">确定移除这些密钥吗：%s？对应的密钥文件将被一并删除。</string>
