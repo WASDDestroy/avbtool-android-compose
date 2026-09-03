@@ -2092,21 +2092,29 @@ private fun PartitionEditDialog(
                     ),
                 )
 
-                // ---- advanced section -----------------------------------
-                PreferenceRow(
-                    title = stringResource(R.string.profile_partition_edit_advanced),
-                    summary = stringResource(
-                        if (showAdvanced) {
-                            R.string.profile_partition_edit_advanced_hide
-                        } else {
-                            R.string.profile_partition_edit_advanced_show
+                // ---- advanced segment ------------------------------------
+                // The toggle row is the segment's first row: collapsed, the
+                // segment holds only this row; expanded, it stays at the top
+                // of the same clustered paragraph.
+                preferenceParagraph(
+                    (listOf<@Composable () -> Unit>(
+                        {
+                            PreferenceRow(
+                                title = stringResource(
+                                    R.string.profile_partition_edit_advanced,
+                                ),
+                                summary = stringResource(
+                                    if (showAdvanced) {
+                                        R.string.profile_partition_edit_advanced_hide
+                                    } else {
+                                        R.string.profile_partition_edit_advanced_show
+                                    },
+                                ),
+                                onClick = { showAdvanced = !showAdvanced },
+                                expanded = showAdvanced,
+                            )
                         },
-                    ),
-                    onClick = { showAdvanced = !showAdvanced },
-                    expanded = showAdvanced,
-                )
-                if (showAdvanced) {
-                    preferenceParagraph(
+                    ) + (if (showAdvanced) {
                         (if (isVbmeta) {
                             listOf<@Composable () -> Unit>(
                                 {
@@ -2400,9 +2408,11 @@ private fun PartitionEditDialog(
                                     },
                                 )
                             },
-                        ),
-                    )
-                }
+                        )
+                    } else {
+                        emptyList()
+                    })),
+                )
 
                 saveError?.let { error ->
                     Column {
