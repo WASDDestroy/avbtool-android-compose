@@ -489,10 +489,12 @@
     <string name="profile_partition_edit_descriptor">Descriptor type: %1$s</string>
     <string name="profile_partition_edit_image">Image file name</string>
     <string name="profile_partition_edit_image_warning">Other partitions that include this image by file name will lose the reference.</string>
-    <string name="profile_partition_edit_partition_name">Partition name (descriptor)</string>
+    <string name="profile_partition_edit_partition_name">Partition name</string>
+    <string name="profile_partition_edit_partition_name_hint">Stored in the descriptor, not the file name.</string>
     <string name="profile_partition_edit_key">Signing key</string>
     <string name="profile_partition_edit_key_none">(no key)</string>
-    <string name="profile_partition_edit_partition_size">Partition size (bytes)</string>
+    <string name="profile_partition_edit_partition_size">Partition size</string>
+    <string name="profile_partition_edit_partition_size_hint">Size in bytes.</string>
     <string name="profile_partition_edit_size_append">Empty = append to end of image</string>
     <string name="profile_partition_edit_dynamic_size">Derive size from image</string>
     <string name="profile_partition_edit_salt">Salt</string>
@@ -500,13 +502,15 @@
     <string name="profile_partition_edit_unset">Not set</string>
     <string name="profile_partition_edit_omit">Empty = omit from config</string>
     <string name="profile_partition_edit_flags">VBMeta flags</string>
-    <string name="profile_partition_edit_rollback_index">Rollback index (empty = omit)</string>
+    <string name="profile_partition_edit_rollback_index">Rollback index</string>
+    <string name="profile_partition_edit_rollback_index_hint">Empty = omit.</string>
     <string name="profile_partition_edit_advanced">Advanced configuration</string>
     <string name="profile_partition_edit_advanced_show">Show advanced configuration</string>
     <string name="profile_partition_edit_advanced_hide">Hide advanced configuration</string>
-    <string name="profile_partition_edit_rollback_location">Rollback index location (empty = omit)</string>
-    <string name="profile_partition_edit_props">Properties (one KEY:VALUE per line)</string>
-    <string name="profile_partition_edit_props_hint">Split at the first colon; the value may contain colons.</string>
+    <string name="profile_partition_edit_rollback_location">Rollback index location</string>
+    <string name="profile_partition_edit_rollback_location_hint">Empty = omit.</string>
+    <string name="profile_partition_edit_props">Properties</string>
+    <string name="profile_partition_edit_props_hint">One KEY:VALUE per line, split at the first colon; the value may contain colons. Example: com.android.build.boot.os_version:14</string>
     <string name="profile_partition_edit_hashtree_disabled">Set HASHTREE_DISABLED flag</string>
     <string name="profile_partition_edit_verification_disabled">Set VERIFICATION_DISABLED flag</string>
     <string name="profile_partition_edit_block_size">Block size</string>
@@ -542,9 +546,12 @@
     <string name="profile_partition_edit_cmdline_hint">One command line per line; repeated entries are passed with one --kernel_cmdline flag each.</string>
     <string name="profile_partition_edit_none_set">Not configured</string>
     <string name="profile_partition_edit_list_invalid">One or more entries are malformed.</string>
-    <string name="profile_partition_edit_setup_rootfs_image">Setup rootfs from kernel image (file name)</string>
-    <string name="profile_partition_edit_output_vbmeta">Also write vbmeta to file (file name)</string>
-    <string name="profile_partition_edit_pubkey_metadata">Public key metadata (file name)</string>
+    <string name="profile_partition_edit_setup_rootfs_image">Set up rootfs from kernel image</string>
+    <string name="profile_partition_edit_setup_rootfs_image_hint">Image file name to derive rootfs setup from.</string>
+    <string name="profile_partition_edit_output_vbmeta">Also write vbmeta to file</string>
+    <string name="profile_partition_edit_output_vbmeta_hint">File name for the exported vbmeta blob.</string>
+    <string name="profile_partition_edit_pubkey_metadata">Public key metadata</string>
+    <string name="profile_partition_edit_pubkey_metadata_hint">File name within the profile folder or keys/.</string>
     <string name="profile_partition_edit_signing_helper">Signing helper (program)</string>
     <string name="profile_partition_edit_signing_helper_files">Signing helper with files (program)</string>
     <string name="profile_partition_edit_append_release">Append to release string</string>

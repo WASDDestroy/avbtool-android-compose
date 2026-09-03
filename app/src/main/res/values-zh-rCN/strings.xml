@@ -486,10 +486,12 @@
     <string name="profile_partition_edit_descriptor">描述符类型：%1$s</string>
     <string name="profile_partition_edit_image">镜像文件名</string>
     <string name="profile_partition_edit_image_warning">其他分区若按文件名引用此镜像，改名后将失去该引用。</string>
-    <string name="profile_partition_edit_partition_name">分区名（描述符内）</string>
+    <string name="profile_partition_edit_partition_name">分区名</string>
+    <string name="profile_partition_edit_partition_name_hint">写入描述符，与镜像文件名无关。</string>
     <string name="profile_partition_edit_key">签名密钥</string>
     <string name="profile_partition_edit_key_none">（无密钥）</string>
-    <string name="profile_partition_edit_partition_size">分区大小（字节）</string>
+    <string name="profile_partition_edit_partition_size">分区大小</string>
+    <string name="profile_partition_edit_partition_size_hint">以字节为单位。</string>
     <string name="profile_partition_edit_size_append">留空 = 追加到镜像末尾</string>
     <string name="profile_partition_edit_dynamic_size">由镜像推算大小</string>
     <string name="profile_partition_edit_salt">盐</string>
@@ -497,13 +499,15 @@
     <string name="profile_partition_edit_unset">未设置</string>
     <string name="profile_partition_edit_omit">留空 = 不写入配置</string>
     <string name="profile_partition_edit_flags">VBMeta 标志位</string>
-    <string name="profile_partition_edit_rollback_index">防回滚指数（留空 = 不写入）</string>
+    <string name="profile_partition_edit_rollback_index">防回滚指数</string>
+    <string name="profile_partition_edit_rollback_index_hint">留空 = 不写入。</string>
     <string name="profile_partition_edit_advanced">高级配置</string>
     <string name="profile_partition_edit_advanced_show">展开高级配置</string>
     <string name="profile_partition_edit_advanced_hide">收起高级配置</string>
-    <string name="profile_partition_edit_rollback_location">防回滚指数位置（留空 = 不写入）</string>
-    <string name="profile_partition_edit_props">属性（每行一条 KEY:VALUE）</string>
-    <string name="profile_partition_edit_props_hint">按第一个冒号拆分；值中可以包含冒号。</string>
+    <string name="profile_partition_edit_rollback_location">防回滚指数位置</string>
+    <string name="profile_partition_edit_rollback_location_hint">留空 = 不写入。</string>
+    <string name="profile_partition_edit_props">属性</string>
+    <string name="profile_partition_edit_props_hint">每行一条 KEY:VALUE，按第一个冒号拆分；值中可以包含冒号。示例：com.android.build.boot.os_version:14</string>
     <string name="profile_partition_edit_hashtree_disabled">设置 HASHTREE_DISABLED 标志位</string>
     <string name="profile_partition_edit_verification_disabled">设置 VERIFICATION_DISABLED 标志位</string>
     <string name="profile_partition_edit_block_size">块大小</string>
@@ -539,9 +543,12 @@
     <string name="profile_partition_edit_cmdline_hint">每行一条命令行；多条条目会以独立的 --kernel_cmdline 参数逐条传入。</string>
     <string name="profile_partition_edit_none_set">未配置</string>
     <string name="profile_partition_edit_list_invalid">存在格式不正确的条目。</string>
-    <string name="profile_partition_edit_setup_rootfs_image">由内核镜像设置根文件系统（文件名）</string>
-    <string name="profile_partition_edit_output_vbmeta">同时输出 vbmeta 到文件（文件名）</string>
-    <string name="profile_partition_edit_pubkey_metadata">公钥元数据（文件名）</string>
+    <string name="profile_partition_edit_setup_rootfs_image">由内核镜像设置根文件系统</string>
+    <string name="profile_partition_edit_setup_rootfs_image_hint">用于推算根文件系统设置的镜像文件名。</string>
+    <string name="profile_partition_edit_output_vbmeta">同时输出 vbmeta 到文件</string>
+    <string name="profile_partition_edit_output_vbmeta_hint">vbmeta 文件的输出文件名。</string>
+    <string name="profile_partition_edit_pubkey_metadata">公钥元数据</string>
+    <string name="profile_partition_edit_pubkey_metadata_hint">profile 目录或 keys/ 中的文件名。</string>
     <string name="profile_partition_edit_signing_helper">签名辅助程序</string>
     <string name="profile_partition_edit_signing_helper_files">基于文件的签名辅助程序</string>
     <string name="profile_partition_edit_append_release">追加到 release 字符串</string>

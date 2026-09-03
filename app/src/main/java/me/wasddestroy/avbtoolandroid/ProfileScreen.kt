@@ -2706,6 +2706,7 @@ private fun PartitionEditDialog(
         FIELD_PARTITION_NAME -> PartitionTextFieldDialog(
             title = stringResource(R.string.profile_partition_edit_partition_name),
             initialValue = partitionName,
+            supportingText = stringResource(R.string.profile_partition_edit_partition_name_hint),
             onDismiss = { editingField = null },
             onConfirm = {
                 partitionName = it
@@ -2719,7 +2720,7 @@ private fun PartitionEditDialog(
             supportingText = if (isHashtree) {
                 stringResource(R.string.profile_partition_edit_size_append)
             } else {
-                null
+                stringResource(R.string.profile_partition_edit_partition_size_hint)
             },
             onDismiss = { editingField = null },
             onConfirm = {
@@ -2742,7 +2743,7 @@ private fun PartitionEditDialog(
             initialValue = rollbackIndex,
             numeric = true,
             filterInput = { value -> value.filter { c -> c.isDigit() || c == '-' } },
-            supportingText = stringResource(R.string.profile_partition_edit_omit),
+            supportingText = stringResource(R.string.profile_partition_edit_rollback_index_hint),
             onDismiss = { editingField = null },
             onConfirm = {
                 rollbackIndex = it
@@ -2754,7 +2755,7 @@ private fun PartitionEditDialog(
             initialValue = rollbackIndexLocation,
             numeric = true,
             filterInput = { value -> value.filter { c -> c.isDigit() } },
-            supportingText = stringResource(R.string.profile_partition_edit_omit),
+            supportingText = stringResource(R.string.profile_partition_edit_rollback_location_hint),
             onDismiss = { editingField = null },
             onConfirm = {
                 rollbackIndexLocation = it
@@ -2806,6 +2807,7 @@ private fun PartitionEditDialog(
         FIELD_SETUP_ROOTFS_IMAGE -> PartitionTextFieldDialog(
             title = stringResource(R.string.profile_partition_edit_setup_rootfs_image),
             initialValue = setupRootfsFromKernel,
+            supportingText = stringResource(R.string.profile_partition_edit_setup_rootfs_image_hint),
             onDismiss = { editingField = null },
             onConfirm = {
                 setupRootfsFromKernel = it
@@ -2815,6 +2817,7 @@ private fun PartitionEditDialog(
         FIELD_OUTPUT_VBMETA -> PartitionTextFieldDialog(
             title = stringResource(R.string.profile_partition_edit_output_vbmeta),
             initialValue = outputVbmetaImage,
+            supportingText = stringResource(R.string.profile_partition_edit_output_vbmeta_hint),
             onDismiss = { editingField = null },
             onConfirm = {
                 outputVbmetaImage = it
@@ -2824,6 +2827,7 @@ private fun PartitionEditDialog(
         FIELD_PUBKEY_METADATA -> PartitionTextFieldDialog(
             title = stringResource(R.string.profile_partition_edit_pubkey_metadata),
             initialValue = publicKeyMetadata,
+            supportingText = stringResource(R.string.profile_partition_edit_pubkey_metadata_hint),
             onDismiss = { editingField = null },
             onConfirm = {
                 publicKeyMetadata = it
