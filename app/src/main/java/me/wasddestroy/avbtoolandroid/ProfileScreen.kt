@@ -1291,18 +1291,29 @@ private fun AddKeyDialog(
                         null
                     },
                 )
-                PreferenceSwitchRow(
-                    title = stringResource(R.string.profile_key_use_file_name),
-                    checked = useFileName,
-                    enabled = !adding,
-                    onCheckedChange = { useFileName = it },
-                )
-                PreferenceRow(
-                    title = stringResource(R.string.profile_key_pick),
-                    summary = pickedFileName?.let {
-                        stringResource(R.string.profile_key_selected, it)
-                    } ?: stringResource(R.string.profile_key_none),
-                    onClick = { if (!adding) onPickFile() },
+                preferenceParagraph(
+                    listOf<@Composable () -> Unit>(
+                        // The toggle and the picker share one segmented block:
+                        // they describe the same choice (id from file name vs.
+                        // typed, file picked below it).
+                        {
+                            PreferenceSwitchRow(
+                                title = stringResource(R.string.profile_key_use_file_name),
+                                checked = useFileName,
+                                enabled = !adding,
+                                onCheckedChange = { useFileName = it },
+                            )
+                        },
+                        {
+                            PreferenceRow(
+                                title = stringResource(R.string.profile_key_pick),
+                                summary = pickedFileName?.let {
+                                    stringResource(R.string.profile_key_selected, it)
+                                } ?: stringResource(R.string.profile_key_none),
+                                onClick = { if (!adding) onPickFile() },
+                            )
+                        },
+                    ),
                 )
             }
         },
@@ -1485,18 +1496,29 @@ private fun AddPartitionDialog(
                         null
                     },
                 )
-                PreferenceSwitchRow(
-                    title = stringResource(R.string.profile_partition_use_image_name),
-                    checked = useImageFileName,
-                    enabled = !adding,
-                    onCheckedChange = { useImageFileName = it },
-                )
-                PreferenceRow(
-                    title = stringResource(R.string.profile_partition_pick_image),
-                    summary = pickedImageFileName?.let {
-                        stringResource(R.string.profile_partition_image_selected, it)
-                    } ?: stringResource(R.string.profile_partition_image_none),
-                    onClick = { if (!adding) onPickImage() },
+                preferenceParagraph(
+                    listOf<@Composable () -> Unit>(
+                        // The toggle and the picker share one segmented block:
+                        // they describe the same choice (name from file vs.
+                        // typed, file picked below it).
+                        {
+                            PreferenceSwitchRow(
+                                title = stringResource(R.string.profile_partition_use_image_name),
+                                checked = useImageFileName,
+                                enabled = !adding,
+                                onCheckedChange = { useImageFileName = it },
+                            )
+                        },
+                        {
+                            PreferenceRow(
+                                title = stringResource(R.string.profile_partition_pick_image),
+                                summary = pickedImageFileName?.let {
+                                    stringResource(R.string.profile_partition_image_selected, it)
+                                } ?: stringResource(R.string.profile_partition_image_none),
+                                onClick = { if (!adding) onPickImage() },
+                            )
+                        },
+                    ),
                 )
             }
         },
