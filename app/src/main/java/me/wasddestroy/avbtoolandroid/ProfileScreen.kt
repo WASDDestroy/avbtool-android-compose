@@ -1760,12 +1760,16 @@ private fun SignScopeDialog(
                         }
                     }
                 }
-                Text(
-                    stringResource(R.string.profile_sign_scope_retry),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(top = 8.dp),
-                )
+                // How-to-fix hint: only meaningful when something is actually
+                // unreachable; an all-images-available scope must not nag.
+                if (feasibility.values.any { !it.feasible }) {
+                    Text(
+                        stringResource(R.string.profile_sign_scope_retry),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(top = 8.dp),
+                    )
+                }
             }
         },
         confirmButton = {
