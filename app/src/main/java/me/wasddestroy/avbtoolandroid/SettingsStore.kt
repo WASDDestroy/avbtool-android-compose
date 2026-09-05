@@ -41,7 +41,17 @@ class SettingsStore(private val sp: SharedPreferences) {
             .apply()
     }
 
+    /** SAF tree URI of the partition-dump workspace, persisted independently
+     *  of SettingsUiState because only the partition reader uses it. */
+    fun readPartitionWorkspaceUri(): String? =
+        sp.getString(KEY_PARTITION_WORKSPACE, null)
+
+    fun writePartitionWorkspaceUri(value: String?) {
+        sp.edit().putString(KEY_PARTITION_WORKSPACE, value).apply()
+    }
+
     companion object {
+        private const val KEY_PARTITION_WORKSPACE = "partition_workspace_uri"
         private const val KEY_DYNAMIC_THEME = "dynamic_theme_color"
         private const val KEY_THEME_MODE = "theme_mode"
         private const val KEY_AMOLED_BLACK = "amoled_black"

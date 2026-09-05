@@ -573,4 +573,27 @@
         <item quantity="one">%1$d entry</item>
         <item quantity="other">%1$d entries</item>
     </plurals>
+    <!-- partition reader -->
+    <string name="partition_reader_title">Read partitions</string>
+    <string name="settings_partition_reader">Read device partitions</string>
+    <string name="settings_partition_reader_summary">Dump partitions from /dev/block to a workspace folder (requires root)</string>
+    <string name="partition_root_checking">Checking for root access…</string>
+    <string name="partition_root_no_su">No root is available: no su binary was found on this device.</string>
+    <string name="partition_root_denied">Root access was not granted. Grant it for this app in your root manager (Magisk / KernelSU / APatch) and try again.</string>
+    <string name="partition_workspace">Workspace folder</string>
+    <string name="partition_workspace_none">Not selected</string>
+    <string name="partition_path_by_name" translatable="false">/dev/block/by-name</string>
+    <string name="partition_path_mapper" translatable="false">/dev/block/mapper</string>
+    <string name="partition_loading">Loading partitions…</string>
+    <string name="partition_empty">No partitions found</string>
+    <string name="partition_read">Read</string>
+    <string name="partition_cancel">Cancel</string>
+    <string name="partition_progress">%1$s (%2$d/%3$d) · %4$s / %5$s</string>
+    <string name="partition_done_overwritten">Overwritten existing files: %1$s</string>
+    <string name="partition_cancelled">Cancelled</string>
+    <string name="partition_error_tmp_space">Not enough space in app storage: need %1$s, only %2$s available.</string>
+    <string name="partition_error_workspace_space">Not enough space in the workspace: need %1$s, only %2$s available.</string>
+    <string name="partition_error_enumerate">Failed to list partitions.</string>
+    <string name="partition_error_dd">Failed to read %1$s</string>
+    <string name="partition_error_copy">Failed to save %1$s</string>
 </resources>

@@ -568,4 +568,27 @@
     <plurals name="profile_partition_edit_list_count">
         <item quantity="other">%1$d 条</item>
     </plurals>
+    <!-- 分区读取 -->
+    <string name="partition_reader_title">读取分区</string>
+    <string name="settings_partition_reader">读取设备分区</string>
+    <string name="settings_partition_reader_summary">将 /dev/block 下的分区导出到工作区文件夹（需要 Root）</string>
+    <string name="partition_root_checking">正在检查 Root 权限…</string>
+    <string name="partition_root_no_su">无法使用 Root：设备上未找到 su 可执行文件。</string>
+    <string name="partition_root_denied">未获得 Root 授权。请在 Root 管理器（Magisk / KernelSU / APatch）中授权本应用后重试。</string>
+    <string name="partition_workspace">工作区文件夹</string>
+    <string name="partition_workspace_none">未选择</string>
+    <string name="partition_path_by_name" translatable="false">/dev/block/by-name</string>
+    <string name="partition_path_mapper" translatable="false">/dev/block/mapper</string>
+    <string name="partition_loading">正在加载分区…</string>
+    <string name="partition_empty">未找到分区</string>
+    <string name="partition_read">读取</string>
+    <string name="partition_cancel">取消</string>
+    <string name="partition_progress">%1$s（%2$d/%3$d）· %4$s / %5$s</string>
+    <string name="partition_done_overwritten">已覆盖已有文件：%1$s</string>
+    <string name="partition_cancelled">已取消</string>
+    <string name="partition_error_tmp_space">应用存储空间不足：需要 %1$s，仅有 %2$s 可用。</string>
+    <string name="partition_error_workspace_space">工作区空间不足：需要 %1$s，仅有 %2$s 可用。</string>
+    <string name="partition_error_enumerate">列出分区失败。</string>
+    <string name="partition_error_dd">读取 %1$s 失败</string>
+    <string name="partition_error_copy">保存 %1$s 失败</string>
 </resources>

@@ -15,6 +15,7 @@ import androidx.compose.material.icons.filled.Keyboard
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Palette
+import androidx.compose.material.icons.filled.Storage
 import androidx.compose.material.icons.filled.Style
 import androidx.compose.material.icons.filled.Terminal
 import androidx.compose.material.icons.filled.Tune
@@ -41,6 +42,7 @@ import androidx.compose.ui.unit.dp
 import androidx.core.content.pm.PackageInfoCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import me.wasddestroy.avbtoolandroid.ui.components.PreferenceRow
+import me.wasddestroy.avbtoolandroid.partition.RootProbeCache
 import me.wasddestroy.avbtoolandroid.ui.components.PreferenceSwitchRow
 import me.wasddestroy.avbtoolandroid.ui.components.SettingsList
 import me.wasddestroy.avbtoolandroid.ui.components.preferenceGroup
@@ -53,8 +55,12 @@ fun SettingsScreen(
     modifier: Modifier = Modifier,
     viewModel: SettingsViewModel,
     onOpenConsole: () -> Unit = {},
+    onOpenPartitionReader: () -> Unit = {},
 ) {
     val settings by viewModel.uiState.collectAsStateWithLifecycle()
+    // Root availability is probed when the partition reader screen opens; once
+    // a probe has failed, the entry row stays disabled for this process.
+    val partitionReaderEnabled = !RootProbeCache.lastProbeFailed
     var showThemeModeDialog by rememberSaveable { mutableStateOf(false) }
     var showLanguageDialog by rememberSaveable { mutableStateOf(false) }
     var showColorSpecDialog by rememberSaveable { mutableStateOf(false) }
@@ -80,6 +86,15 @@ fun SettingsScreen(
                     summary = stringResource(R.string.settings_console_summary),
                     iconContent = { SettingsIcon(Icons.Filled.Terminal) },
                     onClick = onOpenConsole,
+                )
+            }
+            row("partition_reader") {
+                PreferenceRow(
+                    title = stringResource(R.string.settings_partition_reader),
+                    summary = stringResource(R.string.settings_partition_reader_summary),
+                    iconContent = { SettingsIcon(Icons.Filled.Storage) },
+                    enabled = partitionReaderEnabled,
+                    onClick = onOpenPartitionReader,
                 )
             }
             row("dynamic_theme_color") {

@@ -21,6 +21,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LocalContentColor
@@ -312,6 +313,39 @@ fun PreferenceSwitchRow(
         role = Role.Switch,
         trailing = {
             Switch(
+                checked = checked,
+                onCheckedChange = null,
+                enabled = enabled,
+            )
+        },
+    )
+}
+
+@Composable
+fun PreferenceCheckboxRow(
+    checked: Boolean,
+    title: String,
+    modifier: Modifier = Modifier,
+    summary: String? = null,
+    enabled: Boolean = true,
+    onCheckedChange: (Boolean) -> Unit,
+) {
+    PreferenceRow(
+        title = title,
+        modifier = modifier,
+        summary = summary,
+        enabled = enabled,
+        // The whole row consumes the click and drives the checked state; the
+        // Checkbox is display-only (onCheckedChange = null) so taps anywhere on
+        // the row toggle it exactly once.
+        onClick = if (enabled) {
+            { onCheckedChange(!checked) }
+        } else {
+            null
+        },
+        role = Role.Checkbox,
+        trailing = {
+            Checkbox(
                 checked = checked,
                 onCheckedChange = null,
                 enabled = enabled,

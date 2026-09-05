@@ -1,0 +1,411 @@
+package me.wasddestroy.avbtoolandroid.partition
+
+import android.content.Context
+import android.net.Uri
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.ViewModelProvider.AndroidViewModelFactory.Companion.APPLICATION_KEY
+import androidx.lifecycle.viewModelScope
+import androidx.lifecycle.viewmodel.initializer
+import androidx.lifecycle.viewmodel.viewModelFactory
+import java.io.File
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import me.wasddestroy.avbtoolandroid.R
+import me.wasddestroy.avbtoolandroid.SettingsStore
+
+enum class RootCheckState {
+    CHECKING,
+    AVAILABLE,
+    /** No su binary exists anywhere on this device. */
+    NO_SU,
+    /** A su binary exists but the app was not granted root (or timed out). */
+    DENIED,
+}
+
+enum class PartitionSource { BY_NAME, MAPPER }
+
+data class PartitionEntry(
+    val name: String,
+    /** Resolved block device, e.g. /dev/block/dm-3; the dedup key. */
+    val device: String,
+    val sizeBytes: Long,
+    val source: PartitionSource,
+    val checked: Boolean = false,
+)
+
+sealed interface ReadState {
+    data object Idle : ReadState
+
+    /** Progress over unique block devices; [writtenBytes] is the dd temp file size. */
+    data class Running(
+        val currentName: String,
+        val deviceIndex: Int,
+        val deviceCount: Int,
+        val writtenBytes: Long,
+        val totalBytes: Long,
+    ) : ReadState
+
+    data class Done(
+        val savedNames: List<String>,
+        val overwrittenNames: List<String>,
+    ) : ReadState
+
+    data object Cancelled : ReadState
+    data class Error(val message: String) : ReadState
+}
+
+data class PartitionReaderUiState(
+    val rootState: RootCheckState = RootCheckState.CHECKING,
+    val workspaceUri: String? = null,
+    val workspaceName: String? = null,
+    val loadingPartitions: Boolean = false,
+    val byName: List<PartitionEntry> = emptyList(),
+    val mapper: List<PartitionEntry> = emptyList(),
+    val enumerationError: String? = null,
+    val readState: ReadState = ReadState.Idle,
+)
+
+class PartitionReaderViewModel(
+    private val context: Context,
+    private val store: SettingsStore,
+) : ViewModel() {
+
+    private val _uiState = MutableStateFlow(PartitionReaderUiState())
+    val uiState: StateFlow<PartitionReaderUiState> = _uiState.asStateFlow()
+
+    private var shell: RootShell? = null
+    private var readJob: Job? = null
+    private var cancelRequested = false
+    private var currentDdPid: Int? = null
+
+    init {
+        checkRoot()
+        restoreWorkspace()
+    }
+
+    private fun checkRoot() {
+        viewModelScope.launch(Dispatchers.IO) {
+            val suPath = RootShell.detect()
+            if (suPath != null) {
+                shell?.close()
+                shell = RootShell.open(suPath)
+                RootProbeCache.record(false)
+                _uiState.update { it.copy(rootState = RootCheckState.AVAILABLE) }
+                loadPartitions()
+            } else {
+                val denied = RootShell.hasSuBinary()
+                RootProbeCache.record(true)
+                _uiState.update {
+                    it.copy(
+                        rootState = if (denied) RootCheckState.DENIED else RootCheckState.NO_SU,
+                    )
+                }
+            }
+        }
+    }
+
+    private fun loadPartitions() {
+        val session = shell ?: return
+        _uiState.update { it.copy(loadingPartitions = true, enumerationError = null) }
+        val byName = enumerate(session, "/dev/block/by-name", PartitionSource.BY_NAME)
+        val mapper = enumerate(session, "/dev/block/mapper", PartitionSource.MAPPER)
+        _uiState.update {
+            it.copy(
+                loadingPartitions = false,
+                byName = byName ?: emptyList(),
+                mapper = mapper ?: emptyList(),
+                enumerationError = if (byName == null && mapper == null) {
+                    context.getString(R.string.partition_error_enumerate)
+                } else {
+                    null
+                },
+            )
+        }
+    }
+
+    /** Returns null when the directory cannot be listed at all. */
+    private fun enumerate(session: RootShell, dir: String, source: PartitionSource): List<PartitionEntry>? {
+        val result = session.run(
+            "if [ -d '$dir' ]; then for f in '$dir'/*; do printf '%s\\t%s\\t%s\\n' " +
+                "\"\${f##*/}\" \"\$(readlink -f \"\$f\")\" \"\$(blockdev --getsize64 \"\$f\" 2>/dev/null)\"; done; fi",
+        )
+        if (!result.success && result.stdout.isEmpty()) return null
+        return result.stdout.mapNotNull { line ->
+            val parts = line.split('\t')
+            if (parts.size < 3) return@mapNotNull null
+            PartitionEntry(
+                name = parts[0],
+                device = parts[1],
+                sizeBytes = parts[2].toLongOrNull() ?: 0L,
+                source = source,
+            )
+        }.sortedBy { it.name }
+    }
+
+    private fun restoreWorkspace() {
+        val saved = store.readPartitionWorkspaceUri() ?: return
+        viewModelScope.launch(Dispatchers.IO) {
+            val uri = Uri.parse(saved)
+            val persisted = context.contentResolver.persistedUriPermissions.any {
+                it.uri == uri && it.isWritePermission
+            }
+            if (!persisted) {
+                store.writePartitionWorkspaceUri(null)
+                return@launch
+            }
+            _uiState.update {
+                it.copy(workspaceUri = saved, workspaceName = WorkspaceFolder.displayName(context, uri))
+            }
+        }
+    }
+
+    fun setWorkspace(uri: Uri) {
+        viewModelScope.launch(Dispatchers.IO) {
+            store.writePartitionWorkspaceUri(uri.toString())
+            _uiState.update {
+                it.copy(
+                    workspaceUri = uri.toString(),
+                    workspaceName = WorkspaceFolder.displayName(context, uri),
+                    readState = ReadState.Idle,
+                )
+            }
+        }
+    }
+
+    fun togglePartition(entry: PartitionEntry) {
+        _uiState.update { state ->
+            fun toggle(list: List<PartitionEntry>) = list.map {
+                if (it.name == entry.name && it.source == entry.source) {
+                    it.copy(checked = !it.checked)
+                } else {
+                    it
+                }
+            }
+            state.copy(
+                byName = toggle(state.byName),
+                mapper = toggle(state.mapper),
+                readState = ReadState.Idle,
+            )
+        }
+    }
+
+    val canRead: Boolean
+        get() {
+            val state = _uiState.value
+            return state.rootState == RootCheckState.AVAILABLE &&
+                state.workspaceUri != null &&
+                (state.byName + state.mapper).any { it.checked } &&
+                state.readState !is ReadState.Running
+        }
+
+    fun startOrCancelRead() {
+        if (_uiState.value.readState is ReadState.Running) {
+            cancelRead()
+        } else {
+            startRead()
+        }
+    }
+
+    private fun startRead() {
+        if (!canRead) return
+        val state = _uiState.value
+        val session = shell ?: return
+        val workspace = state.workspaceUri ?: return
+        readJob = viewModelScope.launch(Dispatchers.IO) {
+            cancelRequested = false
+            val selected = (state.byName + state.mapper).filter { it.checked }
+            // Dedup: by-name and mapper entries can resolve to the same dm
+            // device; read each unique block device once, then copy it out
+            // once per partition name.
+            val groups = selected.groupBy { it.device }.toList()
+            val totalBytes = groups.sumOf { (_, entries) -> entries.first().sizeBytes }
+
+            val tmpDir = context.getExternalFilesDir(null) ?: context.filesDir
+            val tmp = File(tmpDir, TEMP_FILE_NAME)
+            val needed = formatBytes(totalBytes)
+            val tmpFree = tmpDir.usableSpace
+            if (tmpFree < totalBytes) {
+                _uiState.update {
+                    it.copy(readState = ReadState.Error(
+                        context.getString(
+                            R.string.partition_error_tmp_space,
+                            needed, formatBytes(tmpFree),
+                        ),
+                    ))
+                }
+                return@launch
+            }
+            val treeUri = Uri.parse(workspace)
+            WorkspaceFolder.freeSpace(context, treeUri)?.let { free ->
+                if (free < totalBytes) {
+                    _uiState.update {
+                        it.copy(readState = ReadState.Error(
+                            context.getString(
+                                R.string.partition_error_workspace_space,
+                                needed, formatBytes(free),
+                            ),
+                        ))
+                    }
+                    return@launch
+                }
+            }
+
+            val savedNames = mutableListOf<String>()
+            val overwrittenNames = mutableListOf<String>()
+            var cancelled = false
+
+            for ((index, group) in groups.withIndex()) {
+                val (device, entries) = group
+                val size = entries.first().sizeBytes
+                _uiState.update {
+                    it.copy(readState = ReadState.Running(
+                        currentName = entries.first().name,
+                        deviceIndex = index + 1,
+                        deviceCount = groups.size,
+                        writtenBytes = 0L,
+                        totalBytes = size,
+                    ))
+                }
+
+                tmp.delete()
+                val pidLine = shellCommandFor(device, tmp.absolutePath)
+                val progressJob = launch {
+                    while (isActive) {
+                        delay(500)
+                        _uiState.update { current ->
+                            val running = current.readState as? ReadState.Running ?: return@update current
+                            current.copy(readState = running.copy(writtenBytes = tmp.length()))
+                        }
+                    }
+                }
+                val result = session.run(pidLine, timeoutMs = DD_TIMEOUT_MS)
+                progressJob.cancel()
+
+                val pid = result.stdout.firstOrNull()?.trim()?.toIntOrNull()
+                currentDdPid = pid
+
+                if (cancelRequested) {
+                    pid?.let { session.submit("kill -9 $it") }
+                    // Give dd a moment to die so the next session command is clean.
+                    session.run("true", timeoutMs = 5_000)
+                    cancelled = true
+                    break
+                }
+                if (!result.success) {
+                    _uiState.update {
+                        it.copy(readState = ReadState.Error(
+                            context.getString(R.string.partition_error_dd, device) +
+                                result.stderr.takeIf { s -> s.isNotBlank() }?.let { s -> "\n$s" }.orEmpty(),
+                        ))
+                    }
+                    tmp.delete()
+                    return@launch
+                }
+
+                for (entry in entries) {
+                    val fileName = entry.name + IMG_SUFFIX
+                    val outcome = copyToWorkspace(tmp, treeUri, fileName)
+                    when (outcome) {
+                        CopyOutcome.CREATED -> savedNames.add(fileName)
+                        CopyOutcome.OVERWRITTEN -> overwrittenNames.add(fileName)
+                        CopyOutcome.FAILED -> {
+                            _uiState.update {
+                                it.copy(readState = ReadState.Error(
+                                    context.getString(R.string.partition_error_copy, fileName),
+                                ))
+                            }
+                            tmp.delete()
+                            return@launch
+                        }
+                    }
+                }
+                tmp.delete()
+            }
+
+            _uiState.update {
+                it.copy(readState = if (cancelled) {
+                    ReadState.Cancelled
+                } else {
+                    ReadState.Done(savedNames.toList(), overwrittenNames.toList())
+                })
+            }
+        }
+    }
+
+    private fun shellCommandFor(device: String, outputPath: String): String =
+        "sh -c 'echo \$\$; exec dd if=\"$device\" of=\"$outputPath\" bs=4194304'"
+
+    private suspend fun copyToWorkspace(tmp: File, treeUri: Uri, fileName: String): CopyOutcome =
+        withContext(Dispatchers.IO) {
+            val existed = WorkspaceFolder.childExists(context, treeUri, fileName)
+            if (existed && !WorkspaceFolder.deleteChild(context, treeUri, fileName)) {
+                return@withContext CopyOutcome.FAILED
+            }
+            val docUri = WorkspaceFolder.createChild(context, treeUri, fileName)
+                ?: return@withContext CopyOutcome.FAILED
+            val output = WorkspaceFolder.openOutput(context, docUri)
+                ?: return@withContext CopyOutcome.FAILED
+            try {
+                output.use { os ->
+                    tmp.inputStream().use { input ->
+                        input.copyTo(os, COPY_BUFFER_BYTES)
+                    }
+                    os.flush()
+                }
+            } catch (_: Exception) {
+                return@withContext CopyOutcome.FAILED
+            }
+            if (existed) CopyOutcome.OVERWRITTEN else CopyOutcome.CREATED
+        }
+
+    private fun cancelRead() {
+        cancelRequested = true
+        currentDdPid?.let { pid -> shell?.submit("kill -9 $pid") }
+    }
+
+    override fun onCleared() {
+        currentDdPid?.let { pid -> shell?.submit("kill -9 $pid") }
+        shell?.close()
+        super.onCleared()
+    }
+
+    private enum class CopyOutcome { CREATED, OVERWRITTEN, FAILED }
+
+    companion object {
+        private const val TEMP_FILE_NAME = "partition_dump.img"
+        private const val IMG_SUFFIX = ".img"
+        private const val COPY_BUFFER_BYTES = 1 shl 16
+        /** Large partitions can take a long time; effectively "no timeout". */
+        private const val DD_TIMEOUT_MS = 6L * 60 * 60 * 1000
+
+        val factory: ViewModelProvider.Factory = viewModelFactory {
+            initializer {
+                val app = this[APPLICATION_KEY]!!
+                PartitionReaderViewModel(
+                    context = app.applicationContext,
+                    store = SettingsStore(
+                        app.getSharedPreferences("application_configs", Context.MODE_PRIVATE),
+                    ),
+                )
+            }
+        }
+    }
+}
+
+fun formatBytes(bytes: Long): String {
+    if (bytes < 1024) return "$bytes B"
+    val kb = bytes / 1024.0
+    if (kb < 1024) return String.format(java.util.Locale.US, "%.1f KB", kb)
+    val mb = kb / 1024.0
+    if (mb < 1024) return String.format(java.util.Locale.US, "%.1f MB", mb)
+    return String.format(java.util.Locale.US, "%.2f GB", mb / 1024.0)
+}

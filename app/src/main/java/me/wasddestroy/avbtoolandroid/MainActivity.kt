@@ -47,6 +47,7 @@ import android.os.LocaleList
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import me.wasddestroy.avbtoolandroid.ui.theme.AVBToolAndroidTheme
+import me.wasddestroy.avbtoolandroid.partition.PartitionReaderScreen
 import me.wasddestroy.avbtoolandroid.ui.theme.ThemeMode
 import java.util.concurrent.CancellationException
 import kotlinx.coroutines.launch
@@ -99,6 +100,7 @@ fun AVBToolAndroidApp() {
 
     var commandId by rememberSaveable { mutableStateOf<String?>(null) }
     var consoleOpen by rememberSaveable { mutableStateOf(false) }
+    var partitionReaderOpen by rememberSaveable { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
     val commandBackProgress = remember { Animatable(0f) }
 
@@ -111,16 +113,29 @@ fun AVBToolAndroidApp() {
         }
     }
 
-    BackHandler(enabled = commandId != null || consoleOpen) {
-        if (commandId != null) closeCommand() else consoleOpen = false
+    fun closeOverlays() {
+        if (commandId != null) {
+            closeCommand()
+        } else if (consoleOpen) {
+            consoleOpen = false
+        } else {
+            partitionReaderOpen = false
+        }
     }
 
-    PredictiveBackHandler(enabled = commandId == null && consoleOpen && settings.predictiveBackGesture) { progress ->
+    BackHandler(enabled = commandId != null || consoleOpen || partitionReaderOpen) {
+        closeOverlays()
+    }
+
+    PredictiveBackHandler(
+        enabled = commandId == null && (consoleOpen || partitionReaderOpen) && settings.predictiveBackGesture,
+    ) { progress ->
         try {
             progress.collect { event ->
                 commandBackProgress.snapTo(event.progress)
             }
             consoleOpen = false
+            partitionReaderOpen = false
         } catch (e: CancellationException) {
             scope.launch {
                 commandBackProgress.animateTo(0f, tween(200))
@@ -129,8 +144,8 @@ fun AVBToolAndroidApp() {
         }
     }
 
-    LaunchedEffect(commandId, consoleOpen) {
-        if (commandId != null || consoleOpen) {
+    LaunchedEffect(commandId, consoleOpen, partitionReaderOpen) {
+        if (commandId != null || consoleOpen || partitionReaderOpen) {
             commandBackProgress.snapTo(1f)
             commandBackProgress.animateTo(0f, tween(300))
         } else {
@@ -147,9 +162,10 @@ fun AVBToolAndroidApp() {
     ) {
         Box(Modifier.fillMaxSize()) {
             RootScreen(
-                isTopDestination = commandId == null && !consoleOpen,
+                isTopDestination = commandId == null && !consoleOpen && !partitionReaderOpen,
                 onOpenCommand = { id -> commandId = id },
                 onOpenConsole = { consoleOpen = true },
+                onOpenPartitionReader = { partitionReaderOpen = true },
                 predictiveBackGesture = settings.predictiveBackGesture,
                 settingsViewModel = settingsViewModel,
             )
@@ -176,6 +192,15 @@ fun AVBToolAndroidApp() {
                             translationX = commandBackProgress.value * size.width
                         },
                 )
+            } else if (partitionReaderOpen) {
+                PartitionReaderScreen(
+                    onBack = { partitionReaderOpen = false },
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .graphicsLayer {
+                            translationX = commandBackProgress.value * size.width
+                        },
+                )
             }
         }
     }
@@ -187,6 +212,7 @@ private fun RootScreen(
     isTopDestination: Boolean,
     onOpenCommand: (String) -> Unit,
     onOpenConsole: () -> Unit,
+    onOpenPartitionReader: () -> Unit,
     predictiveBackGesture: Boolean,
     settingsViewModel: SettingsViewModel,
 ) {
@@ -297,6 +323,7 @@ private fun RootScreen(
                         modifier = Modifier.fillMaxSize(),
                         viewModel = settingsViewModel,
                         onOpenConsole = onOpenConsole,
+                        onOpenPartitionReader = onOpenPartitionReader,
                     )
                 }
             }
