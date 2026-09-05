@@ -596,4 +596,5 @@
     <string name="partition_error_enumerate">Failed to list partitions.</string>
     <string name="partition_error_dd">Failed to read %1$s</string>
     <string name="partition_error_copy">Failed to save %1$s</string>
+    <string name="partition_hint_select_workspace">Select a workspace folder first to enable reading.</string>
 </resources>

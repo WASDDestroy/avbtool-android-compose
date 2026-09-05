@@ -100,15 +100,27 @@ fun PartitionReaderScreen(
                     style = MaterialTheme.typography.bodyMedium,
                 )
             }
-            RootCheckState.AVAILABLE -> PartitionList(
-                state = state,
-                onPickWorkspace = { treePicker.launch(null) },
-                onToggle = viewModel::togglePartition,
-                onReadClick = viewModel::startOrCancelRead,
+            RootCheckState.AVAILABLE -> Column(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(contentPadding),
-            )
+            ) {
+                PartitionList(
+                    state = state,
+                    onPickWorkspace = { treePicker.launch(null) },
+                    onToggle = viewModel::togglePartition,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f),
+                )
+                // Pinned below the scrolling list so Read/Cancel is always
+                // reachable without scrolling to the end.
+                ReadButtonSection(
+                    state = state,
+                    enabled = readEnabled(state),
+                    onClick = viewModel::startOrCancelRead,
+                )
+            }
         }
     }
 }
@@ -137,7 +149,6 @@ private fun PartitionList(
     state: PartitionReaderUiState,
     onPickWorkspace: () -> Unit,
     onToggle: (PartitionEntry) -> Unit,
-    onReadClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     SettingsList(
@@ -179,8 +190,7 @@ private fun PartitionList(
         }
 
         if (!state.loadingPartitions && state.enumerationError == null) {
-            item("by_name") {
-                PreferenceGroup(title = stringResource(R.string.partition_path_by_name)) {
+            item("by_name") {                PreferenceGroup(title = stringResource(R.string.partition_path_by_name)) {
                     if (state.byName.isEmpty()) {
                         row("empty") {
                             EmptyPartitionRow()
@@ -209,10 +219,6 @@ private fun PartitionList(
                     }
                 }
             }
-        }
-
-        item("read") {
-            ReadButtonSection(state = state, enabled = readEnabled(state), onClick = onReadClick)
         }
     }
 }
@@ -248,6 +254,14 @@ private fun ReadButtonSection(
 ) {
     val running = state.readState as? ReadState.Running
     Column(Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
+        if (state.workspaceUri == null && running == null) {
+            Text(
+                text = stringResource(R.string.partition_hint_select_workspace),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(bottom = 8.dp),
+            )
+        }
         Button(
             onClick = onClick,
             enabled = enabled || running != null,

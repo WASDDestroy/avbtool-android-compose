@@ -64,13 +64,13 @@ internal object WorkspaceFolder {
 
     /**
      * Free bytes of the storage the tree lives on. Only resolvable on API 30+;
-     * null means "unknown, skip the check".
+     * null means "unknown, skip the check". Some tree URIs cannot be mapped to
+     * a storage volume, which throws — treat that as unknown too.
      */
     fun freeSpace(context: Context, treeUri: Uri): Long? {
         if (Build.VERSION.SDK_INT < 30) return null
         val manager = context.getSystemService(StorageManager::class.java) ?: return null
-        val volume = manager.getStorageVolume(treeUri) ?: return null
-        return volume.directory?.usableSpace
+        return runCatching { manager.getStorageVolume(treeUri)?.directory?.usableSpace }.getOrNull()
     }
 
     private fun childUri(context: Context, treeUri: Uri, name: String): Uri? {
