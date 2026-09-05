@@ -498,11 +498,16 @@ fun ProfileScreen(
                         }
                     }
                     row("partition_actions") {
+                        // Partition specs are matched against the signing key
+                        // material; without any imported key the operations
+                        // have no effect, so both actions stay disabled until
+                        // a key exists.
+                        val keysReady = uiState.keys.isNotEmpty()
                         SegmentActionsRow(
                             addLabel = stringResource(R.string.profile_partition_add),
                             secondaryLabel = stringResource(R.string.profile_partition_delete),
-                            addEnabled = true,
-                            secondaryEnabled = uiState.activeSpecs.isNotEmpty(),
+                            addEnabled = keysReady,
+                            secondaryEnabled = keysReady && uiState.activeSpecs.isNotEmpty(),
                             onAdd = { showAddPartitionDialog = true },
                             onSecondary = { showDeletePartitionsDialog = true },
                         )
