@@ -419,6 +419,12 @@
     <string name="profile_delete">Delete profile</string>
     <string name="profile_delete_title">Delete profile</string>
     <string name="profile_delete_message">Delete profile %s? This cannot be undone.</string>
+    <string name="profile_delete_multi_message">Delete %s? This cannot be undone.</string>
+    <string name="profile_delete_select_title">Select profiles to delete</string>
+    <string name="profile_export_select_title">Select profiles to export</string>
+    <string name="profile_edit">Edit profiles</string>
+    <string name="profile_add_create">New profile</string>
+    <string name="profile_add_import_local">Import from local storage</string>
     <string name="profile_sign">Sign</string>
     <string name="profile_sign_no_active">Select a profile first.</string>
     <string name="profile_sign_modify_message">Signing overwrites the selected input images in place (footer partitions). If a SAF provider does not allow in-place writing, that image is processed on a private copy and exported afterwards. Continue?</string>

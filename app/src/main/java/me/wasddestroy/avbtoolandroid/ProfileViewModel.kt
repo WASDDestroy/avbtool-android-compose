@@ -168,8 +168,8 @@ data class ProfileUiState(
     val result: ProfileSignResult? = null,
     /** Output files awaiting "save via SAF"; consumed by the CreateDocument launcher. */
     val pendingExports: List<PendingExport> = emptyList(),
-    /** Zip bytes awaiting "save via SAF" after an export-profile action, one-shot. */
-    val pendingProfileZip: Pair<String, ByteArray>? = null,
+    /** Zip archives awaiting "save via SAF" after a profile export, one at a time. */
+    val pendingProfileZips: List<Pair<String, ByteArray>> = emptyList(),
     /** Whether generated vbmeta images also get the profile's configured props. */
     val addPropsToVbmeta: Boolean = false,
     /** Per-partition display names of the picked input images (active profile only). */
@@ -389,14 +389,22 @@ class ProfileViewModel(
         }
     }
 
-    fun deleteProfile(id: String) {
+    /**
+     * Deletes the given profiles in one pass. Deactivates the active profile
+     * if it is among them and drops every per-profile selection record, then
+     * releases persistable grants only after removal so shared URIs survive.
+     */
+    fun deleteProfiles(ids: Collection<String>) {
+        if (ids.isEmpty()) return
         viewModelScope.launch {
-            withContext(Dispatchers.IO) { store.deleteProfile(id) }
-            if (_uiState.value.activeId == id) {
+            withContext(Dispatchers.IO) {
+                ids.forEach { store.deleteProfile(it) }
+            }
+            if (_uiState.value.activeId in ids) {
                 activeStore.write(null)
             }
-            keyActivationStore.write(id, null)
-            imageSelections.keys.removeAll { it.startsWith("$id:") }
+            ids.forEach { keyActivationStore.write(it, null) }
+            imageSelections.keys.removeAll { key -> ids.any { key.startsWith("$it:") } }
             // Drop grants only after removal, so shared URIs survive.
             imageSelections.values.forEach { releasePersistableGrant(it.toUri()) }
             imageSelectionStore.write(imageSelections)
@@ -1114,37 +1122,39 @@ class ProfileViewModel(
     }
 
     fun dismissProfileZip() {
-        _uiState.update { it.copy(pendingProfileZip = null) }
+        _uiState.update { it.copy(pendingProfileZips = it.pendingProfileZips.drop(1)) }
     }
 
     fun consumeProfileZip() {
-        _uiState.update { it.copy(pendingProfileZip = null) }
+        _uiState.update { it.copy(pendingProfileZips = it.pendingProfileZips.drop(1)) }
     }
 
     /**
-     * Packs the active profile into an import-format zip. Partition images
-     * the user picked are copied to a separate scratch dir during signing and
-     * never live inside the profile folder, so nothing else needs excluding.
+     * Packs the given profiles into import-format zips, one per profile.
+     * Partition images the user picked are copied to a separate scratch dir
+     * during signing and never live inside the profile folder, so nothing else
+     * needs excluding. The screen saves the finished zips one SAF dialog at a
+     * time, exactly like the sign-output export queue.
      */
-    fun exportActiveProfile() {
+    fun exportProfiles(ids: Collection<String>) {
         val state = _uiState.value
-        val profile = state.profiles.find { it.id == state.activeId }
-        if (profile == null) {
-            _uiState.update { it.copy(message = R.string.profile_sign_no_active) }
+        val targets = state.profiles.filter { it.id in ids }
+        if (targets.isEmpty()) {
+            _uiState.update { it.copy(message = R.string.profile_export_failed) }
             return
         }
         if (state.exporting) return
         viewModelScope.launch {
             _uiState.update { it.copy(exporting = true, message = null) }
-            val zip = withContext(Dispatchers.IO) {
-                store.exportProfileZip(profile.id, excludePaths = imageEntryPaths(profile.id))
+            val zips = withContext(Dispatchers.IO) {
+                targets.mapNotNull { profile ->
+                    store.exportProfileZip(profile.id, excludePaths = imageEntryPaths(profile.id))
+                        ?.let { "${profile.id}.zip" to it }
+                }
             }
             _uiState.update {
-                if (zip != null) {
-                    it.copy(
-                        exporting = false,
-                        pendingProfileZip = "${profile.id}.zip" to zip,
-                    )
+                if (zips.isNotEmpty()) {
+                    it.copy(exporting = false, pendingProfileZips = zips)
                 } else {
                     it.copy(exporting = false, message = R.string.profile_export_failed)
                 }

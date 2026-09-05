@@ -80,6 +80,8 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import java.math.BigInteger
 import me.wasddestroy.avbtoolandroid.ui.components.DialogConfirmButton
 import me.wasddestroy.avbtoolandroid.ui.components.DialogDismissButton
+import me.wasddestroy.avbtoolandroid.ui.components.MultiSelectDialog
+import me.wasddestroy.avbtoolandroid.ui.components.MultiSelectItem
 import me.wasddestroy.avbtoolandroid.ui.components.PreferenceGroup
 import me.wasddestroy.avbtoolandroid.ui.components.PreferenceRow
 import me.wasddestroy.avbtoolandroid.ui.components.PreferenceSwitchRow
@@ -100,9 +102,14 @@ fun ProfileScreen(
     @Suppress("DEPRECATION")
     val clipboard = LocalClipboardManager.current
     val copiedMessage = stringResource(R.string.copied_to_clipboard)
-    var pendingDeleteId by remember { mutableStateOf<String?>(null) }
     var confirmOverwrite by remember { mutableStateOf(false) }
     var showCreateDialog by remember { mutableStateOf(false) }
+    var showAddProfileSheet by remember { mutableStateOf(false) }
+    var showEditProfileSheet by remember { mutableStateOf(false) }
+    var showExportProfilesDialog by remember { mutableStateOf(false) }
+    var showDeleteProfilesDialog by remember { mutableStateOf(false) }
+    // Multi-select delete outcome awaiting the confirmation dialog.
+    var pendingDeleteProfileIds by remember { mutableStateOf<Set<String>?>(null) }
     var showAddPartitionDialog by remember { mutableStateOf(false) }
     var showDeletePartitionsDialog by remember { mutableStateOf(false) }
     var pendingDeletePartitions by remember { mutableStateOf<Set<String>?>(null) }
@@ -273,7 +280,7 @@ fun ProfileScreen(
     val exportProfileDocument = rememberLauncherForActivityResult(
         ActivityResultContracts.CreateDocument("application/zip"),
     ) { uri: Uri? ->
-        val zip = uiState.pendingProfileZip
+        val zip = uiState.pendingProfileZips.firstOrNull()
         if (uri != null && zip != null) {
             runCatching {
                 context.contentResolver.openOutputStream(uri)?.use { out ->
@@ -326,7 +333,7 @@ fun ProfileScreen(
         )
     }
 
-    val pendingZip = uiState.pendingProfileZip
+    val pendingZip = uiState.pendingProfileZips.firstOrNull()
     if (pendingZip != null) {
         AlertDialog(
             onDismissRequest = { viewModel.dismissProfileZip() },
@@ -389,23 +396,19 @@ fun ProfileScreen(
                                 profile = profile,
                                 selected = uiState.activeId == profile.id,
                                 onSelect = { viewModel.selectProfile(profile.id) },
-                                onDelete = { pendingDeleteId = profile.id },
                             )
                         }
                     }
                 }
-                row("import_export") {
-                    ImportExportRow(
-                        onImport = { importLauncher.launch("*/*") },
-                        onExport = viewModel::exportActiveProfile,
-                        importEnabled = !uiState.importing,
-                        exportEnabled = !uiState.exporting && uiState.activeId != null,
-                    )
-                }
-                row("create") {
-                    CreateProfileRow(
-                        enabled = !uiState.importing,
-                        onClick = { showCreateDialog = true },
+                row("profile_actions") {
+                    SegmentActionsRow(
+                        addLabel = stringResource(R.string.profile_create),
+                        secondaryLabel = stringResource(R.string.profile_edit),
+                        secondaryIcon = Icons.Filled.Edit,
+                        addEnabled = !uiState.importing,
+                        secondaryEnabled = true,
+                        onAdd = { showAddProfileSheet = true },
+                        onSecondary = { showEditProfileSheet = true },
                     )
                 }
             }
@@ -432,11 +435,11 @@ fun ProfileScreen(
                     row("key_actions") {
                         SegmentActionsRow(
                             addLabel = stringResource(R.string.profile_key_add),
-                            deleteLabel = stringResource(R.string.profile_key_delete),
+                            secondaryLabel = stringResource(R.string.profile_key_delete),
                             addEnabled = true,
-                            deleteEnabled = keys.isNotEmpty(),
+                            secondaryEnabled = keys.isNotEmpty(),
                             onAdd = { showAddKeyDialog = true },
-                            onDelete = { showDeleteKeysDialog = true },
+                            onSecondary = { showDeleteKeysDialog = true },
                         )
                     }
                 }
@@ -497,11 +500,11 @@ fun ProfileScreen(
                     row("partition_actions") {
                         SegmentActionsRow(
                             addLabel = stringResource(R.string.profile_partition_add),
-                            deleteLabel = stringResource(R.string.profile_partition_delete),
+                            secondaryLabel = stringResource(R.string.profile_partition_delete),
                             addEnabled = true,
-                            deleteEnabled = uiState.activeSpecs.isNotEmpty(),
+                            secondaryEnabled = uiState.activeSpecs.isNotEmpty(),
                             onAdd = { showAddPartitionDialog = true },
-                            onDelete = { showDeletePartitionsDialog = true },
+                            onSecondary = { showDeletePartitionsDialog = true },
                         )
                     }
                 }
@@ -623,22 +626,22 @@ fun ProfileScreen(
         )
     }
 
-    pendingDeleteId?.let { id ->
-        val profile = uiState.profiles.find { it.id == id }
+    pendingDeleteProfileIds?.let { ids ->
+        val names = uiState.profiles.filter { it.id in ids }.joinToString(", ") { it.name }
         AlertDialog(
-            onDismissRequest = { pendingDeleteId = null },
+            onDismissRequest = { pendingDeleteProfileIds = null },
             title = { Text(stringResource(R.string.profile_delete_title)) },
-            text = { Text(stringResource(R.string.profile_delete_message, profile?.name ?: id)) },
+            text = { Text(stringResource(R.string.profile_delete_multi_message, names)) },
             confirmButton = {
                 DialogConfirmButton(onClick = {
-                    viewModel.deleteProfile(id)
-                    pendingDeleteId = null
+                    viewModel.deleteProfiles(ids)
+                    pendingDeleteProfileIds = null
                 }) {
                     Text(stringResource(R.string.command_continue))
                 }
             },
             dismissButton = {
-                DialogDismissButton(onClick = { pendingDeleteId = null }) {
+                DialogDismissButton(onClick = { pendingDeleteProfileIds = null }) {
                     Text(stringResource(R.string.command_cancel))
                 }
             },
@@ -652,6 +655,59 @@ fun ProfileScreen(
             onConfirm = { id, name ->
                 showCreateDialog = false
                 viewModel.createProfile(id, name)
+            },
+        )
+    }
+
+    if (showAddProfileSheet) {
+        AddProfileSheet(
+            onDismiss = { showAddProfileSheet = false },
+            onCreate = {
+                showAddProfileSheet = false
+                showCreateDialog = true
+            },
+            onImportLocal = {
+                showAddProfileSheet = false
+                importLauncher.launch("*/*")
+            },
+        )
+    }
+
+    if (showEditProfileSheet) {
+        EditProfileSheet(
+            hasProfiles = uiState.profiles.isNotEmpty(),
+            onDismiss = { showEditProfileSheet = false },
+            onExport = {
+                showEditProfileSheet = false
+                showExportProfilesDialog = true
+            },
+            onDelete = {
+                showEditProfileSheet = false
+                showDeleteProfilesDialog = true
+            },
+        )
+    }
+
+    if (showExportProfilesDialog) {
+        MultiSelectDialog(
+            title = stringResource(R.string.profile_export_select_title),
+            items = uiState.profiles.map { MultiSelectItem(it.id, it.name, it.id) },
+            onDismiss = { showExportProfilesDialog = false },
+            onConfirm = { ids ->
+                showExportProfilesDialog = false
+                viewModel.exportProfiles(ids)
+            },
+        )
+    }
+
+    if (showDeleteProfilesDialog) {
+        MultiSelectDialog(
+            title = stringResource(R.string.profile_delete_select_title),
+            items = uiState.profiles.map { MultiSelectItem(it.id, it.name, it.id) },
+            onDismiss = { showDeleteProfilesDialog = false },
+            onConfirm = { ids ->
+                showDeleteProfilesDialog = false
+                pendingDeleteProfileIds = ids
             },
         )
     }
@@ -810,8 +866,9 @@ fun ProfileScreen(
     }
 
     if (showDeleteKeysDialog) {
-        DeleteKeysDialog(
-            keys = uiState.keys,
+        MultiSelectDialog(
+            title = stringResource(R.string.profile_key_delete_title),
+            items = uiState.keys.map { MultiSelectItem(it.id, it.id, it.fileName) },
             onDismiss = { showDeleteKeysDialog = false },
             onConfirm = { selected ->
                 showDeleteKeysDialog = false
@@ -924,75 +981,6 @@ private fun CreateProfileDialog(
 }
 
 @Composable
-private fun ImportExportRow(
-    onImport: () -> Unit,
-    onExport: () -> Unit,
-    importEnabled: Boolean,
-    exportEnabled: Boolean,
-) {
-    // Middle row of the card, split into two halves. Each half is its own
-    // Surface so the 2dp gap between them shows the screen background —
-    // the same segmentation look as between preference rows. Profile rows sit
-    // above and the create row below, so all corners stay small.
-    val halfShape = RoundedCornerShape(4.dp)
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(2.dp),
-    ) {
-        ActionHalfSurface(
-            label = stringResource(R.string.profile_import),
-            icon = Icons.Filled.FileDownload,
-            enabled = importEnabled,
-            onClick = onImport,
-            shape = halfShape,
-            modifier = Modifier.weight(1f),
-        )
-        ActionHalfSurface(
-            label = stringResource(R.string.profile_export),
-            icon = Icons.Filled.FileUpload,
-            enabled = exportEnabled,
-            onClick = onExport,
-            shape = halfShape,
-            modifier = Modifier.weight(1f),
-        )
-    }
-}
-
-@Composable
-private fun CreateProfileRow(
-    enabled: Boolean,
-    onClick: () -> Unit,
-) {
-    // Last row of the card, below import/export. The profiles above and the
-    // import/export row in between keep small corners, so only this row's two
-    // bottom corners use the large card radius.
-    Surface(
-        shape = RoundedCornerShape(
-            topStart = 4.dp, topEnd = 4.dp, bottomStart = 16.dp, bottomEnd = 16.dp,
-        ),
-        color = MaterialTheme.colorScheme.surfaceContainer,
-        modifier = Modifier.fillMaxWidth(),
-    ) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .heightIn(min = 56.dp),
-            contentAlignment = Alignment.Center,
-        ) {
-            TextButton(onClick = onClick, enabled = enabled) {
-                Icon(
-                    imageVector = Icons.Filled.Add,
-                    contentDescription = null,
-                    modifier = Modifier.size(18.dp),
-                )
-                Spacer(Modifier.width(8.dp))
-                Text(stringResource(R.string.profile_create))
-            }
-        }
-    }
-}
-
-@Composable
 private fun ActionHalfSurface(
     label: String,
     icon: ImageVector,
@@ -1044,22 +1032,12 @@ private fun ProfileRow(
     profile: ProfileStore.ProfileEntry,
     selected: Boolean,
     onSelect: () -> Unit,
-    onDelete: () -> Unit,
 ) {
     PreferenceRow(
         title = profile.name,
         summary = profile.id,
         trailing = {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                IconButton(onClick = onDelete) {
-                    Icon(
-                        imageVector = Icons.Filled.Delete,
-                        contentDescription = stringResource(R.string.profile_delete),
-                        tint = MaterialTheme.colorScheme.error,
-                    )
-                }
-                RadioButton(selected = selected, onClick = onSelect)
-            }
+            RadioButton(selected = selected, onClick = onSelect)
         },
         onClick = onSelect,
     )
@@ -1394,68 +1372,6 @@ private fun AddKeyDialog(
     }
 }
 
-/** Multi-select dialog over the active profile's key store entries. */
-@Composable
-private fun DeleteKeysDialog(
-    keys: List<ProfileKeyUi>,
-    onDismiss: () -> Unit,
-    onConfirm: (Set<String>) -> Unit,
-) {
-    var selected by remember { mutableStateOf(setOf<String>()) }
-
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.profile_key_delete_title)) },
-        text = {
-            Column(Modifier.verticalScroll(rememberScrollState())) {
-                keys.forEach { key ->
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable {
-                                selected = if (key.id in selected) {
-                                    selected - key.id
-                                } else {
-                                    selected + key.id
-                                }
-                            }
-                            .padding(vertical = 4.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Checkbox(
-                            checked = key.id in selected,
-                            onCheckedChange = { checked ->
-                                selected = if (checked) selected + key.id else selected - key.id
-                            },
-                        )
-                        Column(Modifier.weight(1f)) {
-                            Text(key.id, style = MaterialTheme.typography.bodyLarge)
-                            Text(
-                                key.fileName,
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                        }
-                    }
-                }
-            }
-        },
-        confirmButton = {
-            DialogConfirmButton(
-                onClick = { onConfirm(selected) },
-                enabled = selected.isNotEmpty(),
-            ) {
-                Text(stringResource(R.string.command_continue))
-            }
-        },
-        dismissButton = {
-            DialogDismissButton(onClick = onDismiss) {
-                Text(stringResource(R.string.command_cancel))
-            }
-        },
-    )
-}
-
 /** Process-wide application context holder, populated from the screen. */
 private object AppContextHolder {
     @Volatile
@@ -1463,19 +1379,20 @@ private object AppContextHolder {
 }
 
 /**
- * Half-and-half "add / delete" action row closing a preference card —
- * mirrors the import/export row's split-surface look, with the large bottom
- * corners since nothing follows. Delete is disabled while the card has no
- * entries to delete.
+ * Half-and-half two-action row closing a preference card. Both halves are
+ * their own Surface so the 2dp gap shows the screen background, with the
+ * large bottom corners on the outer edges. [secondaryIcon] defaults to
+ * delete for the keys/images cards; the profiles card passes an edit icon.
  */
 @Composable
 private fun SegmentActionsRow(
     addLabel: String,
-    deleteLabel: String,
-    addEnabled: Boolean,
-    deleteEnabled: Boolean,
-    onAdd: () -> Unit,
-    onDelete: () -> Unit,
+    secondaryLabel: String,
+    secondaryIcon: ImageVector = Icons.Filled.Delete,
+    addEnabled: Boolean = true,
+    secondaryEnabled: Boolean = true,
+    onAdd: () -> Unit = {},
+    onSecondary: () -> Unit = {},
 ) {
     val leftShape = RoundedCornerShape(
         topStart = 4.dp, topEnd = 4.dp, bottomStart = 16.dp, bottomEnd = 4.dp,
@@ -1496,13 +1413,70 @@ private fun SegmentActionsRow(
             modifier = Modifier.weight(1f),
         )
         ActionHalfSurface(
-            label = deleteLabel,
-            icon = Icons.Filled.Delete,
-            enabled = deleteEnabled,
-            onClick = onDelete,
+            label = secondaryLabel,
+            icon = secondaryIcon,
+            enabled = secondaryEnabled,
+            onClick = onSecondary,
             shape = rightShape,
             modifier = Modifier.weight(1f),
         )
+    }
+}
+
+/**
+ * "Add profile" action sheet: create from scratch or import from local
+ * storage. A future network-import entry joins the same column.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun AddProfileSheet(
+    onDismiss: () -> Unit,
+    onCreate: () -> Unit,
+    onImportLocal: () -> Unit,
+) {
+    ModalBottomSheet(onDismissRequest = onDismiss) {
+        Column(Modifier.padding(bottom = 24.dp)) {
+            SheetActionRow(
+                label = stringResource(R.string.profile_add_create),
+                icon = Icons.Filled.Add,
+                onClick = onCreate,
+            )
+            SheetActionRow(
+                label = stringResource(R.string.profile_add_import_local),
+                icon = Icons.Filled.FileDownload,
+                onClick = onImportLocal,
+            )
+        }
+    }
+}
+
+/**
+ * "Edit profiles" action sheet: batch-export or batch-delete via the
+ * multi-select dialog; both actions only make sense with profiles present.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun EditProfileSheet(
+    hasProfiles: Boolean,
+    onDismiss: () -> Unit,
+    onExport: () -> Unit,
+    onDelete: () -> Unit,
+) {
+    ModalBottomSheet(onDismissRequest = onDismiss) {
+        Column(Modifier.padding(bottom = 24.dp)) {
+            SheetActionRow(
+                label = stringResource(R.string.profile_export),
+                icon = Icons.Filled.FileUpload,
+                enabled = hasProfiles,
+                onClick = onExport,
+            )
+            SheetActionRow(
+                label = stringResource(R.string.profile_delete),
+                icon = Icons.Filled.Delete,
+                enabled = hasProfiles,
+                onClick = onDelete,
+            )
+        }
     }
 }
 

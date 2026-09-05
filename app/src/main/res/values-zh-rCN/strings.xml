@@ -418,6 +418,12 @@
     <string name="profile_delete">删除配置</string>
     <string name="profile_delete_title">删除配置</string>
     <string name="profile_delete_message">删除配置 %s？此操作无法撤销。</string>
+    <string name="profile_delete_multi_message">删除 %s？此操作无法撤销。</string>
+    <string name="profile_delete_select_title">选择要删除的配置</string>
+    <string name="profile_export_select_title">选择要导出的配置</string>
+    <string name="profile_edit">编辑配置</string>
+    <string name="profile_add_create">新建配置</string>
+    <string name="profile_add_import_local">从本地导入</string>
     <string name="profile_sign">签名</string>
     <string name="profile_sign_no_active">请先选择一个配置。</string>
     <string name="profile_sign_modify_message">签名将原地覆写所选的输入映像（footer 分区）。若 SAF 提供程序不允许原地写入，该映像将在应用私有存储的副本上处理，随后导出。是否继续？</string>
