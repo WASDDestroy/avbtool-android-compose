@@ -1341,20 +1341,20 @@ private fun AddKeyDialog(
                             )
                         },
                         {
+                            PreferenceSwitchRow(
+                                title = stringResource(R.string.profile_key_set_default),
+                                checked = setAsDefault,
+                                enabled = !adding,
+                                onCheckedChange = { setAsDefault = it },
+                            )
+                        },
+                        {
                             PreferenceRow(
                                 title = stringResource(R.string.profile_key_pick),
                                 summary = pickedFileName?.let {
                                     stringResource(R.string.profile_key_selected, it)
                                 } ?: stringResource(R.string.profile_key_none),
                                 onClick = { if (!adding) onPickFile() },
-                            )
-                        },
-                        {
-                            PreferenceSwitchRow(
-                                title = stringResource(R.string.profile_key_set_default),
-                                checked = setAsDefault,
-                                enabled = !adding,
-                                onCheckedChange = { setAsDefault = it },
                             )
                         },
                     ),
