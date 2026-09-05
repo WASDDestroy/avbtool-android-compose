@@ -19,6 +19,8 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import me.wasddestroy.avbtoolandroid.AvbCommandResult
+import me.wasddestroy.avbtoolandroid.AvbResultStatus
 import me.wasddestroy.avbtoolandroid.R
 import me.wasddestroy.avbtoolandroid.SettingsStore
 
@@ -72,6 +74,8 @@ data class PartitionReaderUiState(
     val mapper: List<PartitionEntry> = emptyList(),
     val enumerationError: String? = null,
     val readState: ReadState = ReadState.Idle,
+    /** Summary banner shown when a read finishes, mirrors the command screen. */
+    val popup: AvbCommandResult? = null,
 )
 
 class PartitionReaderViewModel(
@@ -251,27 +255,23 @@ class PartitionReaderViewModel(
             val needed = formatBytes(totalBytes)
             val tmpFree = tmpDir.usableSpace
             if (tmpFree < totalBytes) {
-                _uiState.update {
-                    it.copy(readState = ReadState.Error(
-                        context.getString(
-                            R.string.partition_error_tmp_space,
-                            needed, formatBytes(tmpFree),
-                        ),
-                    ))
-                }
+                failWith(
+                    context.getString(
+                        R.string.partition_error_tmp_space,
+                        needed, formatBytes(tmpFree),
+                    ),
+                )
                 return@launch
             }
             val treeUri = Uri.parse(workspace)
             WorkspaceFolder.freeSpace(context, treeUri)?.let { free ->
                 if (free < totalBytes) {
-                    _uiState.update {
-                        it.copy(readState = ReadState.Error(
-                            context.getString(
-                                R.string.partition_error_workspace_space,
-                                needed, formatBytes(free),
-                            ),
-                        ))
-                    }
+                    failWith(
+                        context.getString(
+                            R.string.partition_error_workspace_space,
+                            needed, formatBytes(free),
+                        ),
+                    )
                     return@launch
                 }
             }
@@ -318,59 +318,110 @@ class PartitionReaderViewModel(
                     break
                 }
                 if (!result.success) {
-                    _uiState.update {
-                        it.copy(readState = ReadState.Error(
-                            context.getString(R.string.partition_error_dd, device) +
-                                result.stderr.takeIf { s -> s.isNotBlank() }?.let { s -> "\n$s" }.orEmpty(),
-                        ))
-                    }
+                    failWith(
+                        context.getString(R.string.partition_error_dd, device) +
+                            result.stderr.takeIf { s -> s.isNotBlank() }?.let { s -> "\n$s" }.orEmpty(),
+                    )
                     tmp.delete()
                     return@launch
                 }
 
                 for (entry in entries) {
                     val fileName = entry.name + IMG_SUFFIX
-                    val outcome = copyToWorkspace(tmp, treeUri, fileName)
-                    when (outcome) {
-                        CopyOutcome.CREATED -> savedNames.add(fileName)
-                        CopyOutcome.OVERWRITTEN -> overwrittenNames.add(fileName)
-                        CopyOutcome.FAILED -> {
-                            _uiState.update {
-                                it.copy(readState = ReadState.Error(
-                                    context.getString(R.string.partition_error_copy, fileName),
-                                ))
-                            }
-                            tmp.delete()
-                            return@launch
-                        }
+                    val copy = copyToWorkspace(tmp, treeUri, fileName)
+                    if (copy.error != null) {
+                        // A vanished workspace (deleted while reading) produces
+                        // an unspecific save failure; probe it once to name the
+                        // real cause.
+                        val gone = WorkspaceFolder.displayName(context, treeUri) == null
+                        failWith(
+                            if (gone) {
+                                context.getString(R.string.partition_error_workspace_gone)
+                            } else {
+                                context.getString(R.string.partition_error_copy, fileName) +
+                                    "\n" + copy.error
+                            },
+                        )
+                        tmp.delete()
+                        return@launch
+                    }
+                    if (copy.overwritten) {
+                        overwrittenNames.add(fileName)
+                    } else {
+                        savedNames.add(fileName)
                     }
                 }
                 tmp.delete()
             }
 
-            _uiState.update {
-                it.copy(readState = if (cancelled) {
-                    ReadState.Cancelled
+            if (cancelled) {
+                _uiState.update {
+                    it.copy(
+                        readState = ReadState.Cancelled,
+                        popup = AvbCommandResult(status = AvbResultStatus.CANCELLED),
+                    )
+                }
+            } else {
+                val warnings = if (overwrittenNames.isEmpty()) {
+                    emptyList()
                 } else {
-                    ReadState.Done(savedNames.toList(), overwrittenNames.toList())
-                })
+                    listOf(
+                        context.getString(
+                            R.string.partition_done_overwritten,
+                            overwrittenNames.joinToString(", "),
+                        ),
+                    )
+                }
+                _uiState.update {
+                    it.copy(
+                        readState = ReadState.Done(savedNames.toList(), overwrittenNames.toList()),
+                        popup = AvbCommandResult(status = AvbResultStatus.SUCCESS, warnings = warnings),
+                    )
+                }
             }
+        }
+    }
+
+    fun dismissPopup() {
+        _uiState.update { it.copy(popup = null) }
+    }
+
+    private fun failWith(message: String) {
+        _uiState.update {
+            it.copy(
+                readState = ReadState.Error(message),
+                popup = AvbCommandResult(status = AvbResultStatus.FAILED, errors = listOf(message)),
+            )
         }
     }
 
     private fun shellCommandFor(device: String, outputPath: String): String =
         "sh -c 'echo \$\$; exec dd if=\"$device\" of=\"$outputPath\" bs=4194304'"
 
-    private suspend fun copyToWorkspace(tmp: File, treeUri: Uri, fileName: String): CopyOutcome =
+    private data class CopyResult(val overwritten: Boolean, val error: String? = null)
+
+    private suspend fun copyToWorkspace(tmp: File, treeUri: Uri, fileName: String): CopyResult =
         withContext(Dispatchers.IO) {
             val existed = WorkspaceFolder.childExists(context, treeUri, fileName)
             if (existed && !WorkspaceFolder.deleteChild(context, treeUri, fileName)) {
-                return@withContext CopyOutcome.FAILED
+                return@withContext CopyResult(
+                    overwritten = existed,
+                    error = "could not replace the existing document",
+                )
             }
             val docUri = WorkspaceFolder.createChild(context, treeUri, fileName)
-                ?: return@withContext CopyOutcome.FAILED
-            val output = WorkspaceFolder.openOutput(context, docUri)
-                ?: return@withContext CopyOutcome.FAILED
+                ?: return@withContext CopyResult(
+                    overwritten = existed,
+                    error = "could not create the document",
+                )
+            val output = try {
+                context.contentResolver.openOutputStream(docUri, "w")
+            } catch (e: Exception) {
+                null
+            } ?: return@withContext CopyResult(
+                overwritten = existed,
+                error = "could not open the document for writing",
+            )
             try {
                 output.use { os ->
                     tmp.inputStream().use { input ->
@@ -378,10 +429,13 @@ class PartitionReaderViewModel(
                     }
                     os.flush()
                 }
-            } catch (_: Exception) {
-                return@withContext CopyOutcome.FAILED
+            } catch (e: Exception) {
+                return@withContext CopyResult(
+                    overwritten = existed,
+                    error = e.message ?: e.javaClass.simpleName,
+                )
             }
-            if (existed) CopyOutcome.OVERWRITTEN else CopyOutcome.CREATED
+            CopyResult(overwritten = existed)
         }
 
     private fun cancelRead() {
@@ -394,8 +448,6 @@ class PartitionReaderViewModel(
         shell?.close()
         super.onCleared()
     }
-
-    private enum class CopyOutcome { CREATED, OVERWRITTEN, FAILED }
 
     companion object {
         private const val TEMP_FILE_NAME = "partition_dump.img"

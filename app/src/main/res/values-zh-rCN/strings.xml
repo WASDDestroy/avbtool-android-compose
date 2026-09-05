@@ -592,4 +592,5 @@
     <string name="partition_error_dd">读取 %1$s 失败</string>
     <string name="partition_error_copy">保存 %1$s 失败</string>
     <string name="partition_hint_select_workspace">请先选择工作区文件夹，才能开始读取。</string>
+    <string name="partition_error_workspace_gone">工作区文件夹已无法访问，可能在读取过程中被删除或卸载。</string>
 </resources>

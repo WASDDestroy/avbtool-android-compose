@@ -38,6 +38,7 @@ import me.wasddestroy.avbtoolandroid.R
 import me.wasddestroy.avbtoolandroid.ui.components.PreferenceCheckboxRow
 import me.wasddestroy.avbtoolandroid.ui.components.PreferenceGroup
 import me.wasddestroy.avbtoolandroid.ui.components.PreferenceRow
+import me.wasddestroy.avbtoolandroid.ui.components.ResultPopupHost
 import me.wasddestroy.avbtoolandroid.ui.components.SettingsList
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -100,26 +101,36 @@ fun PartitionReaderScreen(
                     style = MaterialTheme.typography.bodyMedium,
                 )
             }
-            RootCheckState.AVAILABLE -> Column(
+            RootCheckState.AVAILABLE -> Box(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(contentPadding),
             ) {
-                PartitionList(
-                    state = state,
-                    onPickWorkspace = { treePicker.launch(null) },
-                    onToggle = viewModel::togglePartition,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .weight(1f),
-                )
-                // Pinned below the scrolling list so Read/Cancel is always
-                // reachable without scrolling to the end.
-                ReadButtonSection(
-                    state = state,
-                    enabled = readEnabled(state),
-                    onClick = viewModel::startOrCancelRead,
-                )
+                Column(Modifier.fillMaxSize()) {
+                    PartitionList(
+                        state = state,
+                        onPickWorkspace = { treePicker.launch(null) },
+                        onToggle = viewModel::togglePartition,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .weight(1f),
+                    )
+                    // Pinned below the scrolling list so Read/Cancel is always
+                    // reachable without scrolling to the end.
+                    ReadButtonSection(
+                        state = state,
+                        enabled = readEnabled(state),
+                        onClick = viewModel::startOrCancelRead,
+                    )
+                }
+                val popup = state.popup
+                if (popup != null && state.readState !is ReadState.Running) {
+                    ResultPopupHost(
+                        result = popup,
+                        onDismiss = viewModel::dismissPopup,
+                        modifier = Modifier.align(Alignment.TopCenter),
+                    )
+                }
             }
         }
     }

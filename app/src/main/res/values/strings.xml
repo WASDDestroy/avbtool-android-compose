@@ -597,4 +597,5 @@
     <string name="partition_error_dd">Failed to read %1$s</string>
     <string name="partition_error_copy">Failed to save %1$s</string>
     <string name="partition_hint_select_workspace">Select a workspace folder first to enable reading.</string>
+    <string name="partition_error_workspace_gone">The workspace folder is no longer accessible. It may have been deleted or unmounted during the read.</string>
 </resources>

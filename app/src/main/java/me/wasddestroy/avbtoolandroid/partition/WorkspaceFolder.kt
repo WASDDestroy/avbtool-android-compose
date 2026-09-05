@@ -5,8 +5,6 @@ import android.net.Uri
 import android.os.Build
 import android.os.storage.StorageManager
 import android.provider.DocumentsContract
-import java.io.OutputStream
-
 /**
  * SAF tree-folder helpers built directly on [DocumentsContract] so no extra
  * documentfile dependency is needed. The workspace is one picked directory;
@@ -58,9 +56,6 @@ internal object WorkspaceFolder {
             )
         }.getOrNull()
     }
-
-    fun openOutput(context: Context, documentUri: Uri): OutputStream? =
-        runCatching { context.contentResolver.openOutputStream(documentUri, "w") }.getOrNull()
 
     /**
      * Free bytes of the storage the tree lives on. Only resolvable on API 30+;
