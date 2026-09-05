@@ -386,6 +386,7 @@
     <string name="profile_key_id_error">Only ASCII characters are allowed.</string>
     <string name="profile_key_id_taken">This key ID is already in use.</string>
     <string name="profile_key_use_file_name">Use key file name</string>
+    <string name="profile_key_set_default">Set as default key</string>
     <string name="profile_key_pick">Select a key file</string>
     <string name="profile_key_none">No key file selected</string>
     <string name="profile_key_selected">Key file: %s</string>

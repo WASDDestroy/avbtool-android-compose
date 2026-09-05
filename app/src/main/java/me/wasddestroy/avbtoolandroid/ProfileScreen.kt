@@ -798,9 +798,14 @@ fun ProfileScreen(
             pickedFileName = pendingKeyFileName,
             hasPickedFile = pendingKeyFile != null,
             adding = uiState.addingKey,
+            // No default key yet (first import, or the activation was
+            // dropped): suggest making the new key the default.
+            initialSetAsDefault = uiState.keys.isEmpty() || uiState.defaultKeyId == null,
             onPickFile = { keyFileLauncher.launch(KEY_FILE_MIME_TYPES) },
             onDismiss = { showAddKeyDialog = false },
-            onConfirm = { keyId -> viewModel.addKey(keyId, pendingKeyFile, pendingKeyFileName) },
+            onConfirm = { keyId, setAsDefault ->
+                viewModel.addKey(keyId, pendingKeyFile, pendingKeyFileName, setAsDefault)
+            },
         )
     }
 
@@ -1282,11 +1287,13 @@ private fun AddKeyDialog(
     pickedFileName: String?,
     hasPickedFile: Boolean,
     adding: Boolean,
+    initialSetAsDefault: Boolean,
     onPickFile: () -> Unit,
     onDismiss: () -> Unit,
-    onConfirm: (keyId: String) -> Unit,
+    onConfirm: (keyId: String, setAsDefault: Boolean) -> Unit,
 ) {
     var useFileName by remember { mutableStateOf(true) }
+    var setAsDefault by remember { mutableStateOf(initialSetAsDefault) }
     var id by remember { mutableStateOf("") }
     var editingId by remember { mutableStateOf(false) }
 
@@ -1342,13 +1349,21 @@ private fun AddKeyDialog(
                                 onClick = { if (!adding) onPickFile() },
                             )
                         },
+                        {
+                            PreferenceSwitchRow(
+                                title = stringResource(R.string.profile_key_set_default),
+                                checked = setAsDefault,
+                                enabled = !adding,
+                                onCheckedChange = { setAsDefault = it },
+                            )
+                        },
                     ),
                 )
             }
         },
         confirmButton = {
             DialogConfirmButton(
-                onClick = { onConfirm(effectiveId) },
+                onClick = { onConfirm(effectiveId, setAsDefault) },
                 enabled = canConfirm,
             ) {
                 Text(stringResource(R.string.command_continue))

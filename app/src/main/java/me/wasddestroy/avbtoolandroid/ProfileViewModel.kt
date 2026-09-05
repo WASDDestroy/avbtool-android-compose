@@ -799,7 +799,7 @@ class ProfileViewModel(
      * registered in the key manifest. The extracted public key `.bin` is
      * persisted next to the private key per the schema v3 naming convention.
      */
-    fun addKey(keyId: String, uri: Uri?, originalFileName: String?) {
+    fun addKey(keyId: String, uri: Uri?, originalFileName: String?, setAsDefault: Boolean = false) {
         val profileId = _uiState.value.activeId ?: return
         val trimmedId = keyId.trim()
         if (uri == null) {
@@ -817,7 +817,12 @@ class ProfileViewModel(
                 importKey(profileId, trimmedId, uri, originalFileName)
             }
             _uiState.update { it.copy(addingKey = false, keyImportEvent = event) }
-            if (event == KeyImportEvent.Success) refreshKeys()
+            if (event == KeyImportEvent.Success) {
+                // Only promote the key after the import succeeded so a
+                // failed import never disturbs the current default.
+                if (setAsDefault) activateKey(trimmedId)
+                refreshKeys()
+            }
         }
     }
 
