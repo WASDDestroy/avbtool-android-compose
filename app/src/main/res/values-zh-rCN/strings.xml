@@ -463,6 +463,8 @@
     <string name="profile_partition_add_conflict">同名分区已存在。</string>
     <string name="profile_partition_add_failed">添加分区失败。</string>
     <string name="profile_partitions_empty">配置文件中不包含分区信息。</string>
+    <!-- 无密钥时替代上面的提示：导入密钥前分区操作保持禁用。 -->
+    <string name="profile_partitions_empty_no_keys">请先导入密钥，再添加分区。</string>
 
     <!-- 防回滚指数守卫：防回滚指数是 AVB 体系中唯一写入 RPMB 的值，
          因此在签名前与配置导入前拦截数值异常或来自不可信来源的值。 -->

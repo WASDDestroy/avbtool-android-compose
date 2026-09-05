@@ -464,6 +464,9 @@
     <string name="profile_partition_add_conflict">A partition with this name already exists.</string>
     <string name="profile_partition_add_failed">Could not add the partition.</string>
     <string name="profile_partitions_empty">The profile does not contain any partitions.</string>
+    <!-- Shown instead of the above while the profile has no keys: the
+    partition actions are locked until key material is imported. -->
+    <string name="profile_partitions_empty_no_keys">Import a key first to start adding partitions.</string>
 
     <!-- Rollback index guard: the rollback index is the only AVB value written
          to RPMB, so mis-scaled or malicious values are gated before signing

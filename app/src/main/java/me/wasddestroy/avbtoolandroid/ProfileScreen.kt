@@ -449,8 +449,15 @@ fun ProfileScreen(
                     val specs = uiState.activeSpecs
                     if (specs.isEmpty()) {
                         row("partitions_empty") {
+                            // While no key exists the add/delete actions are
+                            // locked, so point the user at the keys card
+                            // instead of the plain "no partitions" text.
                             PreferenceRow(
-                                title = stringResource(R.string.profile_partitions_empty),
+                                title = if (uiState.keys.isEmpty()) {
+                                    stringResource(R.string.profile_partitions_empty_no_keys)
+                                } else {
+                                    stringResource(R.string.profile_partitions_empty)
+                                },
                             )
                         }
                     } else {
