@@ -135,20 +135,37 @@ class PartitionReaderViewModel(
     /** Returns null when the directory cannot be listed at all. */
     private fun enumerate(session: RootShell, dir: String, source: PartitionSource): List<PartitionEntry>? {
         val result = session.run(
-            "if [ -d '$dir' ]; then for f in '$dir'/*; do printf '%s\\t%s\\t%s\\n' " +
-                "\"\${f##*/}\" \"\$(readlink -f \"\$f\")\" \"\$(blockdev --getsize64 \"\$f\" 2>/dev/null)\"; done; fi",
+            "if [ -d '$dir' ]; then for f in '$dir'/*; do r=\"\$(readlink -f \"\$f\")\"; " +
+                "printf '%s\\t%s\\t%s\\t%s\\n' \"\${f##*/}\" \"\$r\" " +
+                "\"\$(blockdev --getsize64 \"\$r\" 2>/dev/null)\" \"\$(test -b \"\$r\" && echo b || echo o)\"; done; fi",
         )
         if (!result.success && result.stdout.isEmpty()) return null
         return result.stdout.mapNotNull { line ->
             val parts = line.split('\t')
-            if (parts.size < 3) return@mapNotNull null
-            PartitionEntry(
+            if (parts.size < 4) return@mapNotNull null
+            val entry = PartitionEntry(
                 name = parts[0],
                 device = parts[1],
                 sizeBytes = parts[2].toLongOrNull() ?: 0L,
                 source = source,
             )
+            // Not a block device (e.g. the by-uuid directory under mapper).
+            if (parts[3] != "b") return@mapNotNull null
+            if (!isDumpable(entry)) null else entry
         }.sortedBy { it.name }
+    }
+
+    /**
+     * Mapper holds non-dumpable entries besides real partitions: the by-uuid
+     * directory (size unknown), mirrors named after this app's package, and
+     * userdata itself. Only real block devices survive.
+     */
+    private fun isDumpable(entry: PartitionEntry): Boolean {
+        if (entry.source == PartitionSource.MAPPER) {
+            if (entry.name == "userdata") return false
+            if (entry.name.startsWith(context.packageName)) return false
+        }
+        return true
     }
 
     private fun restoreWorkspace() {
