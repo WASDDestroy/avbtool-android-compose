@@ -468,6 +468,16 @@
     partition actions are locked until key material is imported. -->
     <string name="profile_partitions_empty_no_keys">Import a key first to start adding partitions.</string>
 
+    <!-- Workspace batch import: offered only while the profile has no
+    partitions, so imported names cannot collide with existing entries. -->
+    <string name="profile_partition_import">Import from workspace</string>
+    <string name="profile_partition_import_title">Import partitions from a workspace folder</string>
+    <string name="profile_partition_import_message">This batch-imports image information. Put the images you want to add to this profile into one folder, then grant this app access to that folder. The image information is parsed automatically.\n\nName the image files after their partition names so they are easier to identify and manage later.</string>
+    <string name="profile_partition_import_done">Imported %1$d partitions from the workspace.</string>
+    <string name="profile_partition_import_partial">Imported %1$d partitions; skipped %2$d file(s): %3$s</string>
+    <string name="profile_partition_import_none">No .img files were found in the selected folder.</string>
+    <string name="profile_partition_import_failed">Could not read the selected folder.</string>
+
     <!-- Rollback index guard: the rollback index is the only AVB value written
          to RPMB, so mis-scaled or malicious values are gated before signing
          and before a profile import is committed. -->

@@ -12,6 +12,49 @@ import android.provider.DocumentsContract
  */
 internal object WorkspaceFolder {
 
+    /** One image document found directly inside the workspace folder. */
+    data class WorkspaceImage(val fileName: String, val uri: Uri)
+
+    /**
+     * Lists the `.img` documents (case-insensitive extension) directly inside
+     * the tree; subfolders and other files are skipped. An unreadable folder
+     * yields an empty list.
+     */
+    fun listImageFiles(context: Context, treeUri: Uri): List<WorkspaceImage> {
+        val parentId = DocumentsContract.getTreeDocumentId(treeUri)
+        val children = DocumentsContract.buildChildDocumentsUriUsingTree(treeUri, parentId)
+        return runCatching {
+            context.contentResolver.query(
+                children,
+                arrayOf(
+                    DocumentsContract.Document.COLUMN_DOCUMENT_ID,
+                    DocumentsContract.Document.COLUMN_DISPLAY_NAME,
+                    DocumentsContract.Document.COLUMN_MIME_TYPE,
+                ),
+                null,
+                null,
+                null,
+            )?.use { cursor ->
+                buildList {
+                    while (cursor.moveToNext()) {
+                        if (cursor.getString(2) == DocumentsContract.Document.MIME_TYPE_DIR) continue
+                        val name = cursor.getString(1) ?: continue
+                        if (!name.endsWith(".img", ignoreCase = true)) continue
+                        add(
+                            WorkspaceImage(
+                                fileName = name,
+                                uri = DocumentsContract.buildDocumentUriUsingTree(
+                                    treeUri,
+                                    cursor.getString(0),
+                                ),
+                            ),
+                        )
+                    }
+                }
+            }
+        }.getOrNull().orEmpty()
+    }
+
     /** Directory display name of a tree URI, e.g. "Downloads". */
     fun displayName(context: Context, treeUri: Uri): String? {
         val docUri = DocumentsContract.buildDocumentUriUsingTree(

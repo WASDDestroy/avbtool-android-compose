@@ -21,6 +21,7 @@ import org.json.JSONObject
 import java.io.File
 import java.math.BigInteger
 import java.security.MessageDigest
+import me.wasddestroy.avbtoolandroid.partition.WorkspaceFolder
 
 /**
  * One partition of an imported signing profile. Mirrors the config
@@ -157,6 +158,27 @@ data class PendingExport(
     val file: File,
 )
 
+/**
+ * Outcome of one workspace batch import ([ProfileViewModel.importPartitionsFromWorkspace]).
+ * The batch is written in one pass, so per-file failures only skip that file.
+ */
+sealed class PartitionImportEvent {
+    /** Every `.img` found in the folder parsed and was written. */
+    data class Completed(val imported: List<String>) : PartitionImportEvent()
+
+    /** Some files were skipped; [failed] lists their names. */
+    data class Partial(
+        val imported: List<String>,
+        val failed: List<String>,
+    ) : PartitionImportEvent()
+
+    /** The folder contained no `.img` files (or none parsed). */
+    data object NoImages : PartitionImportEvent()
+
+    /** The folder could not be read or profile.json could not be written. */
+    data object Failed : PartitionImportEvent()
+}
+
 data class ProfileUiState(
     val profiles: List<ProfileStore.ProfileEntry> = emptyList(),
     val activeId: String? = null,
@@ -205,6 +227,10 @@ data class ProfileUiState(
     val savingPartition: Boolean = false,
     /** One-shot outcome of a partition-config save; consumed by the screen. */
     val partitionSaveEvent: PartitionSaveEvent? = null,
+    /** Set while a workspace batch import runs; disables the import button. */
+    val importingPartitions: Boolean = false,
+    /** One-shot outcome of a workspace batch import; consumed by the screen. */
+    val partitionImportEvent: PartitionImportEvent? = null,
 )
 
 /**
@@ -742,6 +768,92 @@ class ProfileViewModel(
 
     fun consumePartitionSaveEvent() {
         _uiState.update { it.copy(partitionSaveEvent = null) }
+    }
+
+    fun consumePartitionImportEvent() {
+        _uiState.update { it.copy(partitionImportEvent = null) }
+    }
+
+    /**
+     * Batch-imports partition entries from a workspace folder the user granted
+     * via SAF: every `.img` document is inspected with `avbtool info_image` and
+     * written into the profile keyed by its file name (extension stripped).
+     * Only offered while the profile has no partitions, so key collisions are
+     * impossible; the guard below keeps a stale dialog from writing into a
+     * profile that gained entries meanwhile. Images are parsed serially —
+     * `run_avbtool` redirects the global stdout/stderr and must not be called
+     * concurrently — and the whole batch lands in a single profile.json write.
+     */
+    fun importPartitionsFromWorkspace(treeUri: Uri) {
+        val profileId = _uiState.value.activeId ?: return
+        if (_uiState.value.importingPartitions) return
+        viewModelScope.launch {
+            _uiState.update { it.copy(importingPartitions = true, partitionImportEvent = null) }
+            val event = withContext(Dispatchers.IO) {
+                importFromWorkspace(profileId, treeUri)
+            }
+            _uiState.update { it.copy(importingPartitions = false, partitionImportEvent = event) }
+            if (event is PartitionImportEvent.Completed || event is PartitionImportEvent.Partial) {
+                refresh()
+            }
+        }
+    }
+
+    private suspend fun importFromWorkspace(profileId: String, treeUri: Uri): PartitionImportEvent {
+        val images = WorkspaceFolder.listImageFiles(appContext, treeUri)
+        if (images.isEmpty()) return PartitionImportEvent.NoImages
+        // The entry point is only shown for empty profiles; if entries appeared
+        // meanwhile, refuse rather than risk surprising merges.
+        if (existingPartitionNames(profileId).isNotEmpty()) return PartitionImportEvent.Failed
+
+        val entries = linkedMapOf<String, JSONObject>()
+        val failed = mutableListOf<String>()
+        val picks = mutableListOf<Pair<String, Uri>>()
+        for (image in images) {
+            val partitionName = image.fileName.substringBeforeLast('.').trim()
+            if (partitionName.isEmpty() || partitionName in entries) {
+                failed += image.fileName
+                continue
+            }
+            val inspection = inspectWorkspaceImage(image.uri, image.fileName) ?: run {
+                failed += image.fileName
+                continue
+            }
+            // vbmeta images are generated at sign time — no input image to
+            // register, same as the single add-partition flow.
+            if (inspection.descriptor != "vbmeta") {
+                picks += partitionName to image.uri
+            }
+            entries[partitionName] = buildPartitionEntry(inspection, partitionName, image.fileName, profileId)
+        }
+        if (entries.isEmpty()) return PartitionImportEvent.NoImages
+
+        val ok = store.updateProfileJson(profileId) { obj ->
+            val partitions = obj.optJSONObject("partitions")
+            entries.forEach { (name, entry) -> partitions?.put(name, entry) }
+        }
+        if (!ok) return PartitionImportEvent.Failed
+        // Register image picks only after the write succeeded so a failure
+        // leaves no orphan grants for partitions the profile does not know.
+        picks.forEach { (name, uri) -> setImageInternal(profileId, name, uri) }
+        val imported = entries.keys.toList()
+        return if (failed.isEmpty()) {
+            PartitionImportEvent.Completed(imported)
+        } else {
+            PartitionImportEvent.Partial(imported, failed)
+        }
+    }
+
+    /** Runs `avbtool info_image` on [uri] and parses the output; null when the image is invalid. */
+    private suspend fun inspectWorkspaceImage(uri: Uri, fileName: String): InfoImageParser.ImageInspection? {
+        val fd = bridge.openRead(uri) ?: return null
+        val result = try {
+            runner.run(listOf("avbtool", "info_image", "--image", bridge.pseudoPath(fd)))
+        } finally {
+            bridge.closeFd(fd)
+        }
+        if (result.stderr.isNotBlank()) return null
+        return runCatching { InfoImageParser.inspect(fileName, result.stdout) }.getOrNull()
     }
 
     // ---- Key store management -------------------------------------------

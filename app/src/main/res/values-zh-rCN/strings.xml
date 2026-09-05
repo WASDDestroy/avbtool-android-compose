@@ -466,6 +466,15 @@
     <!-- 无密钥时替代上面的提示：导入密钥前分区操作保持禁用。 -->
     <string name="profile_partitions_empty_no_keys">请先导入密钥，再添加分区。</string>
 
+    <!-- 工作区批量导入：仅在配置没有任何分区时提供，避免与既有条目重名。 -->
+    <string name="profile_partition_import">从工作区导入</string>
+    <string name="profile_partition_import_title">从工作区文件夹导入分区</string>
+    <string name="profile_partition_import_message">本功能可用于批量导入镜像信息。请将您需要添加到本配置中的镜像文件放入一个文件夹，然后授权本应用使用该文件夹。应用会自动解析镜像信息。\n\n建议您使用分区名称命名镜像文件，以便后续识别和管理。</string>
+    <string name="profile_partition_import_done">已从工作区导入 %1$d 个分区。</string>
+    <string name="profile_partition_import_partial">已导入 %1$d 个分区；跳过 %2$d 个文件：%3$s</string>
+    <string name="profile_partition_import_none">所选文件夹中没有找到 .img 文件。</string>
+    <string name="profile_partition_import_failed">无法读取所选文件夹。</string>
+
     <!-- 防回滚指数守卫：防回滚指数是 AVB 体系中唯一写入 RPMB 的值，
          因此在签名前与配置导入前拦截数值异常或来自不可信来源的值。 -->
     <string name="rollback_warning_title">检测到异常的防回滚指数</string>

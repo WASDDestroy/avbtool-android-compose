@@ -112,6 +112,8 @@ fun ProfileScreen(
     var pendingDeleteProfileIds by remember { mutableStateOf<Set<String>?>(null) }
     var showAddPartitionDialog by remember { mutableStateOf(false) }
     var showDeletePartitionsDialog by remember { mutableStateOf(false) }
+    // Explanation dialog before the SAF folder pick for the batch import.
+    var showImportPartitionsDialog by remember { mutableStateOf(false) }
     var pendingDeletePartitions by remember { mutableStateOf<Set<String>?>(null) }
     var pendingSignScope by remember { mutableStateOf<Set<String>?>(null) }
     var signRollbackFindings by remember { mutableStateOf<List<RollbackIndexFinding>?>(null) }
@@ -215,6 +217,56 @@ fun ProfileScreen(
     ) { uri: Uri? ->
         pendingKeyFile = uri
         pendingKeyFileName = uri?.let { resolveDisplayName(it) }
+    }
+
+    // Batch-import entry: pick the workspace folder, persist the grant (the
+    // read+write flags let later in-place signing reuse the same documents),
+    // then hand the tree to the ViewModel.
+    val workspaceLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocumentTree(),
+    ) { uri: Uri? ->
+        if (uri == null) return@rememberLauncherForActivityResult
+        runCatching {
+            context.contentResolver.takePersistableUriPermission(
+                uri,
+                android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION or
+                    android.content.Intent.FLAG_GRANT_WRITE_URI_PERMISSION,
+            )
+        }
+        viewModel.importPartitionsFromWorkspace(uri)
+    }
+
+    val partitionImportEvent = uiState.partitionImportEvent
+    LaunchedEffect(partitionImportEvent) {
+        when (val event = partitionImportEvent) {
+            is PartitionImportEvent.Completed -> Toast.makeText(
+                context,
+                context.getString(R.string.profile_partition_import_done, event.imported.size),
+                Toast.LENGTH_SHORT,
+            ).show()
+            is PartitionImportEvent.Partial -> Toast.makeText(
+                context,
+                context.getString(
+                    R.string.profile_partition_import_partial,
+                    event.imported.size,
+                    event.failed.size,
+                    event.failed.joinToString(", "),
+                ),
+                Toast.LENGTH_LONG,
+            ).show()
+            PartitionImportEvent.NoImages -> Toast.makeText(
+                context,
+                context.getString(R.string.profile_partition_import_none),
+                Toast.LENGTH_SHORT,
+            ).show()
+            PartitionImportEvent.Failed -> Toast.makeText(
+                context,
+                context.getString(R.string.profile_partition_import_failed),
+                Toast.LENGTH_SHORT,
+            ).show()
+            null -> Unit
+        }
+        if (partitionImportEvent != null) viewModel.consumePartitionImportEvent()
     }
 
     val keyImportEvent = uiState.keyImportEvent
@@ -362,6 +414,27 @@ fun ProfileScreen(
             findings = findings,
             onDismiss = viewModel::dismissRollbackWarning,
             onContinue = if (hasInvalid) null else viewModel::confirmRollbackImport,
+        )
+    }
+
+    if (showImportPartitionsDialog) {
+        AlertDialog(
+            onDismissRequest = { showImportPartitionsDialog = false },
+            title = { Text(stringResource(R.string.profile_partition_import_title)) },
+            text = { Text(stringResource(R.string.profile_partition_import_message)) },
+            confirmButton = {
+                DialogConfirmButton(onClick = {
+                    showImportPartitionsDialog = false
+                    workspaceLauncher.launch(null)
+                }) {
+                    Text(stringResource(R.string.command_continue))
+                }
+            },
+            dismissButton = {
+                DialogDismissButton(onClick = { showImportPartitionsDialog = false }) {
+                    Text(stringResource(R.string.command_dismiss))
+                }
+            },
         )
     }
 
@@ -518,6 +591,26 @@ fun ProfileScreen(
                             onAdd = { showAddPartitionDialog = true },
                             onSecondary = { showDeletePartitionsDialog = true },
                         )
+                    }
+                    // Batch import is only offered while the profile has no
+                    // partitions: importing into a populated profile could
+                    // collide with existing entry names, which the profile
+                    // format only allows replacing one by one.
+                    if (uiState.activeSpecs.isEmpty()) {
+                        row("partition_import") {
+                            val importShape = RoundedCornerShape(
+                                topStart = 4.dp, topEnd = 4.dp,
+                                bottomStart = 16.dp, bottomEnd = 16.dp,
+                            )
+                            ActionHalfSurface(
+                                label = stringResource(R.string.profile_partition_import),
+                                icon = Icons.Filled.FileUpload,
+                                enabled = uiState.keys.isNotEmpty() && !uiState.importingPartitions,
+                                onClick = { showImportPartitionsDialog = true },
+                                shape = importShape,
+                                modifier = Modifier.fillMaxWidth(),
+                            )
+                        }
                     }
                 }
             }
